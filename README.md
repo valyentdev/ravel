@@ -26,12 +26,30 @@
 ## Table of Contents
 
 - [Technologies](#technologies)
+- [Roadmap] (#roadmap)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Documentation](#documentation)
 - [FAQ](#faq)
 - [License](#license)
 - [Star History](#star-history)
+
+## WIP Roadmap
+
+There is still a lot of work to be done to stabilize Ravel and make it ready for production:
+- [ ] Create a process jailer for cloud-hypervisor (see the firecracker Jailer)
+- [ ] Enforce resources limitations with cgroups
+- [ ] Secure agent / manager communications with mTLS
+- [ ] Improve the OCI images management on the agent
+- [ ] Private networks with Wireguard
+- [ ] Build a solid implementation of the server to ensure consistency and authorization
+- [ ] Support public IPV6 address for machines
+- [ ] Build a service discovery system and a proxy around Corrosion
+- [ ] Implement machine migrations between workers
+- [ ] Persistent volumes
+- [ ] Lot of tests
+- [ ] Handle different regions properly
+
 
 ## About
 
