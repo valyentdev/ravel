@@ -37,6 +37,7 @@
 ## WIP Roadmap
 
 There is still a lot of work to be done to stabilize Ravel and make it ready for production:
+
 - [ ] Create a process jailer for cloud-hypervisor (see the firecracker Jailer)
 - [ ] Enforce resources limitations with cgroups
 - [ ] Secure agent / manager communications with mTLS
@@ -49,7 +50,6 @@ There is still a lot of work to be done to stabilize Ravel and make it ready for
 - [ ] Persistent volumes
 - [ ] Lot of tests
 - [ ] Handle different regions properly
-
 
 ## About
 
@@ -73,7 +73,6 @@ Ravel is a **bidding-style orchestrator** for _microVMs_. It allows you to creat
 - [ ] Secrets management
 - [ ] Multi-region
 - [ ] Multi-tenancy
-
 
 ## Prerequisites
 
