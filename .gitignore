@@ -1,0 +1,11 @@
+.env
+bin/**/*
+raveld.db
+ravel.json
+.devdbrc
+/.idea
+*.iml
+/disks
+nats.creds
+/tmp
+

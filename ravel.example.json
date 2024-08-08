@@ -1,0 +1,20 @@
+{
+    "node_id": "ravel-1",
+    "agent": {
+        "region": "fr",
+        "address": "127.0.0.1:8080",
+        "init_binary": "./bin/ravel-init",
+        "linux_kernel": "./vmlinux.bin",
+        "resources": {
+            "cpus": 28000,
+            "memory": 30000
+        }
+    },
+    "nats": {
+        "url": "nats://127.0.0.1:4222",
+        "cred_file": "./nats.creds"
+    },
+    "corrosion": {
+        "url": "http://127.0.0.1:8081"
+    }
+}

@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/valyentdev/ravel/pkg/proto";
+
+service InitService {
+  rpc Exec(ExecRequest) returns (ExecResponse);
+  rpc Signal(SignalRequest) returns (google.protobuf.Empty);
+  rpc Follow(google.protobuf.Empty) returns (stream InitStatus);
+  rpc HealthCheck(google.protobuf.Empty) returns (InitStatus);
+}
+
+message SignalRequest {
+  int32 signal = 2;
+}
+
+message ExecRequest {
+  repeated string cmd = 1;
+  optional string working_dir = 2;
+  repeated string env = 3;
+}
+
+message ExecResponse {
+  int32 exit_code = 1;
+  bytes output = 2;
+}
+
+message InitStatus {
+  bool init_failed = 1;
+  bool process_started = 2;
+  bool process_exited = 3;
+  optional string error = 4;
+  optional int64 exit_code = 5;
+}

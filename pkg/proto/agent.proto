@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package proto;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "pkg/proto/init.proto";
+
+option go_package = "github.com/valyentdev/ravel/pkg/proto";
+
+service AgentService {
+  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse) {} // place a instance with the given config and reserve the resources
+  rpc GetInstance(GetInstanceRequest) returns (GetInstanceResponse) {} // get the instance by a instance id
+  rpc ListInstances(ListInstancesRequest) returns (ListInstancesResponse) {} // list all the instances
+  rpc DestroyInstance(DestroyInstanceRequest) returns (google.protobuf.Empty) {} // delete the instance and release the resources
+  rpc StartInstance(StartInstanceRequest) returns (StartInstanceResponse) {} // start a suspended or stopped instance
+  rpc StopInstance(StopInstanceRequest) returns (StopInstanceResponse) {} // keep the instance data but keep resources reserved
+  rpc InstanceExec(InstanceExecRequest) returns (InstanceExecResponse) {}
+}
+
+message StreamInstanceLogsRequest {
+  string instance_id = 1;
+}
+
+message StreamInstanceLogResponse {
+  bytes content = 1;
+}
+
+message CreateInstanceRequest {
+  string machine_id = 1;
+  string namespace = 2;
+  string fleet_id = 3;
+  MachineConfig config = 4;
+  bool start = 5;
+}
+
+message CreateInstanceResponse {
+  string instance_id = 1;
+}
+
+message GetInstanceRequest {
+  string instance_id = 1;
+}
+
+message GetInstanceResponse {
+  Instance instance = 1;
+}
+
+message ListInstancesRequest {}
+
+message ListInstancesResponse {
+  repeated Instance instances = 1;
+}
+
+message Instance {
+  string id = 1;
+  string namespace = 2;
+  string machine_id = 3;
+  string state = 4;
+  string private_ipv6 = 5;
+  string local_ipv4 = 6;
+  string region = 7;
+  MachineConfig config = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message DestroyInstanceRequest {
+  string id = 1;
+}
+
+message StartInstanceRequest {
+  string id = 1;
+}
+
+message StartInstanceResponse {
+  string id = 1;
+}
+
+message StopInstanceRequest {
+  string id = 1;
+}
+
+message StopInstanceResponse {
+  string id = 1;
+}
+
+message MachineConfig {
+  GuestConfig guest = 1;
+  Workload workload = 2;
+}
+
+message GuestConfig {
+  int64 cpus = 1;
+  int64 memory_mb = 2;
+  int64 vcpus = 3;
+}
+
+message Workload {
+  string kind = 1;
+  string image = 2;
+  RestartPolicy restart_policy = 3;
+  repeated string env = 4;
+  InitConfig init = 5;
+}
+
+message InitConfig {
+  repeated string cmd = 1;
+  repeated string entrypoint = 2;
+  string user = 3;
+}
+
+message RestartPolicy {
+  int32 max_retries = 1;
+  string policy = 2;
+}
+
+message InstanceExecRequest {
+  string instance_id = 1;
+  ExecRequest exec_request = 2;
+  int64 timeout = 3;
+}
+
+message InstanceExecResponse {
+  int32 exit_code = 1;
+  bytes output = 2;
+}

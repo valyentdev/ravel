@@ -1,0 +1,13 @@
+version: v1
+plugins:
+  - plugin: go
+    out: .
+    opt:
+      - paths=import
+      - module=github.com/valyentdev/ravel
+  - plugin: go-grpc
+    out: .
+    opt:
+      - paths=import
+      - module=github.com/valyentdev/ravel
+      - require_unimplemented_servers=false
