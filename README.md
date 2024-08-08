@@ -37,7 +37,7 @@
 
 Ravel emerges as the building block for [Valyent](https://valyent.dev)'s cloud services.
 
-Ravel is a **bidding-style orchestrator** for _microVMs_. It allows you to create, manage, and destroy microVMs on the fly.
+Ravel is a **bidding-style orchestrator** for _microVMs_. It allows you to create, manage, and destroy microVMs on the fly. It supports running OCI images inside cloud-hypervisor micro-vms.
 
 ## Technologies
 
