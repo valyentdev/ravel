@@ -34,7 +34,7 @@
 - [License](#license)
 - [Star History](#star-history)
 
-## WIP Roadmap
+## Roadmap
 
 There is still a lot of work to be done to stabilize Ravel and make it ready for production:
 
@@ -109,9 +109,19 @@ No, Ravel is in **ALPHA** and is to be considered unstable.
 
 ## License
 
-Copyright 2024 - Valyent
+ Copyright 2024 SAS Valyent
 
-This project is licensed under the AGPL version 3 License - see the [license](./LICENSE.md) file for details.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 
 ## Star History
 
