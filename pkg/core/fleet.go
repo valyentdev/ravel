@@ -7,4 +7,5 @@ type Fleet struct {
 	Namespace string    `json:"namespace"`
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
+	Destroyed bool      `json:"destroyed"`
 }

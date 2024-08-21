@@ -119,12 +119,5 @@ func generateClientCert(caCert *x509.Certificate, caPrivateKey *ecdsa.PrivateKey
 
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 
-	// If you need the private key as PEM as well, uncomment the following lines:
-	// privBytes, err := x509.MarshalECPrivateKey(clientPrivateKey)
-	// if err != nil {
-	// 	return nil, "", err
-	// }
-	// privPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
-
 	return cert, string(certPEM), nil
 }

@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/valyentdev/ravel/internal/agent/instance/state"
-	"github.com/valyentdev/ravel/internal/agent/runtimes"
 	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/runtimes"
 )
 
 type Manager struct {

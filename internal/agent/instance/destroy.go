@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/valyentdev/ravel/pkg/core"
-	"github.com/valyentdev/ravel/pkg/ravelerrors"
 )
 
 func (m *Manager) Destroy(ctx context.Context, force bool) error {
@@ -16,7 +15,7 @@ func (m *Manager) Destroy(ctx context.Context, force bool) error {
 	}
 
 	if m.isRunning && !force {
-		return ravelerrors.ErrInstanceIsRunning
+		return core.NewFailedPrecondition("instance is running")
 	}
 
 	if m.isRunning {

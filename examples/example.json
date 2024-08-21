@@ -1,22 +1,26 @@
 {
-    "workload": {
-        "image": "docker.io/codercom/code-server:latest",
-        "registry_auth": {},
-        "env": [
-            "SUDO_PASSWORD=password",
-            "PASSWORD=password"
-        ],
-        "restart_policy": {
-            "policy": "always",
-            "max_retries": 5
+    "region": "fr",
+    "skip_start": false,
+    "config": {
+        "workload": {
+            "type": "container",
+            "image": "docker.io/codercom/code-server:latest",
+            "env": [
+                "SUDO_PASSWORD=password",
+                "PASSWORD=password"
+            ],
+            "restart_policy": {
+                "policy": "always",
+                "max_retries": 5
+            },
+            "init": {
+                "user": "root"
+            }
         },
-        "init": {
-            "user": "root"
+        "guest": {
+            "cpu_kind": "eco",
+            "cpus": 1,
+            "memory_mb": 512
         }
-    },
-    "guest": {
-        "vcpus": 1,
-        "cpus": 1,
-        "memory_mb": 512
     }
 }

@@ -19,10 +19,6 @@ var instanceFields = []string{
 	"desired_status",
 	"restarts",
 	"config",
-	"created_at",
-	"prepared",
-	"destroyed",
-	"destroyed_at",
 }
 
 var instanceColumns = allColumns(instanceFields)
@@ -30,8 +26,6 @@ var instancePlaceholders = placeholders(len(instanceFields))
 
 func scanInstance(row scannable) (*core.Instance, error) {
 	var instance core.Instance
-
-	var destroyedAt sql.NullTime
 
 	configJSON := []byte{}
 	err := row.Scan(
@@ -44,15 +38,7 @@ func scanInstance(row scannable) (*core.Instance, error) {
 		&instance.DesiredStatus,
 		&instance.Restarts,
 		&configJSON,
-		&instance.CreatedAt,
-		&instance.Prepared,
-		&instance.Destroyed,
-		&destroyedAt,
 	)
-
-	if destroyedAt.Valid {
-		instance.DestroyedAt = destroyedAt.Time
-	}
 
 	if err != nil {
 		return nil, err
@@ -84,26 +70,12 @@ func (q *Queries) CreateInstance(ctx context.Context, instance core.Instance) er
 		instance.DesiredStatus,
 		instance.Restarts,
 		configJSON,
-		instance.CreatedAt,
-		instance.Prepared,
-		instance.Destroyed,
-		instance.DestroyedAt,
 	)
 	return err
 }
 
-func (q *Queries) GetInstance(ctx context.Context, id string) (*core.Instance, error) {
-	request := fmt.Sprintf("SELECT %s FROM instances WHERE id = ?", instanceColumns)
-	row := q.db.QueryRowContext(ctx, request, id)
-	if row.Err() != nil {
-		return nil, row.Err()
-	}
-
-	return scanInstance(row)
-}
-
 func (q *Queries) ListInstances(ctx context.Context) ([]core.Instance, error) {
-	request := fmt.Sprintf("SELECT %s FROM instances WHERE destroyed = false", instanceColumns)
+	request := fmt.Sprintf("SELECT %s FROM instances WHERE destroyed = FALSE", instanceColumns)
 	rows, err := q.db.QueryContext(ctx, request)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -126,21 +98,6 @@ func (q *Queries) ListInstances(ctx context.Context) ([]core.Instance, error) {
 	return instances, nil
 }
 
-func (s *Queries) MarkInstanceDestroyed(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, "UPDATE instances SET destroyed = true WHERE id = ?1", id)
-	return err
-}
-
-func (s *Queries) MarkInstanceAsPrepared(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, "UPDATE instances SET prepared = true WHERE id = ?1", id)
-	return err
-}
-
-func (s *Queries) DestroyInstance(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM instances WHERE id = ?1", id)
-	return err
-}
-
 func (s *Queries) IncrementInstanceRestarts(ctx context.Context, id string) error {
 	_, err := s.db.ExecContext(ctx, "UPDATE instances SET restarts = restarts + 1 WHERE id = ?1", id)
 	return err
@@ -153,5 +110,10 @@ func (s *Queries) ResetRestarts(ctx context.Context, id string) error {
 
 func (s *Queries) UpdateInstanceDesiredStatus(ctx context.Context, id string, status core.InstanceStatus) error {
 	_, err := s.db.ExecContext(ctx, "UPDATE instances SET desired_status = ?1 WHERE id = ?2", status, id)
+	return err
+}
+
+func (s *Queries) MarkInstanceDestroyed(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, "UPDATE instances SET destroyed = TRUE WHERE id = ?1", id)
 	return err
 }

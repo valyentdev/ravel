@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"github.com/valyentdev/ravel/pkg/helper/corroclient"
+	"github.com/valyentdev/corroclient"
 )
 
 type ClusterState struct {

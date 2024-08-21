@@ -1,40 +1,61 @@
 package server
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"context"
+	"log/slog"
+	"net/http"
+
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/valyentdev/ravel/internal/server/endpoints"
 	"github.com/valyentdev/ravel/internal/server/utils"
-	"github.com/valyentdev/ravel/pkg/config"
-	"github.com/valyentdev/ravel/pkg/manager"
+	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/core/config"
+	"github.com/valyentdev/ravel/pkg/ravel"
 )
 
 type Server struct {
-	m         *manager.Manager
-	fiber     *fiber.App
+	ravel     *ravel.Ravel
+	server    *http.Server
 	validator *utils.Validator
 }
 
 func NewServer(c config.RavelConfig) (*Server, error) {
-	app := fiber.New()
-	m, err := manager.New(manager.ManagerConfig{
-		CorrosionConfig: c.Corrosion,
-		NatsURl:         c.Nats.Url,
-	})
+	r, err := ravel.New(c)
 	if err != nil {
 		return nil, err
 	}
 
+	address := c.RavelApi.Address
+	if address == "" {
+		address = "127.0.0.1:3000"
+	}
+
+	core.OverrideHumaErrorBuilder()
+
+	mux := http.NewServeMux()
+
+	humaConfig := utils.GetHumaConfig()
+	api := humago.New(mux, humaConfig)
+	e := endpoints.New(r)
+	e.Register(api)
+
+	server := &http.Server{
+		Addr:    address,
+		Handler: mux,
+	}
+
 	return &Server{
-		fiber:     app,
+		ravel:     r,
+		server:    server,
 		validator: utils.NewValidator(),
-		m:         m,
 	}, nil
 }
 
 func (s *Server) Serve() error {
-	s.registerEndpoints(s.fiber)
-	return s.fiber.Listen(":3000")
+	slog.Info("Starting server", "address", s.server.Addr)
+	return s.server.ListenAndServe()
 }
 
-func (s *Server) Stop() error {
-	return s.fiber.Shutdown()
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }

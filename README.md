@@ -111,7 +111,7 @@ No, Ravel is in **ALPHA** and is to be considered unstable.
 
 Copyright 2024 - Valyent
 
-This project is licensed under the X License - see the [license](./LICENSE.md) file for details.
+This project is licensed under the AGPL version 3 License - see the [license](./LICENSE.md) file for details.
 
 ## Star History
 

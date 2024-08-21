@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/valyentdev/ravel/pkg/core"
-	"github.com/valyentdev/ravel/pkg/ravelerrors"
 )
 
 func (m *Manager) Start(ctx context.Context) error {
@@ -21,13 +20,13 @@ func (m *Manager) Start(ctx context.Context) error {
 			m.mutex.Lock()
 		} else {
 			// in all other cases the instance cannot be started now and another incompatible operation is probably in progress
-			return ravelerrors.NewFailedPrecondition(fmt.Sprintf("instance is in %s status", status))
+			return core.NewFailedPrecondition(fmt.Sprintf("instance is in %s status", status))
 		}
 	}
 	defer m.mutex.Unlock()
 
 	if !canTransition(m.state.Status(), core.MachineStatusStarting) {
-		return ravelerrors.NewFailedPrecondition(fmt.Sprintf("instance is in %s status", m.state.Status()))
+		return core.NewFailedPrecondition(fmt.Sprintf("instance is in %s status", m.state.Status()))
 	}
 
 	if m.isRunning {

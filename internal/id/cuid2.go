@@ -3,6 +3,7 @@ package id
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/nrednav/cuid2"
@@ -23,8 +24,8 @@ func Generate() string {
 }
 
 func RandomFloat() float64 {
-	random, _ := rand.Int(rand.Reader, big.NewInt(big.MaxPrec))
+	random, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	float, _ := random.Float64()
 
-	return float / big.MaxPrec
+	return float / math.MaxFloat64
 }

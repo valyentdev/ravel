@@ -149,6 +149,10 @@ func UnmarshalEventPayload(eventType InstanceEventType, payload []byte) (any, er
 		return unmarshalGeneric[InstanceStartedEventPayload](payload)
 	case InstanceStop:
 		return unmarshalGeneric[InstanceStopEventPayload](payload)
+	case InstanceDestroy:
+		return unmarshalGeneric[InstanceDestroyEventPayload](payload)
+	case InstanceDestroyed:
+		return unmarshalGeneric[InstanceDestroyedEventPayload](payload)
 	default:
 		return nil, errors.New("unknown event type")
 	}

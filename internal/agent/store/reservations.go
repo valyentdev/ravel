@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/valyentdev/ravel/internal/agent/structs"
 	"github.com/valyentdev/ravel/pkg/core"
-	"github.com/valyentdev/ravel/pkg/ravelerrors"
 )
 
 var reservationFields = []string{
@@ -22,8 +22,8 @@ var reservationFields = []string{
 var reservationColumns = allColumns(reservationFields)
 var reservationPlaceholders = placeholders(len(reservationFields))
 
-func scanReservation(row scannable) (core.Reservation, error) {
-	var reservation core.Reservation
+func scanReservation(row scannable) (structs.Reservation, error) {
+	var reservation structs.Reservation
 
 	err := row.Scan(
 		&reservation.Id,
@@ -37,18 +37,18 @@ func scanReservation(row scannable) (core.Reservation, error) {
 	return reservation, err
 }
 
-func (s *Queries) ListReservations(ctx context.Context) ([]core.Reservation, error) {
+func (s *Queries) ListReservations(ctx context.Context) ([]structs.Reservation, error) {
 	rows, err := s.db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM reservations", reservationColumns))
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return []core.Reservation{}, nil
+			return []structs.Reservation{}, nil
 		}
 		return nil, err
 	}
 
 	defer rows.Close()
 
-	reservations := []core.Reservation{}
+	reservations := []structs.Reservation{}
 
 	for rows.Next() {
 		reservation, err := scanReservation(rows)
@@ -62,18 +62,18 @@ func (s *Queries) ListReservations(ctx context.Context) ([]core.Reservation, err
 	return reservations, nil
 }
 
-func (s *Queries) ListDanglingReservations(ctx context.Context) ([]core.Reservation, error) {
+func (s *Queries) ListDanglingReservations(ctx context.Context) ([]structs.Reservation, error) {
 	rows, err := s.db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM reservations WHERE status = 'dangling'", reservationColumns))
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return []core.Reservation{}, nil
+			return []structs.Reservation{}, nil
 		}
 		return nil, err
 	}
 
 	defer rows.Close()
 
-	reservations := []core.Reservation{}
+	reservations := []structs.Reservation{}
 
 	for rows.Next() {
 		reservation, err := scanReservation(rows)
@@ -87,13 +87,13 @@ func (s *Queries) ListDanglingReservations(ctx context.Context) ([]core.Reservat
 	return reservations, nil
 }
 
-func (s *Queries) GetReservation(ctx context.Context, id string) (res core.Reservation, err error) {
+func (s *Queries) GetReservation(ctx context.Context, id string) (res structs.Reservation, err error) {
 	row := s.db.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM reservations WHERE id = ? LIMIT 1", reservationColumns), id)
 
 	res, err = scanReservation(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return res, ravelerrors.NewNotFound("reservation not found")
+			return res, core.NewNotFound("reservation not found")
 		}
 
 		return
@@ -107,7 +107,7 @@ type CreateReservationParams struct {
 	Memory    int64
 }
 
-func (s *Queries) CreateReservation(ctx context.Context, params core.Reservation) error {
+func (s *Queries) CreateReservation(ctx context.Context, params structs.Reservation) error {
 	_, err := s.db.ExecContext(
 		ctx,
 		fmt.Sprintf("INSERT INTO reservations (%s) VALUES (%s)", reservationColumns, reservationPlaceholders),
@@ -121,7 +121,7 @@ func (s *Queries) CreateReservation(ctx context.Context, params core.Reservation
 	return err
 }
 
-func (s *Queries) UpdateReservation(ctx context.Context, params core.Reservation) error {
+func (s *Queries) UpdateReservation(ctx context.Context, params structs.Reservation) error {
 	_, err := s.db.ExecContext(
 		ctx,
 		"UPDATE reservations SET cpus = ?, memory = ?, status = ?, local_ipv4_subnet = ?, created_at = ? WHERE id = ?",

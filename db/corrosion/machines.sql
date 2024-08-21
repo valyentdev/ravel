@@ -1,14 +1,23 @@
 CREATE TABLE machines (
     id text primary key not null default "",
-    node text not null default "",
     namespace text not null default "",
     fleet_id text not null default "",
     instance_id text not null default "",
+    machine_version text not null default "",
+    node text not null default "",
     region text not null default "",
     created_at integer not null default 0,
     updated_at integer not null default 0,
     destroyed boolean not null default FALSE
 );
+
+
+CREATE TABLE machine_versions (
+    id text primary key not null default "",
+    machine_id text not null default "",
+    config text not null default "{}"
+);
+
 
 CREATE index machines_node on machines(node);
 CREATE index machines_instance_id on machines(instance_id);

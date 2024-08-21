@@ -60,7 +60,9 @@ func (i *instanceState) Id() string {
 }
 
 func (i *instanceState) Instance() core.Instance {
-	return i.instance
+	instance := i.instance
+	instance.Status = i.Status()
+	return instance
 }
 
 func (i *instanceState) Status() core.MachineStatus {
@@ -191,11 +193,7 @@ func (s *instanceState) PushInstancePreparedEvent(ctx context.Context) (err erro
 	}
 	defer tx.Rollback()
 
-	if err = s.store.StoreInstanceEvent(ctx, event.ToAny()); err != nil {
-		return
-	}
-
-	if err = tx.MarkInstanceAsPrepared(ctx, s.instance.Id); err != nil {
+	if err = tx.StoreInstanceEvent(ctx, event.ToAny()); err != nil {
 		return
 	}
 
@@ -204,7 +202,6 @@ func (s *instanceState) PushInstancePreparedEvent(ctx context.Context) (err erro
 	}
 
 	s.lastEvent = event.ToAny()
-	s.instance.Prepared = true
 	s.triggerUpdate()
 
 	return nil
@@ -539,7 +536,6 @@ func (s *instanceState) PushInstanceDestroyedEvent(ctx context.Context) (err err
 	}
 
 	s.lastEvent = event.ToAny()
-	s.instance.Destroyed = true
 	s.triggerUpdate()
 
 	return nil

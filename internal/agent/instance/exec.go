@@ -4,15 +4,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/valyentdev/ravel/internal/agent/runtimes"
-	"github.com/valyentdev/ravel/pkg/ravelerrors"
+	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/runtimes"
 )
 
 const defaultTimeout = 10 * time.Second
 
 func (m *Manager) Exec(ctx context.Context, cmd []string, timeout time.Duration) (*runtimes.ExecResult, error) {
 	if !m.isRunning {
-		return nil, ravelerrors.ErrInstanceIsNotRunning
+		return nil, core.NewFailedPrecondition("instance is not running")
 	}
 
 	var realTimeout time.Duration

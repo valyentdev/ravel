@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/internal/agent/store"
+	"github.com/valyentdev/ravel/internal/agent/structs"
 	"github.com/valyentdev/ravel/internal/networking"
 	"github.com/valyentdev/ravel/pkg/core"
-	"github.com/valyentdev/ravel/pkg/ravelerrors"
 )
 
-var ErrNotEnoughResources = ravelerrors.NewResourcesExhausted("not enough resources")
+var ErrNotEnoughResources = core.NewResourcesExhausted("not enough resources")
 
 type ReservationService struct {
 	lock                 sync.Mutex
@@ -65,7 +65,7 @@ func (rs *ReservationService) Init(ctx context.Context) error {
 	return nil
 }
 
-func (rs *ReservationService) CreateReservation(ctx context.Context, id string, res core.Resources, status core.ReservationStatus) (reservation core.Reservation, before core.Resources, after core.Resources, err error) {
+func (rs *ReservationService) CreateReservation(ctx context.Context, id string, res core.Resources, status structs.ReservationStatus) (reservation structs.Reservation, before core.Resources, after core.Resources, err error) {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
 
@@ -82,7 +82,7 @@ func (rs *ReservationService) CreateReservation(ctx context.Context, id string, 
 		}
 	}()
 
-	alloc := core.Reservation{
+	alloc := structs.Reservation{
 		Id:              id,
 		Cpus:            res.Cpus,
 		Memory:          res.Memory,
@@ -119,7 +119,7 @@ func (rs *ReservationService) DeleteReservation(ctx context.Context, id string) 
 
 	reservation, err := rs.store.GetReservation(ctx, id)
 	if err != nil {
-		if ravelerrors.IsNotFound(err) {
+		if core.IsNotFound(err) {
 			return nil
 		}
 		return err
@@ -141,7 +141,7 @@ func (rs *ReservationService) DeleteReservation(ctx context.Context, id string) 
 	return nil
 }
 
-func (rs *ReservationService) ListReservations(ctx context.Context) ([]core.Reservation, error) {
+func (rs *ReservationService) ListReservations(ctx context.Context) ([]structs.Reservation, error) {
 	return rs.store.ListReservations(ctx)
 }
 
@@ -154,11 +154,11 @@ func (rs *ReservationService) ConfirmReservation(ctx context.Context, id string)
 		return err
 	}
 
-	if reservation.Status == core.ReservationStatusConfirmed {
+	if reservation.Status == structs.ReservationStatusConfirmed {
 		return nil
 	}
 
-	reservation.Status = core.ReservationStatusConfirmed
+	reservation.Status = structs.ReservationStatusConfirmed
 
 	if err := rs.store.UpdateReservation(ctx, reservation); err != nil {
 		return err

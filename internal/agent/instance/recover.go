@@ -25,6 +25,7 @@ func (m *Manager) recoverRunning(wasStarting bool) {
 	stillRunning := m.runtime.RecoverVM(context.Background(), m.state.Instance())
 
 	if stillRunning {
+		m.waitCh = make(chan struct{})
 		go m.run()
 		return
 	}

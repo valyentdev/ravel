@@ -16,5 +16,49 @@
     },
     "corrosion": {
         "url": "http://127.0.0.1:8081"
+    },
+    "postgres_url": "postgres://user:password@host:port/db",
+    "machine_templates": {
+        "eco": {
+            "frequency_by_cpu": 250,
+            "combinations": [
+                {
+                    "vcpus": 1,
+                    "memory_configs": [
+                        256,
+                        512,
+                        1024,
+                        2048
+                    ]
+                },
+                {
+                    "vcpus": 2,
+                    "memory_configs": [
+                        512,
+                        1024,
+                        2048,
+                        4096
+                    ]
+                },
+                {
+                    "vcpus": 4,
+                    "memory_configs": [
+                        1024,
+                        2048,
+                        4096,
+                        8192
+                    ]
+                },
+                {
+                    "vcpus": 8,
+                    "memory": [
+                        2048,
+                        4096,
+                        8192,
+                        16384
+                    ]
+                }
+            ]
+        }
     }
 }
