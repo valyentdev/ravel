@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/internal/networking"
 )
 
-func CleanupMachineTapDevice(instanceId string, machine core.Instance) error {
+func CleanupInstanceTapDevice(instanceId string, config networking.LocalConfig) error {
 	errs := []error{}
 
-	err := cleanupTapDeviceConfig(TapName(instanceId), machine)
+	err := cleanupTapDeviceConfig(TapName(instanceId), config)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("failed to cleanup tap device config: %w", err))
 	}

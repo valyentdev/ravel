@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/valyentdev/corroclient"
@@ -15,20 +16,23 @@ type Instance struct {
 	MachineId      string             `json:"machine_id"`
 	MachineVersion string             `json:"machine_version"`
 	Status         core.MachineStatus `json:"status"`
+	LocalIPV4      string             `json:"local_ipv4"`
 	CreatedAt      time.Time          `json:"created_at"`
 	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
 func (c *ClusterState) UpsertInstance(ctx context.Context, i Instance) error {
+	slog.Info("upserting instance", "id", i.Id, "ip", i.LocalIPV4)
 	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{
 		{
-			Query: `INSERT INTO instances (id, node, machine_id, machine_version, status, created_at, updated_at)
-					VALUES ($1, $2, $3, $4, $5, $6, $7)
+			Query: `INSERT INTO instances (id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 					ON CONFLICT (id, machine_id) DO UPDATE SET
 						status = $5,
-						updated_at = $7`,
+						updated_at = $7,
+						local_ipv4 = $8`,
 
-			Params: []any{i.Id, i.Node, i.MachineId, i.MachineVersion, i.Status, i.CreatedAt.Unix(), i.UpdatedAt.Unix()},
+			Params: []any{i.Id, i.Node, i.MachineId, i.MachineVersion, i.Status, i.CreatedAt.Unix(), i.UpdatedAt.Unix(), i.LocalIPV4},
 		},
 	})
 	if err != nil {
@@ -48,7 +52,7 @@ func (c *ClusterState) UpsertInstance(ctx context.Context, i Instance) error {
 
 func (c *ClusterState) GetInstance(ctx context.Context, id string) (*Instance, error) {
 	row, err := c.corroclient.QueryRow(ctx, corroclient.Statement{
-		Query:  `SELECT id, node, machine_id, machine_version, status, created_at, updated_at FROM instances WHERE id = $1`,
+		Query:  `SELECT id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4 FROM instances WHERE id = $1`,
 		Params: []interface{}{id},
 	})
 	if err != nil {
@@ -62,7 +66,7 @@ func (c *ClusterState) GetInstance(ctx context.Context, id string) (*Instance, e
 	var createdAt int64
 	var updatedAt int64
 
-	err = row.Scan(&i.Id, &i.Node, &i.MachineId, &i.MachineVersion, &i.Status, &createdAt, &updatedAt)
+	err = row.Scan(&i.Id, &i.Node, &i.MachineId, &i.MachineVersion, &i.Status, &createdAt, &updatedAt, &i.LocalIPV4)
 	if err != nil {
 		return nil, err
 	}

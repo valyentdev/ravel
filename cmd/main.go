@@ -1,4 +1,0 @@
-package cmd
-
-func main() {
-}

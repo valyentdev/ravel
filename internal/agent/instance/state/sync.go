@@ -20,6 +20,7 @@ func (i *instanceState) sync() {
 			Status:         event.Status,
 			CreatedAt:      instance.CreatedAt,
 			UpdatedAt:      event.Timestamp,
+			LocalIPV4:      instance.LocalIPV4,
 		})
 
 		if err != nil {

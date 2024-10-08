@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/valyentdev/ravel/pkg/core"
@@ -9,13 +12,13 @@ import (
 )
 
 type AgentClient struct {
-	client *httpclient.Client
+	baseUrl    string
+	httpClient *http.Client
+	client     *httpclient.Client
 }
 
-var _ core.Agent = (*AgentClient)(nil)
-
 func NewAgentClient(c *http.Client, baseUrl string) *AgentClient {
-	return &AgentClient{client: httpclient.NewClient(baseUrl, c)}
+	return &AgentClient{baseUrl: baseUrl, client: httpclient.NewClient(baseUrl, c), httpClient: c}
 }
 
 func (a *AgentClient) CreateInstance(ctx context.Context, options core.CreateInstancePayload) (*core.Instance, error) {
@@ -86,4 +89,74 @@ func (a *AgentClient) StopInstance(ctx context.Context, id string, opt *core.Sto
 	}
 
 	return nil
+}
+
+func (a *AgentClient) GetInstanceLogs(ctx context.Context, id string, follow bool) (<-chan *core.LogEntry, error) {
+	path := "/instances/" + id + "/logs"
+
+	if follow {
+		path += "?follow"
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.baseUrl+path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := a.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, core.NewUnknown("failed to get instance logs")
+	}
+
+	logs := make(chan *core.LogEntry)
+
+	go func() {
+		defer close(logs)
+		defer resp.Body.Close()
+		reader := bufio.NewReader(resp.Body)
+		for {
+			var log core.LogEntry
+			line, _, err := reader.ReadLine()
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+				return
+			}
+
+			if err := json.Unmarshal(line, &log); err != nil {
+				return
+			}
+			logs <- &log
+		}
+	}()
+	return logs, nil
+}
+
+func (a *AgentClient) GetInstanceLogsRaw(ctx context.Context, id string, follow bool) (io.ReadCloser, error) {
+	path := "/instances/" + id + "/logs"
+
+	if follow {
+		path += "?follow"
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.baseUrl+path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := a.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, core.NewUnknown("failed to get instance logs")
+	}
+
+	return resp.Body, nil
 }

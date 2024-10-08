@@ -7,12 +7,10 @@ import (
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/valyentdev/ravel/internal/networking"
-	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/vishvananda/netlink"
 )
 
-func configureTapDevice(tap string, machine core.Instance) error {
-	config := networking.LocalConfig{}
+func configureTapDevice(tap string, config networking.LocalConfig) error {
 	link, err := netlink.LinkByName(tap)
 	if err != nil {
 		return err
@@ -51,7 +49,7 @@ func configureTapDevice(tap string, machine core.Instance) error {
 	return nil
 }
 
-func cleanupTapDeviceConfig(tap string, machine core.Instance) error {
+func cleanupTapDeviceConfig(tap string, config networking.LocalConfig) error {
 	errs := []error{}
 
 	ipt, err := iptables.New()
@@ -68,7 +66,6 @@ func cleanupTapDeviceConfig(tap string, machine core.Instance) error {
 		errs = append(errs, fmt.Errorf("failed to delete iptables rule for tap device: %w", err))
 	}
 
-	config := networking.LocalConfig{}
 	if err := ipt.DeleteIfExists("nat", "POSTROUTING", "-s", config.Network.String(), "-o", defaultInterface, "-j", "MASQUERADE"); err != nil {
 		errs = append(errs, fmt.Errorf("failed to delete iptables rule for tap device: %w", err))
 	}

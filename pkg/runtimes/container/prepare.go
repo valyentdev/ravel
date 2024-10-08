@@ -13,11 +13,12 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/valyentdev/ravel/pkg/helper/cloudhypervisor"
+	"github.com/valyentdev/ravel/pkg/runtimes"
 	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit"
 	"golang.org/x/sys/unix"
 )
 
-func (r *Runtime) PrepareInstance(ctx context.Context, instance core.Instance) (err error, fatal bool) {
+func (r *Runtime) PrepareInstance(ctx context.Context, instance core.Instance, networkConfig runtimes.NetworkConfig) (err error, fatal bool) {
 	config := instance.Config
 
 	var auth string
@@ -38,7 +39,7 @@ func (r *Runtime) PrepareInstance(ctx context.Context, instance core.Instance) (
 		return
 	}
 
-	err = r.prepareInitRD(instance, v1Image.Config)
+	err = r.prepareInitRD(instance, v1Image.Config, networkConfig)
 	if err != nil {
 		fatal = true
 		return
@@ -49,7 +50,7 @@ func (r *Runtime) PrepareInstance(ctx context.Context, instance core.Instance) (
 	return
 }
 
-func (r *Runtime) prepareInitRD(instance core.Instance, image v1.ImageConfig) error {
+func (r *Runtime) prepareInitRD(instance core.Instance, image v1.ImageConfig, netConfig runtimes.NetworkConfig) error {
 	init, err := os.Open(r.config.InitBinary)
 	if err != nil {
 		return fmt.Errorf("failed to read init binary: %w", err)
@@ -72,7 +73,7 @@ func (r *Runtime) prepareInitRD(instance core.Instance, image v1.ImageConfig) er
 
 	w := cpio.Newc.Writer(gz)
 
-	config := getInitConfig(instance, image)
+	config := getInitConfig(instance, image, netConfig)
 	configJSON, err := json.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal init config: %w", err)
@@ -102,7 +103,7 @@ func (r *Runtime) prepareInitRD(instance core.Instance, image v1.ImageConfig) er
 	return nil
 }
 
-func getInitConfig(instance core.Instance, image v1.ImageConfig) vminit.Config {
+func getInitConfig(instance core.Instance, image v1.ImageConfig, netConfig runtimes.NetworkConfig) vminit.Config {
 	config := instance.Config
 	return vminit.Config{
 		ImageConfig: &vminit.ImageConfig{
@@ -120,6 +121,11 @@ func getInitConfig(instance core.Instance, image v1.ImageConfig) vminit.Config {
 			Nameservers: []string{"8.8.8.8"},
 		},
 		ExtraEnv: config.Workload.Env,
-		Network:  vminit.NetworkConfig{},
+		Network: vminit.NetworkConfig{
+			IPConfigs: []vminit.IPConfig{
+				netConfig.LocalConfig.InitConfig(),
+			},
+			DefaultGateway: netConfig.LocalConfig.InitConfig().Gateway,
+		},
 	}
 }

@@ -17,6 +17,7 @@ func NewInstanceCmd() *cobra.Command {
 	instanceCmd.AddCommand(newDestroyInstanceCmd())
 	instanceCmd.AddCommand(newStartInstanceCmd())
 	instanceCmd.AddCommand(newStopCmd())
+	instanceCmd.AddCommand(newGetInstanceLogsCmd())
 
 	return instanceCmd
 }

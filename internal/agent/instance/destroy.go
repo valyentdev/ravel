@@ -13,7 +13,6 @@ func (m *Manager) Destroy(ctx context.Context, force bool) error {
 	if m.state.Status() == core.MachineStatusDestroyed {
 		return nil
 	}
-
 	if m.isRunning && !force {
 		return core.NewFailedPrecondition("instance is running")
 	}

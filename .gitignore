@@ -9,3 +9,4 @@ ravel.json
 nats.creds
 /tmp
 .DS_Store
+vmlinux.bin

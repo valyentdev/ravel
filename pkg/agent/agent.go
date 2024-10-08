@@ -48,8 +48,13 @@ func New(config config.RavelConfig) (*Agent, error) {
 		return nil, fmt.Errorf("failed to initialize container runtime: %w", err)
 	}
 
+	natsOptions := []nats.Option{}
+	if config.Nats.CredFile != "" {
+		natsOptions = append(natsOptions, nats.UserCredentials(config.Nats.CredFile, config.Nats.CredFile))
+	}
+
 	slog.Info("Initializing nats")
-	nc, err := nats.Connect(config.Nats.Url)
+	nc, err := nats.Connect(config.Nats.Url, natsOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +88,21 @@ func New(config config.RavelConfig) (*Agent, error) {
 	managers := map[string]*instance.Manager{}
 	slog.Info("Recovering instances")
 	for _, i := range instances {
-		slog.Debug("Recovering instance", "instance", i.Id)
 		lastEvent, err := store.GetLastInstanceEvent(context.Background(), i.Id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get last event for instance %s: %w", i.Id, err)
 		}
+
+		reservation, err := reservations.GetReservation(context.Background(), i.MachineId)
+		if err != nil {
+			slog.Error("failed to get reservation", "instanceId", i.Id, "machineId", i.MachineId, "error", err, "reservationId", i.MachineId)
+			continue
+		}
+
+		i.LocalIPV4 = reservation.LocalIPV4Subnet.LocalConfig().MachineIP.String()
+
 		state := state.NewInstanceState(store, i, &lastEvent, config.NodeId, cs)
-		manager := instance.NewInstanceManager(state, containerRuntime)
+		manager := instance.NewInstanceManager(state, containerRuntime, reservation)
 		manager.Recover()
 		managers[i.Id] = manager
 	}

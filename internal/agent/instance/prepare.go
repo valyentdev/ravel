@@ -5,7 +5,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/valyentdev/ravel/internal/networking"
 	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/runtimes"
 )
 
 const MAX_RETRIES = 3
@@ -32,7 +34,9 @@ func (m *Manager) Prepare() error {
 
 		retries++
 
-		err, fatal = m.runtime.PrepareInstance(ctx, m.state.Instance())
+		err, fatal = m.runtime.PrepareInstance(ctx, m.state.Instance(), runtimes.NetworkConfig{
+			LocalConfig: networking.LocalIPV4Subnet(m.reservation.LocalIPV4Subnet).LocalConfig(),
+		})
 		if err == nil {
 			err = m.state.PushInstancePreparedEvent(ctx)
 			if err != nil {

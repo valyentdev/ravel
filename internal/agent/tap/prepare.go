@@ -1,9 +1,12 @@
 package tap
 
-import "github.com/valyentdev/ravel/pkg/core"
+import (
+	"github.com/valyentdev/ravel/internal/networking"
+	"github.com/valyentdev/ravel/pkg/core"
+)
 
-func PrepareMachineTapDevice(instanceId string, machine core.Instance) (string, error) {
-	tapName := TapName(instanceId)
+func PrepareInstanceTapDevice(instance core.Instance, config networking.LocalConfig) (string, error) {
+	tapName := TapName(instance.Id)
 	err := createTap(tapName)
 	if err != nil {
 		return "", err
@@ -14,7 +17,7 @@ func PrepareMachineTapDevice(instanceId string, machine core.Instance) (string, 
 		}
 	}()
 
-	if err := configureTapDevice(tapName, machine); err != nil {
+	if err := configureTapDevice(tapName, config); err != nil {
 		return "", err
 	}
 

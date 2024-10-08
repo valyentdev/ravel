@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"log"
+	"log/slog"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -33,6 +34,7 @@ func newStartApiServerCmd() *cobra.Command {
 }
 
 func startApiServer(opt startApiServerOptions) error {
+	slog.Info("Starting API server")
 	err := godotenv.Load(opt.env)
 	if err != nil {
 		log.Fatal("Error loading .env file")

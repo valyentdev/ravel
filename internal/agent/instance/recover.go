@@ -22,11 +22,11 @@ func (m *Manager) Recover() {
 
 func (m *Manager) recoverRunning(wasStarting bool) {
 	slog.Info("recovering running instance", "instance_id", m.state.Id())
-	stillRunning := m.runtime.RecoverVM(context.Background(), m.state.Instance())
+	h, stillRunning := m.runtime.RecoverVM(context.Background(), m.state.Instance())
 
 	if stillRunning {
 		m.waitCh = make(chan struct{})
-		go m.run()
+		go m.run(h)
 		return
 	}
 

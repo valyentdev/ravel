@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/valyentdev/ravel/internal/agent/tap"
+	"github.com/valyentdev/ravel/internal/networking"
 	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/runtimes"
 )
 
 func (m *Manager) Start(ctx context.Context) error {
@@ -38,7 +41,17 @@ func (m *Manager) Start(ctx context.Context) error {
 		return err
 	}
 
-	err = m.runtime.StartVM(context.Background(), m.state.Instance())
+	netConfig := networking.LocalIPV4Subnet(m.reservation.LocalIPV4Subnet).LocalConfig()
+
+	_, err = tap.PrepareInstanceTapDevice(m.Instance(), netConfig)
+	if err != nil {
+		if err := m.state.PushInstanceStartFailedEvent(ctx, err.Error()); err != nil {
+			slog.Error("failed to push instance failed event", "error", err)
+		}
+		return err
+	}
+
+	h, err := m.runtime.StartVM(context.Background(), m.state.Instance())
 	if err != nil {
 		if err := m.state.PushInstanceStartFailedEvent(ctx, err.Error()); err != nil {
 			slog.Error("failed to push instance failed event", "error", err)
@@ -54,12 +67,21 @@ func (m *Manager) Start(ctx context.Context) error {
 	m.isRunning = true
 	m.waitCh = make(chan struct{})
 
-	go m.run()
+	go m.run(h)
 
 	return nil
 }
 
-func (m *Manager) run() {
+func (m *Manager) run(h runtimes.Handle) {
+	if h.Console != "" {
+		err := m.logger.Start(h.Console)
+		if err != nil {
+			slog.Error("failed to start logger", "error", err)
+		}
+
+		defer m.logger.Stop()
+	}
+
 	result, err := m.runtime.WaitVM(context.Background(), m.state.Instance().Id)
 	if err != nil {
 		slog.Error("failed to wait vm", "error", err)
@@ -74,6 +96,11 @@ func (m *Manager) run() {
 	err = m.state.PushInstanceExitedEvent(context.Background(), *result)
 	if err != nil {
 		slog.Error("failed to push instance exited event", "error", err)
+	}
+
+	err = tap.CleanupInstanceTapDevice(m.Instance().Id, networking.LocalIPV4Subnet(m.reservation.LocalIPV4Subnet).LocalConfig())
+	if err != nil {
+		slog.Error("failed to cleanup tap device", "error", err)
 	}
 
 	m.isRunning = false

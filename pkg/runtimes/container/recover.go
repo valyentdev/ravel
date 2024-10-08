@@ -4,14 +4,18 @@ import (
 	"context"
 
 	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/runtimes"
 )
 
-func (r *Runtime) RecoverVM(ctx context.Context, instance core.Instance) bool {
+func (r *Runtime) RecoverVM(ctx context.Context, instance core.Instance) (runtimes.Handle, bool) {
+	h := runtimes.Handle{}
 	instanceId := instance.Id
 	runningInstance, err := recoverRunningVM(instance)
 	if err != nil {
-		return false
+		return h, false
 	}
+
+	h.Console = runningInstance.console
 
 	r.runningVMs[instanceId] = runningInstance
 
@@ -19,5 +23,5 @@ func (r *Runtime) RecoverVM(ctx context.Context, instance core.Instance) bool {
 		runningInstance.Run()
 	}()
 
-	return true
+	return h, true
 }

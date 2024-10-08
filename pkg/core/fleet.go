@@ -1,6 +1,8 @@
 package core
 
-import "time"
+import (
+	"time"
+)
 
 type Fleet struct {
 	Id        string    `json:"id"`

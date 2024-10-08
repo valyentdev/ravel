@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/tmaxmax/go-sse"
 	"github.com/valyentdev/ravel/pkg/core"
 )
 
@@ -142,4 +143,17 @@ func (c *Client) Delete(ctx context.Context, path string, opts ...ReqOpt) error 
 	}
 
 	return c.do(req, nil)
+}
+
+func (c *Client) SSE(ctx context.Context, method string, path string, opts ...ReqOpt) (*sse.Connection, error) {
+	req, err := buildHttpRequest(ctx, method, c.baseURL+path, nil, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	client := sse.Client{
+		HTTPClient: c.client,
+	}
+
+	return client.NewConnection(req), nil
 }

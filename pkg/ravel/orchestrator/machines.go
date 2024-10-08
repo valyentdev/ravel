@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/valyentdev/ravel/pkg/core"
@@ -104,6 +105,15 @@ func (m *Orchestrator) WaitMachine(
 		}
 	}
 
+}
+
+func (m *Orchestrator) GetMachineLogsRaw(ctx context.Context, machine core.Machine, follow bool) (io.ReadCloser, error) {
+	agentClient, err := m.getAgentClient(machine.Node)
+	if err != nil {
+		return nil, err
+	}
+
+	return agentClient.GetInstanceLogsRaw(ctx, machine.InstanceId, follow)
 }
 
 func (m *Orchestrator) getAgentClient(node string) (*api.AgentClient, error) {

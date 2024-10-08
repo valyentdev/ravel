@@ -6,6 +6,7 @@ CREATE TABLE instances (
     status text not null default '',
     created_at integer not null default 0,
     updated_at integer not null default 0,
+    local_ipv4 text not null default '',
     primary key (id, machine_id)
 );
 

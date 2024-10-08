@@ -26,6 +26,7 @@ type Instance struct {
 	Config         InstanceConfig `json:"config"`
 	CreatedAt      time.Time      `json:"created_at"`
 	Status         InstanceStatus `json:"status"`
+	LocalIPV4      string         `json:"local_ipv4"`
 }
 
 type InstanceConfig struct {

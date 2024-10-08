@@ -1,8 +1,11 @@
 package endpoints
 
 import (
+	"bufio"
 	"context"
+	"net/http"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/valyentdev/ravel/pkg/ravel"
 )
@@ -142,4 +145,43 @@ func (e *Endpoints) stopMachine(ctx context.Context, req *StopMachineRequest) (*
 	}
 
 	return nil, nil
+}
+
+type GetMachineLogsRequest struct {
+	MachineResolver
+	Follow bool `query:"follow"`
+}
+
+type GetMachineLogsResponse struct {
+	Body string
+}
+
+func (e *Endpoints) getMachineLogs(ctx context.Context, req *GetMachineLogsRequest) (*huma.StreamResponse, error) {
+	logs, err := e.ravel.GetMachineLogsRaw(ctx, req.Namespace, req.Fleet, req.MachineId, req.Follow)
+	if err != nil {
+		e.log("Failed to get machine logs", err)
+		return nil, err
+	}
+
+	return &huma.StreamResponse{
+		Body: func(ctx huma.Context) {
+			ctx.AppendHeader("Content-Type", "application/x-ndjson")
+			ctx.SetStatus(200)
+
+			bw := ctx.BodyWriter()
+			rw := bw.(http.ResponseWriter)
+			rc := http.NewResponseController(rw)
+			buff := bufio.NewReader(logs)
+			for {
+				line, err := buff.ReadBytes('\n')
+				if err != nil {
+					break
+				}
+
+				rw.Write(line)
+				rc.Flush()
+			}
+
+		},
+	}, nil
 }

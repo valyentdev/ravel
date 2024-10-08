@@ -26,6 +26,31 @@ CREATE TABLE public.fleets (
 
 
 --
+-- Name: gateways; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gateways (
+    id text NOT NULL,
+    name text NOT NULL,
+    fleet_id text NOT NULL,
+    namespace text NOT NULL,
+    target_port integer NOT NULL,
+    protocol text NOT NULL
+);
+
+
+--
+-- Name: machine_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.machine_versions (
+    id text NOT NULL,
+    machine_id text NOT NULL,
+    config jsonb NOT NULL
+);
+
+
+--
 -- Name: machines; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -38,7 +63,8 @@ CREATE TABLE public.machines (
     region text NOT NULL,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    destroyed boolean DEFAULT false NOT NULL
+    destroyed boolean DEFAULT false NOT NULL,
+    machine_version text NOT NULL
 );
 
 
@@ -67,6 +93,22 @@ CREATE TABLE public.schema_migrations (
 
 ALTER TABLE ONLY public.fleets
     ADD CONSTRAINT fleets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gateways gateways_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gateways
+    ADD CONSTRAINT gateways_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: machine_versions machine_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.machine_versions
+    ADD CONSTRAINT machine_versions_pkey PRIMARY KEY (id);
 
 
 --
@@ -116,11 +158,34 @@ CREATE INDEX fleets_namespace_name_idx ON public.fleets USING btree (namespace, 
 
 
 --
+-- Name: gateways_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX gateways_name_idx ON public.gateways USING btree (namespace, name);
+
+
+--
 -- Name: fleets fleets_namespace_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.fleets
     ADD CONSTRAINT fleets_namespace_fkey FOREIGN KEY (namespace) REFERENCES public.namespaces(name);
+
+
+--
+-- Name: gateways gateways_fleet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gateways
+    ADD CONSTRAINT gateways_fleet_id_fkey FOREIGN KEY (fleet_id) REFERENCES public.fleets(id);
+
+
+--
+-- Name: gateways gateways_namespace_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gateways
+    ADD CONSTRAINT gateways_namespace_fkey FOREIGN KEY (namespace) REFERENCES public.namespaces(name);
 
 
 --
@@ -149,4 +214,5 @@ ALTER TABLE ONLY public.machines
 --
 
 INSERT INTO public.schema_migrations (version) VALUES
-    ('20240809111759');
+    ('20240809111759'),
+    ('20241005214512');

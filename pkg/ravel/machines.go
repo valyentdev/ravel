@@ -3,6 +3,7 @@ package ravel
 import (
 	"context"
 	"crypto/rand"
+	"io"
 	"log/slog"
 	"time"
 
@@ -39,6 +40,7 @@ type CreateMachineOptions struct {
 
 func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet string, createOptions CreateMachineOptions) (*Machine, error) {
 	versionId := ulid.MustNew(ulid.Now(), rand.Reader)
+	slog.Info("Creating machine version", "version_id", versionId.String())
 	f, err := r.GetFleet(ctx, namespace, fleet)
 	if err != nil {
 		return nil, err
@@ -183,4 +185,13 @@ func (r *Ravel) ListMachineVersions(ctx context.Context, ns, fleet, machineId st
 		return nil, err
 	}
 	return r.db.ListMachineVersions(ctx, machineId)
+}
+
+func (r *Ravel) GetMachineLogsRaw(ctx context.Context, ns, fleet, machineId string, follow bool) (io.ReadCloser, error) {
+	m, err := r.getMachine(ctx, ns, fleet, machineId)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.o.GetMachineLogsRaw(ctx, m, follow)
 }

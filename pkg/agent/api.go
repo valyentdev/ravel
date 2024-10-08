@@ -2,9 +2,11 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -175,6 +177,116 @@ func (s *AgentServer) exec(ctx context.Context, req *ExecRequest) (*ExecResponse
 	return &ExecResponse{Body: res}, nil
 }
 
+type GetInstanceLogsRequest struct {
+	Id     string `path:"id"`
+	Follow bool   `query:"follow"`
+}
+
+type GetInstanceLogsResponse struct {
+	Body []byte
+}
+
+func (s *AgentServer) getInstanceLogs(ctx context.Context, req *GetInstanceLogsRequest) (*huma.StreamResponse, error) {
+	var err error
+	var logsChan <-chan []*core.LogEntry
+	var logs []*core.LogEntry
+	if req.Follow {
+		logsChan, err = s.agent.SubscribeToInstanceLogs(ctx, req.Id)
+	} else {
+		logs, err = s.agent.GetInstanceLogs(ctx, req.Id)
+	}
+
+	if err != nil {
+		s.log("Failed to get instance logs", err)
+		return nil, err
+	}
+
+	slog.Info("Getting instance logs", "id", req.Id, "follow", req.Follow)
+
+	return &huma.StreamResponse{
+		Body: func(ctx huma.Context) {
+			ctx.SetHeader("Content-Type", "application/x-ndjson")
+			ctx.SetStatus(http.StatusOK)
+
+			if req.Follow {
+				streamLogs(ctx, logsChan)
+				return
+			}
+
+			bw := ctx.BodyWriter()
+			rw := bw.(http.ResponseWriter)
+			rc := http.NewResponseController(rw)
+
+			err := rc.SetWriteDeadline(time.Now().Add(3 * time.Second))
+
+			if err != nil {
+				return
+			}
+
+			for _, entry := range logs {
+				slog.Info("Writing log entry", "entry", entry)
+				bytes, err := json.Marshal(entry)
+				if err != nil {
+					return
+				}
+
+				_, err = bw.Write(bytes)
+				if err != nil {
+					return
+				}
+				_, err = bw.Write([]byte("\n"))
+
+				if err != nil {
+					return
+				}
+			}
+
+		},
+	}, nil
+}
+
+func streamLogs(ctx huma.Context, logsChan <-chan []*core.LogEntry) {
+	bw := ctx.BodyWriter()
+	rw := bw.(http.ResponseWriter)
+	rc := http.NewResponseController(rw)
+
+	err := rc.SetWriteDeadline(time.Now().Add(30 * time.Second))
+	if err != nil {
+		slog.Error("Failed to set write deadline", "error", err)
+		return
+	}
+	err = rc.Flush()
+	if err != nil {
+		slog.Error("Failed to flush response", "error", err)
+		return
+	}
+
+	for log := range logsChan {
+		for _, entry := range log {
+			bytes, err := json.Marshal(entry)
+			if err != nil {
+				return
+			}
+
+			_, err = rw.Write(bytes)
+			if err != nil {
+				return
+			}
+			_, err = rw.Write([]byte("\n"))
+
+			if err != nil {
+				return
+			}
+
+			err = rc.Flush()
+			if err != nil {
+				return
+			}
+
+		}
+	}
+}
+
 func (s AgentServer) registerEndpoints(mux humago.Mux) {
 	humaConfig := utils.GetHumaConfig()
 	api := humago.New(mux, humaConfig)
@@ -220,4 +332,11 @@ func (s AgentServer) registerEndpoints(mux humago.Mux) {
 		Path:        "/instances/{id}/exec",
 		Method:      http.MethodPost,
 	}, s.exec)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "getInstanceLogs",
+		Path:        "/instances/{id}/logs",
+		Method:      http.MethodGet,
+	}, s.getInstanceLogs)
+
 }

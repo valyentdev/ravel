@@ -40,4 +40,6 @@ type Agent interface {
 	StartInstance(ctx context.Context, id string) error
 	StopInstance(ctx context.Context, id string, opt *StopConfig) error
 	InstanceExec(ctx context.Context, id string, opt InstanceExecOptions) (*ExecResult, error)
+	SubscribeToInstanceLogs(ctx context.Context, id string) (<-chan []*LogEntry, error)
+	GetInstanceLogs(ctx context.Context, id string) ([]*LogEntry, error)
 }

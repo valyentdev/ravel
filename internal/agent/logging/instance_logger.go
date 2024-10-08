@@ -1,109 +1,133 @@
 package logging
 
 import (
-	"context"
-	"fmt"
+	"bufio"
+	"io"
 	"log/slog"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/containerd/console"
+	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/helper/broadcaster"
 )
 
-type LogSubscriber struct {
-	ctx context.Context
-	ch  chan []byte
-}
+type LogSubscriber = *broadcaster.Subscriber[[]*core.LogEntry]
 
+// For now, we keep logs in memory but this is not suitable for production
 type InstanceLogger struct {
-	bufSize    int
-	maxLogSize int
+	instanceId string
+
+	maxEntries int
 	truncateBy int
 
-	pts         *os.File
-	log         []byte
-	subscribers []LogSubscriber
+	stop chan struct{}
+
+	log   []*core.LogEntry
+	bc    *broadcaster.Broadcaster[[]*core.LogEntry]
+	mutex sync.RWMutex
 }
 
-func NewMachineLogger(pts string) (*InstanceLogger, error) {
-	ptsFile, err := os.Open(pts)
-	if err != nil {
-		return nil, err
+func NewInstanceLogger(instanceId string) *InstanceLogger {
+	il := &InstanceLogger{
+		maxEntries: 100,
+		truncateBy: 20,
+		stop:       make(chan struct{}),
+		instanceId: instanceId,
+		log:        []*core.LogEntry{},
 	}
 
-	return &InstanceLogger{
-		pts:         ptsFile,
-		bufSize:     256,
-		maxLogSize:  10 * 1024, // 10KB
-		truncateBy:  2 * 1024,  // 2KB
-		subscribers: []LogSubscriber{},
-	}, nil
+	bc := broadcaster.NewBroadcaster[[]*core.LogEntry](broadcaster.BroadcasterOpts[[]*core.LogEntry]{
+		SubsBufferSize: 5,
+		GetReplay: func() [][]*core.LogEntry {
+			return [][]*core.LogEntry{il.GetLog()}
+		},
+	})
+
+	il.bc = bc
+
+	return il
 }
 
-func (m *InstanceLogger) write(buf []byte) {
-	if len(m.log) > m.maxLogSize {
-		slog.Debug("truncating logs")
-		m.log = m.log[m.truncateBy:]
-	}
-
-	m.log = append(m.log, buf...)
-}
-
-func (m *InstanceLogger) broadcast(buf []byte) {
-	for i, sub := range m.subscribers {
-		select {
-		case <-sub.ctx.Done():
-			slog.Debug("removing subscriber")
-			close(sub.ch)
-			m.subscribers = append(m.subscribers[:i], m.subscribers[i+1:]...)
-		default:
-			sub.ch <- buf
-		}
-	}
-}
-
-func (m *InstanceLogger) Start(ctx context.Context) error {
-	defer m.pts.Close()
-
-	pty, err := console.ConsoleFromFile(m.pts)
+func (m *InstanceLogger) Start(path string) error {
+	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 
+	m.stop = make(chan struct{})
+
+	pty, err := console.ConsoleFromFile(file)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		m.bc.Start()
+		m.startReadingPty(pty)
+		file.Close()
+		pty.Close()
+		m.bc.Stop()
+	}()
+
+	return nil
+}
+
+func (m *InstanceLogger) startReadingPty(pty console.Console) {
 	for {
 		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			buf := make([]byte, 1024)
-			n, err := pty.Read(buf)
-			fmt.Print(string(buf[:n]))
-			if err != nil {
-				return err
-			}
-			m.write(buf[:n])
-			m.broadcast(buf[:n])
-
-		}
-	}
-
-}
-
-func (m *InstanceLogger) Subscribe(ctx context.Context, ch chan []byte) {
-	sub := LogSubscriber{ctx: ctx, ch: ch}
-	m.subscribers = append(m.subscribers, sub)
-	ch <- m.log
-
-	<-ctx.Done()
-	for i, sub := range m.subscribers {
-		if sub.ctx == ctx {
-			m.subscribers = append(m.subscribers[:i], m.subscribers[i+1:]...)
-			close(sub.ch)
+		case <-m.stop:
 			return
+		default:
+			reader := bufio.NewReaderSize(pty, 4096)
+
+			line, _, err := reader.ReadLine()
+			if err != nil {
+				if err == io.EOF {
+					m.Stop()
+					return
+				}
+				slog.Warn("failed to read from pty", "error", err)
+				return
+			}
+
+			m.mutex.Lock()
+			log := &core.LogEntry{
+				Timestamp:  time.Now().Unix(),
+				InstanceId: m.instanceId,
+				Source:     "instance",
+				Level:      "info",
+				Message:    string(line),
+			}
+			m.appendOrResize(log)
+			m.mutex.Unlock()
+			m.bc.Publish([]*core.LogEntry{log})
 		}
 	}
-
 }
 
-func (m *InstanceLogger) GetLog() []byte {
-	return m.log
+func (m *InstanceLogger) appendOrResize(log *core.LogEntry) {
+	if len(m.log) < m.maxEntries {
+		m.log = append(m.log, log)
+		return
+	}
+
+	m.log = append(m.log[m.truncateBy:], log)
+}
+
+func (m *InstanceLogger) Stop() {
+	close(m.stop)
+}
+
+func (m *InstanceLogger) GetLog() []*core.LogEntry {
+	m.mutex.RLock()
+	logs := make([]*core.LogEntry, len(m.log))
+	copy(logs, m.log)
+	m.mutex.RUnlock()
+	return logs
+}
+
+func (m *InstanceLogger) Subscribe() LogSubscriber {
+	return m.bc.Subscribe()
 }

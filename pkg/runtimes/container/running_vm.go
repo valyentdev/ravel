@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/valyentdev/ravel/internal/agent/logging"
 	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/valyentdev/ravel/pkg/helper/cloudhypervisor"
+	"github.com/valyentdev/ravel/pkg/runtimes"
 	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit"
 	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -20,10 +20,9 @@ type runningVM struct {
 	instance      core.Instance
 	vmConfig      cloudhypervisor.VmConfig
 	vmm           *cloudhypervisor.VMM
-	serial        string
+	console       string
 	stopRequested bool
 	waitChan      chan struct{}
-	logger        *logging.InstanceLogger
 }
 
 func (i *runningVM) Id() string {
@@ -49,10 +48,11 @@ func NewRunningVM(instance core.Instance, vmConfig cloudhypervisor.VmConfig) (*r
 	}, nil
 }
 
-func (i *runningVM) Start() error {
+func (i *runningVM) Start() (runtimes.Handle, error) {
+	h := runtimes.Handle{}
 	err := i.vmm.StartVMM(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to start vmm for machine %q: %w", i.Id(), err)
+		return h, fmt.Errorf("failed to start vmm for machine %q: %w", i.Id(), err)
 	}
 	defer func() {
 		if err != nil {
@@ -62,43 +62,30 @@ func (i *runningVM) Start() error {
 
 	err = i.vmm.WaitReady(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to wait for vmm to be ready for machine %q: %w", i.Id(), err)
+		return h, fmt.Errorf("failed to wait for vmm to be ready for machine %q: %w", i.Id(), err)
 	}
 
 	err = i.vmm.CreateVM(context.Background(), i.vmConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create vm for machine %q: %w", i.Id(), err)
+		return h, fmt.Errorf("failed to create vm for machine %q: %w", i.Id(), err)
 	}
 
 	err = i.vmm.BootVM(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to boot vm for machine %q: %w", i.Id(), err)
+		return h, fmt.Errorf("failed to boot vm for machine %q: %w", i.Id(), err)
 	}
 
 	vminfo, err := i.vmm.VMInfo(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to get vm info for machine %q: %w", i.Id(), err)
+		return h, fmt.Errorf("failed to get vm info for machine %q: %w", i.Id(), err)
 	}
 
-	i.serial = *vminfo.Config.Console.File
+	i.console = *vminfo.Config.Console.File
 
-	i.logger, err = logging.NewMachineLogger(i.serial)
-	if err != nil {
-		slog.Error("failed to create logger", "err", err)
-	}
+	h.Console = i.console
 
-	go i.logger.Start(context.Background())
+	return h, nil
 
-	return nil
-
-}
-
-func (i *runningVM) GetLog() []byte {
-	return i.logger.GetLog()
-}
-
-func (i *runningVM) SubscribeToLogs(ctx context.Context, ch chan []byte) {
-	i.logger.Subscribe(ctx, ch)
 }
 
 func (i *runningVM) Signal(ctx context.Context, signal string) error {
@@ -265,9 +252,7 @@ func (i *runningVM) recover() (err error) {
 
 	serial := state.vminfo.Config.Console.File
 
-	i.serial = *serial
-
-	i.logger, err = logging.NewMachineLogger(i.serial)
+	i.console = *serial
 
 	if err != nil {
 		return fmt.Errorf("failed to create logger: %w", err)

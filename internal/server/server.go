@@ -27,7 +27,7 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 
 	address := c.RavelApi.Address
 	if address == "" {
-		address = "127.0.0.1:3000"
+		address = ":3000"
 	}
 
 	core.OverrideHumaErrorBuilder()

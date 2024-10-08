@@ -1,7 +1,0 @@
-{
-    "protoc": {
-        "options": [
-            "--proto-path=proto"
-        ]
-    }
-}

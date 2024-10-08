@@ -13,7 +13,7 @@ import (
 )
 
 func (d *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePayload) (*core.Instance, error) {
-	err := d.reservations.ConfirmReservation(ctx, opt.MachineId)
+	reservation, err := d.reservations.ConfirmReservation(ctx, opt.MachineId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to confirm reservation: %w", err)
 	}
@@ -35,6 +35,7 @@ func (d *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePaylo
 		DesiredStatus: desiredStatus,
 		Config:        config,
 		CreatedAt:     time.Now(),
+		LocalIPV4:     reservation.LocalIPV4Subnet.LocalConfig().MachineIP.String(),
 	}
 
 	i.Config = config
@@ -47,7 +48,7 @@ func (d *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePaylo
 		return nil, fmt.Errorf("failed to create instance: %w", err)
 	}
 
-	manager := instance.NewInstanceManager(s, d.containerRuntime)
+	manager := instance.NewInstanceManager(s, d.containerRuntime, reservation)
 	d.lock.Lock()
 	d.instances[i.Id] = manager
 	d.lock.Unlock()

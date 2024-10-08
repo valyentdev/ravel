@@ -52,10 +52,7 @@ func (rs *ReservationService) Init(ctx context.Context) error {
 	}
 
 	for _, res := range reservations {
-		_, subnet, err := net.ParseCIDR(res.LocalIPV4Subnet)
-		if err != nil {
-			return err
-		}
+		subnet := res.LocalIPV4Subnet.LocalConfig().Network
 
 		if err := rs.localSubnetAllocator.Allocate(subnet); err != nil {
 			return err
@@ -86,7 +83,7 @@ func (rs *ReservationService) CreateReservation(ctx context.Context, id string, 
 		Id:              id,
 		Cpus:            res.Cpus,
 		Memory:          res.Memory,
-		LocalIPV4Subnet: localIPV4Subnet.String(),
+		LocalIPV4Subnet: networking.LocalIPV4Subnet(localIPV4Subnet.String()),
 		Status:          status,
 		CreatedAt:       time.Now(),
 	}
@@ -113,6 +110,10 @@ func (rs *ReservationService) CreateReservation(ctx context.Context, id string, 
 	return
 }
 
+func (rs *ReservationService) GetReservation(ctx context.Context, id string) (structs.Reservation, error) {
+	return rs.store.GetReservation(ctx, id)
+}
+
 func (rs *ReservationService) DeleteReservation(ctx context.Context, id string) error {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
@@ -125,10 +126,7 @@ func (rs *ReservationService) DeleteReservation(ctx context.Context, id string) 
 		return err
 	}
 
-	_, subnet, err := net.ParseCIDR(reservation.LocalIPV4Subnet)
-	if err != nil {
-		return err
-	}
+	subnet := reservation.LocalIPV4Subnet.LocalConfig().Network
 
 	if err := rs.localSubnetAllocator.Release(subnet); err != nil {
 		return err
@@ -145,24 +143,24 @@ func (rs *ReservationService) ListReservations(ctx context.Context) ([]structs.R
 	return rs.store.ListReservations(ctx)
 }
 
-func (rs *ReservationService) ConfirmReservation(ctx context.Context, id string) error {
+func (rs *ReservationService) ConfirmReservation(ctx context.Context, id string) (structs.Reservation, error) {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
 
 	reservation, err := rs.store.GetReservation(ctx, id)
 	if err != nil {
-		return err
+		return structs.Reservation{}, err
 	}
 
 	if reservation.Status == structs.ReservationStatusConfirmed {
-		return nil
+		return reservation, nil
 	}
 
 	reservation.Status = structs.ReservationStatusConfirmed
 
 	if err := rs.store.UpdateReservation(ctx, reservation); err != nil {
-		return err
+		return reservation, err
 	}
 
-	return nil
+	return reservation, nil
 }

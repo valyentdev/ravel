@@ -32,7 +32,8 @@ func scanMachine(s scannable) (m core.Machine, err error) {
 }
 
 func (q *Queries) CreateMachine(ctx context.Context, machine core.Machine) error {
-	_, err := q.db.Exec(ctx, `INSERT INTO machines (id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, machine.Id, machine.Namespace, machine.FleetId, machine.Node, machine.InstanceId, machine.MachineVersion, machine.Region, machine.CreatedAt, machine.UpdatedAt)
+
+	_, err := q.db.Exec(ctx, `INSERT INTO machines (id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, machine.Id, machine.Namespace, machine.FleetId, machine.Node, machine.InstanceId, machine.MachineVersion.String(), machine.Region, machine.CreatedAt, machine.UpdatedAt)
 	if err != nil {
 		var pgerr *pgconn.PgError
 		if errors.As(err, &pgerr) {

@@ -20,9 +20,9 @@ func (c *ClusterState) CreateMachine(ctx context.Context, m core.Machine, mv cor
 	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{
 		{
 			Query: `INSERT INTO machines 
-					(id, namespace, fleet_id, node, instance_id, region, created_at, updated_at)
-					VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			Params: []any{m.Id, m.Namespace, m.FleetId, m.Node, m.InstanceId, m.Region, m.CreatedAt.Unix(), m.UpdatedAt.Unix()},
+					(id, namespace, fleet_id, node, instance_id, region, created_at, updated_at, machine_version)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			Params: []any{m.Id, m.Namespace, m.FleetId, m.Node, m.InstanceId, m.Region, m.CreatedAt.Unix(), m.UpdatedAt.Unix(), m.MachineVersion.String()},
 		},
 		{
 			Query: `INSERT INTO machine_versions
@@ -43,13 +43,13 @@ func (c *ClusterState) CreateMachine(ctx context.Context, m core.Machine, mv cor
 	return err
 }
 
-func (c *ClusterState) GetMachine(ctx context.Context, namespace string, fleet string, id string, destroyed bool) (*core.Machine, error) {
+func (c *ClusterState) GetMachine(ctx context.Context, namespace string, fleetId string, id string, destroyed bool) (*core.Machine, error) {
 	row, err := c.corroclient.QueryRow(ctx,
 		corroclient.Statement{
 			Query: `SELECT id, namespace, fleet_id, node, instance_id, region, created_at, updated_at, destroyed
 					FROM machines
 					WHERE namespace = $1 AND fleet_id = $2 AND id = $3 AND destroyed = $4`,
-			Params: []any{namespace, fleet, id, destroyed},
+			Params: []any{namespace, fleetId, id, 0},
 		})
 	if err != nil {
 		if err == corroclient.ErrNoRows {

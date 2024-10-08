@@ -4,8 +4,8 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = ["server", "start", "-c", "ravel.json", "--env", ".env"]
-  bin = "./tmp/main"
-  cmd = "go build -o ./tmp/main ./cmd/ravel/main.go"
+  bin = "./tmp/ravel"
+  cmd = "go build -o ./tmp/ravel ./cmd/ravel/ravel.go"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
   exclude_file = []
