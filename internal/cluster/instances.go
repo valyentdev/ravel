@@ -3,7 +3,6 @@ package cluster
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	"github.com/valyentdev/corroclient"
@@ -22,7 +21,6 @@ type Instance struct {
 }
 
 func (c *ClusterState) UpsertInstance(ctx context.Context, i Instance) error {
-	slog.Info("upserting instance", "id", i.Id, "ip", i.LocalIPV4)
 	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{
 		{
 			Query: `INSERT INTO instances (id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4)

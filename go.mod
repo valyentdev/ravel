@@ -3,7 +3,6 @@ module github.com/valyentdev/ravel
 go 1.22.5
 
 require (
-	github.com/amacneil/dbmate/v2 v2.13.0
 	github.com/containerd/containerd/v2 v2.0.0-rc.0
 	github.com/containerd/errdefs v0.1.0
 	github.com/coreos/go-iptables v0.7.0
@@ -12,7 +11,7 @@ require (
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/mattn/go-sqlite3 v1.14.22
-	github.com/nats-io/nats.go v1.33.1
+	github.com/nats-io/nats.go v1.36.0
 	github.com/nrednav/cuid2 v1.0.0
 	github.com/oklog/ulid v1.3.1
 	github.com/opencontainers/image-spec v1.1.0
@@ -21,6 +20,7 @@ require (
 	github.com/tmaxmax/go-sse v0.8.0
 	github.com/u-root/u-root v0.14.0
 	github.com/valyentdev/corroclient v0.1.0
+	go.etcd.io/bbolt v1.3.11
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 	sigs.k8s.io/yaml v1.4.0
@@ -61,9 +61,8 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/josharian/native v1.1.1-0.20230202152459-5c7d0dd6ab86 // indirect
 	github.com/jsimonetti/rtnetlink v1.4.1 // indirect
-	github.com/klauspost/compress v1.17.7 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
@@ -91,7 +90,7 @@ require (
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/tools v0.21.0 // indirect
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -109,9 +108,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	github.com/vishvananda/netns v0.0.4 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/net v0.25.0
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.25.0
+	golang.org/x/text v0.18.0 // indirect
 )

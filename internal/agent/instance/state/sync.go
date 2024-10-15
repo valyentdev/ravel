@@ -14,7 +14,7 @@ func (i *instanceState) sync() {
 		event := i.lastEvent
 		err := i.cluster.UpsertInstance(context.Background(), cluster.Instance{
 			Id:             instance.Id,
-			Node:           i.node,
+			Node:           instance.NodeId,
 			MachineId:      instance.MachineId,
 			MachineVersion: instance.MachineVersion,
 			Status:         event.Status,

@@ -70,6 +70,7 @@ func (b *Broadcaster[T]) Subscribe() *Subscriber[T] {
 }
 
 func (b *Broadcaster[T]) Start() {
+	b.stopCh = make(chan struct{})
 	go func() {
 		for {
 			select {

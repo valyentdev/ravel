@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/valyentdev/ravel/internal/agent/instance"
@@ -28,9 +29,19 @@ func (s *Agent) DestroyInstance(ctx context.Context, id string, force bool) erro
 		return err
 	}
 
-	err = instance.Destroy(context.Background(), false)
+	err = instance.Destroy(context.Background(), force)
 	if err != nil {
 		return err
+	}
+
+	err = s.reservations.DeleteReservation(instance.Instance().MachineId)
+	if err != nil {
+		return err
+	}
+
+	err = s.store.DestroyInstanceBucket(id)
+	if err != nil {
+		slog.Error("failed to destroy instance bucket", "instance_id", id, "error", err)
 	}
 
 	s.lock.Lock()

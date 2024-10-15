@@ -37,9 +37,14 @@ var _ core.Agent = (*Agent)(nil)
 
 func New(config config.RavelConfig) (*Agent, error) {
 	slog.Info("Initializing agent", "node_id", config.NodeId, "address", config.Agent.Address)
-	store, err := store.NewStore()
+	store, err := store.NewStore(config.Agent.DatabasePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize state: %w", err)
+		return nil, fmt.Errorf("failed to create store: %w", err)
+	}
+
+	err = store.Init()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize store: %w", err)
 	}
 
 	slog.Info("Initializing container runtime")
@@ -61,7 +66,7 @@ func New(config config.RavelConfig) (*Agent, error) {
 
 	reservations := reservations.NewReservationService(store, config.Agent.Resources)
 
-	if err := reservations.Init(context.Background()); err != nil {
+	if err := reservations.Init(); err != nil {
 		return nil, fmt.Errorf("failed to initialize reservation service: %w", err)
 	}
 
@@ -80,31 +85,24 @@ func New(config config.RavelConfig) (*Agent, error) {
 		return nil, fmt.Errorf("failed to start node: %w", err)
 	}
 
-	instances, err := store.ListInstances(context.Background())
+	instances, err := store.LoadInstances()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list instances: %w", err)
+		return nil, fmt.Errorf("failed to load instances: %w", err)
 	}
 
 	managers := map[string]*instance.Manager{}
 	slog.Info("Recovering instances")
 	for _, i := range instances {
-		lastEvent, err := store.GetLastInstanceEvent(context.Background(), i.Id)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get last event for instance %s: %w", i.Id, err)
-		}
 
-		reservation, err := reservations.GetReservation(context.Background(), i.MachineId)
+		reservation, err := reservations.GetReservation(i.Instance.MachineId)
 		if err != nil {
-			slog.Error("failed to get reservation", "instanceId", i.Id, "machineId", i.MachineId, "error", err, "reservationId", i.MachineId)
+			slog.Error("failed to get reservation", "instanceId", i.Instance.Id, "machineId", i.Instance.MachineId, "error", err)
 			continue
 		}
-
-		i.LocalIPV4 = reservation.LocalIPV4Subnet.LocalConfig().MachineIP.String()
-
-		state := state.NewInstanceState(store, i, &lastEvent, config.NodeId, cs)
+		state := state.NewInstanceState(store, i.Instance, i.LastEvent, config.NodeId, cs)
 		manager := instance.NewInstanceManager(state, containerRuntime, reservation)
 		manager.Recover()
-		managers[i.Id] = manager
+		managers[i.Instance.Id] = manager
 	}
 
 	agent := &Agent{
@@ -129,8 +127,6 @@ func (d *Agent) Start(ctx context.Context) error {
 	if err := d.startPlacementHandler(); err != nil {
 		return err
 	}
-
-	go d.reservations.StartGarbageCollection(ctx)
 
 	return nil
 }

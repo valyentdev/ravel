@@ -15,11 +15,16 @@ const MAX_RETRIES = 3
 func (m *Manager) Prepare() error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+
+	return m.prepare()
+}
+
+func (m *Manager) prepare() error {
+	slog.Info("preparing instance", "instance_id", m.state.Id())
 	retries := 0
 	lastEvent := m.state.LastEvent()
 	if lastEvent.Type == core.InstancePrepare {
-		payload := lastEvent.Payload.(core.InstancePrepareEventPayload)
-		retries = payload.Retries
+		retries = lastEvent.Payload.Prepare.Retries
 	}
 
 	ctx := context.Background()
@@ -44,7 +49,7 @@ func (m *Manager) Prepare() error {
 			}
 
 			m.isPrepared = true
-			if m.Instance().DesiredStatus == core.MachineStatusRunning {
+			if m.Instance().State.DesiredStatus == core.MachineStatusRunning {
 				go m.Start(context.Background())
 			}
 			return nil

@@ -18,6 +18,11 @@ func (m *Manager) Recover() {
 		return
 	}
 
+	if m.state.Status() == core.MachineStatusPreparing {
+		m.recoverPreparing()
+		return
+	}
+
 }
 
 func (m *Manager) recoverRunning(wasStarting bool) {
@@ -48,4 +53,12 @@ func (m *Manager) recoverRunning(wasStarting bool) {
 		slog.Error("failed to push instance exited event", "error", err)
 	}
 
+}
+
+func (m *Manager) recoverPreparing() {
+	slog.Info("recovering preparing instance", "instance_id", m.state.Id())
+	err := m.prepare()
+	if err != nil {
+		slog.Error("failed to recover preparing instance", "instance_id", m.state.Id(), "error", err)
+	}
 }

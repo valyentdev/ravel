@@ -1,6 +1,6 @@
 .env
 bin/**/*
-raveld.db
+agent.db
 ravel.json
 .devdbrc
 /.idea

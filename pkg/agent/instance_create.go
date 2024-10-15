@@ -28,27 +28,28 @@ func (d *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePaylo
 
 	config := opt.Config
 	i := core.Instance{
-		Id:            id.GeneratePrefixed("instance"),
-		Namespace:     opt.Namespace,
-		MachineId:     opt.MachineId,
-		FleetId:       opt.FleetId,
-		DesiredStatus: desiredStatus,
-		Config:        config,
-		CreatedAt:     time.Now(),
-		LocalIPV4:     reservation.LocalIPV4Subnet.LocalConfig().MachineIP.String(),
+		Id:        id.GeneratePrefixed("instance"),
+		Namespace: opt.Namespace,
+		MachineId: opt.MachineId,
+		FleetId:   opt.FleetId,
+		State: core.InstanceState{
+			DesiredStatus: desiredStatus,
+			Status:        core.MachineStatusCreated,
+		},
+		Config:    config,
+		CreatedAt: time.Now(),
+		LocalIPV4: reservation.LocalIPV4Subnet.LocalConfig().MachineIP.String(),
 	}
 
 	i.Config = config
 	i.NodeId = d.nodeId
 
-	s := state.NewInstanceState(d.store, i, nil, d.nodeId, d.cluster)
-
-	err = s.Create(ctx)
+	is, err := state.CreateInstance(d.store, d.cluster, i)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create instance: %w", err)
 	}
 
-	manager := instance.NewInstanceManager(s, d.containerRuntime, reservation)
+	manager := instance.NewInstanceManager(is, d.containerRuntime, reservation)
 	d.lock.Lock()
 	d.instances[i.Id] = manager
 	d.lock.Unlock()

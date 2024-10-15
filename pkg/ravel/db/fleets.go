@@ -7,10 +7,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/valyentdev/ravel/internal/dbutil"
 	"github.com/valyentdev/ravel/pkg/core"
 )
 
-func scanFleet(row scannable) (*core.Fleet, error) {
+func scanFleet(row dbutil.Scannable) (*core.Fleet, error) {
 	var fleet core.Fleet
 	err := row.Scan(&fleet.Id, &fleet.Namespace, &fleet.Name, &fleet.CreatedAt)
 	if err != nil {

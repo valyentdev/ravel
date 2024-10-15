@@ -7,10 +7,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/valyentdev/ravel/internal/dbutil"
 	"github.com/valyentdev/ravel/pkg/core"
 )
 
-func scanNamespace(s scannable) (*core.Namespace, error) {
+func scanNamespace(s dbutil.Scannable) (*core.Namespace, error) {
 	var n core.Namespace
 	var createdAt pgtype.Timestamp
 	err := s.Scan(&n.Name, &createdAt)

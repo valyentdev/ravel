@@ -31,7 +31,7 @@ func runListInstances(cmd *cobra.Command, args []string) error {
 
 	fmt.Fprintln(w, "ID\tSTATUS\tIMAGE\tLOCAL IP")
 	for _, instance := range instances {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", instance.Id, instance.Status, instance.Config.Workload.Image, instance.LocalIPV4)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", instance.Id, instance.State.Status, instance.Config.Workload.Image, instance.LocalIPV4)
 	}
 	w.Flush()
 

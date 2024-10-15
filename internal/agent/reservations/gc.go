@@ -1,33 +1,32 @@
 package reservations
 
 import (
-	"context"
-	"log/slog"
 	"time"
+
+	"github.com/valyentdev/ravel/internal/agent/structs"
 )
 
-func (r *ReservationService) StartGarbageCollection(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+func (rs *ReservationService) gc(id string) {
+	time.Sleep(10 * time.Second)
+	rs.lock.Lock()
+	defer rs.lock.Unlock()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			r.gc(ctx)
-		}
+	reservation, ok := rs.reservations[id]
+	if !ok {
+		return
 	}
 
-}
-
-func (r *ReservationService) gc(ctx context.Context) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	err := r.store.GCReservations(ctx, time.Now().Add(-10*time.Second))
-	if err != nil {
-		slog.Error("failed to garbage collect reservations", "err", err)
+	if reservation.Status != structs.ReservationStatusDangling {
+		return
 	}
 
+	subnet := reservation.LocalIPV4Subnet.LocalConfig().Network
+
+	if err := rs.localSubnetAllocator.Release(subnet); err != nil {
+		return
+	}
+
+	delete(rs.reservations, id)
+
+	rs.current = rs.current.Sub(reservation.Resources)
 }

@@ -1,186 +1,69 @@
 package store
 
 import (
-	"context"
-	"database/sql"
-	"fmt"
-	"time"
-
 	"github.com/valyentdev/ravel/internal/agent/structs"
-	"github.com/valyentdev/ravel/pkg/core"
 )
 
-var reservationFields = []string{
-	"id",
-	"cpus",
-	"memory",
-	"local_ipv4_subnet",
-	"status",
-	"created_at",
-}
-
-var reservationColumns = allColumns(reservationFields)
-var reservationPlaceholders = placeholders(len(reservationFields))
-
-func scanReservation(row scannable) (structs.Reservation, error) {
-	var reservation structs.Reservation
-
-	err := row.Scan(
-		&reservation.Id,
-		&reservation.Cpus,
-		&reservation.Memory,
-		&reservation.LocalIPV4Subnet,
-		&reservation.Status,
-		&reservation.CreatedAt,
-	)
-
-	return reservation, err
-}
-
-func (s *Queries) ListReservations(ctx context.Context) ([]structs.Reservation, error) {
-	rows, err := s.db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM reservations", reservationColumns))
+func (s *Store) LoadReservations() ([]structs.Reservation, error) {
+	tx, err := s.db.Begin(false)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return []structs.Reservation{}, nil
-		}
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	reservations, err := tx.Bucket(reservationsBucket)
+	if err != nil {
 		return nil, err
 	}
 
-	defer rows.Close()
+	reservationList := []structs.Reservation{}
 
-	reservations := []structs.Reservation{}
+	cursor := reservations.Cursor()
 
-	for rows.Next() {
-		reservation, err := scanReservation(rows)
+	for k, _ := cursor.First(); k != nil; k, _ = cursor.Next() {
+		reservation := structs.Reservation{}
+		err = reservations.Get(k, &reservation)
 		if err != nil {
 			return nil, err
 		}
-
-		reservations = append(reservations, reservation)
+		reservationList = append(reservationList, reservation)
 	}
-
-	return reservations, nil
+	return reservationList, err
 }
 
-func (s *Queries) ListDanglingReservations(ctx context.Context) ([]structs.Reservation, error) {
-	rows, err := s.db.QueryContext(ctx, fmt.Sprintf("SELECT %s FROM reservations WHERE status = 'dangling'", reservationColumns))
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return []structs.Reservation{}, nil
-		}
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	reservations := []structs.Reservation{}
-
-	for rows.Next() {
-		reservation, err := scanReservation(rows)
-		if err != nil {
-			return nil, err
-		}
-
-		reservations = append(reservations, reservation)
-	}
-
-	return reservations, nil
-}
-
-func (s *Queries) GetReservation(ctx context.Context, id string) (res structs.Reservation, err error) {
-	row := s.db.QueryRowContext(ctx, fmt.Sprintf("SELECT %s FROM reservations WHERE id = ? LIMIT 1", reservationColumns), id)
-
-	res, err = scanReservation(row)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return res, core.NewNotFound("reservation not found")
-		}
-
-		return
-	}
-	return
-}
-
-type CreateReservationParams struct {
-	Id        string
-	MilliCpus int64
-	Memory    int64
-}
-
-func (s *Queries) CreateReservation(ctx context.Context, params structs.Reservation) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		fmt.Sprintf("INSERT INTO reservations (%s) VALUES (%s)", reservationColumns, reservationPlaceholders),
-		params.Id,
-		params.Cpus,
-		params.Memory,
-		params.LocalIPV4Subnet,
-		params.Status,
-		params.CreatedAt,
-	)
-	return err
-}
-
-func (s *Queries) UpdateReservation(ctx context.Context, params structs.Reservation) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		"UPDATE reservations SET cpus = ?, memory = ?, status = ?, local_ipv4_subnet = ?, created_at = ? WHERE id = ?",
-		params.Cpus,
-		params.Memory,
-		params.Status,
-		params.LocalIPV4Subnet,
-		params.CreatedAt,
-		params.Id,
-	)
-	return err
-}
-
-func (s *Queries) ConfirmReservation(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		"UPDATE reservations SET status = 'confirmed' WHERE id = ?",
-		id,
-	)
+func (store *Store) DeleteReservation(id string) error {
+	tx, err := store.db.Begin(true)
 	if err != nil {
 		return err
 	}
-	return nil
-}
+	defer tx.Rollback()
 
-func (s *Queries) DeleteReservation(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		"DELETE FROM reservations WHERE id = ?",
-		id,
-	)
+	reservations, err := tx.Bucket(reservationsBucket)
 	if err != nil {
 		return err
 	}
+
+	if err = reservations.Delete([]byte(id)); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (s *Queries) GCReservations(ctx context.Context, cutoff time.Time) error {
-	_, err := s.db.ExecContext(
-		ctx,
-		"DELETE FROM reservations WHERE created_at < ? AND status = 'dangling'",
-		cutoff,
-	)
+func (store *Store) PutReservation(r structs.Reservation) error {
+	tx, err := store.db.Begin(true)
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (s *Queries) GetReservedResources(ctx context.Context) (core.Resources, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(cpus),0), COALESCE(SUM(memory),0) FROM reservations WHERE status = 'confirmed'")
-	if row.Err() != nil {
-		return core.Resources{}, row.Err()
-	}
-
-	var resources core.Resources
-	err := row.Scan(&resources.Cpus, &resources.Memory)
+	defer tx.Rollback()
+	reservations, err := tx.Bucket(reservationsBucket)
 	if err != nil {
-		return core.Resources{}, err
+		return err
 	}
-	return resources, nil
+
+	if err = reservations.Put([]byte(r.Id), r); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

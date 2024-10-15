@@ -104,6 +104,7 @@ func (m *Manager) run(h runtimes.Handle) {
 	}
 
 	m.isRunning = false
+	slog.Info("instance stopped", "instanceId", m.Instance().Id)
 	close(m.waitCh)
 
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/valyentdev/ravel/internal/agent/structs"
 	"github.com/valyentdev/ravel/internal/placement"
 	"github.com/valyentdev/ravel/pkg/core"
 )
@@ -18,7 +17,7 @@ func (a *Agent) startPlacementHandler() error {
 		_, before, after, err := a.reservations.CreateReservation(context.Background(), msg.ReservationId, core.Resources{
 			Cpus:   msg.Cpus,
 			Memory: msg.Memory,
-		}, structs.ReservationStatusDangling)
+		})
 
 		if err != nil {
 			slog.Error("Failed to create reservation", "error", err)

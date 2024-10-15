@@ -8,10 +8,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/oklog/ulid"
+	"github.com/valyentdev/ravel/internal/dbutil"
 	"github.com/valyentdev/ravel/pkg/core"
 )
 
-func scanMachine(s scannable) (m core.Machine, err error) {
+func scanMachine(s dbutil.Scannable) (m core.Machine, err error) {
 	var version string
 	err = s.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.Node, &m.InstanceId, &version, &m.Region, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {

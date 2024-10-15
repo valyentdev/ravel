@@ -1,9 +1,9 @@
 package core
 
 import (
-	"encoding/json"
-	"errors"
 	"time"
+
+	"github.com/oklog/ulid"
 )
 
 type InstanceEventType string
@@ -22,34 +22,15 @@ const (
 	InstanceDestroyed         InstanceEventType = "instance.destroyed"
 )
 
-type InstanceEvent = BaseInstanceEvent[any]
-
-type InstanceEventI interface {
-	ToAny() InstanceEvent
-}
-
-type BaseInstanceEvent[P any] struct {
-	Id         string            `json:"id"`
-	Type       InstanceEventType `json:"type"`
-	Origin     Origin            `json:"origin"`
-	Payload    P                 `json:"payload"`
-	InstanceId string            `json:"instance_id"`
-	Status     InstanceStatus    `json:"status"`
-	Reported   bool              `json:"reported"`
-	Timestamp  time.Time         `json:"time"`
-}
-
-func (e *BaseInstanceEvent[P]) ToAny() *BaseInstanceEvent[any] {
-	return &BaseInstanceEvent[any]{
-		Id:         e.Id,
-		Type:       e.Type,
-		Origin:     e.Origin,
-		Payload:    e.Payload,
-		InstanceId: e.InstanceId,
-		Status:     e.Status,
-		Reported:   e.Reported,
-		Timestamp:  e.Timestamp,
-	}
+type InstanceEvent struct {
+	Id         ulid.ULID            `json:"id"`
+	Type       InstanceEventType    `json:"type"`
+	Origin     Origin               `json:"origin"`
+	Payload    InstanceEventPayload `json:"payload"`
+	InstanceId string               `json:"instance_id"`
+	Status     InstanceStatus       `json:"status"`
+	Reported   bool                 `json:"reported"`
+	Timestamp  time.Time            `json:"time"`
 }
 
 type InstanceCreatedEventPayload struct {
@@ -99,61 +80,17 @@ type InstanceDestroyEventPayload struct {
 type InstanceDestroyedEventPayload struct {
 }
 
-type InstanceCreatedEvent = BaseInstanceEvent[InstanceCreatedEventPayload]
-
-type InstancePrepareEvent = BaseInstanceEvent[InstancePrepareEventPayload]
-
-type InstancePreparedEvent = BaseInstanceEvent[InstancePreparedEventPayload]
-
-type InstancePreparationFailedEvent = BaseInstanceEvent[InstancePreparationFailedEventPayload]
-
-type InstanceStartEvent = BaseInstanceEvent[InstanceStartEventPayload]
-
-type InstanceStartFailedEvent = BaseInstanceEvent[InstanceStartFailedEventPayload]
-
-type InstanceStartedEvent = BaseInstanceEvent[InstanceStartedEventPayload]
-
-type InstanceStopEvent = BaseInstanceEvent[InstanceStopEventPayload]
-
-type InstanceExitedEvent = BaseInstanceEvent[InstanceExitedEventPayload]
-
-type InstanceDestroyEvent = BaseInstanceEvent[InstanceDestroyEventPayload]
-
-type InstanceDestroyedEvent = BaseInstanceEvent[InstanceDestroyedEventPayload]
-
-func unmarshalGeneric[P any](payload []byte) (P, error) {
-	var p P
-	err := json.Unmarshal(payload, &p)
-	if err != nil {
-		return p, err
-	}
-
-	return p, nil
-}
-
-func UnmarshalEventPayload(eventType InstanceEventType, payload []byte) (any, error) {
-	switch eventType {
-	case InstancePrepare:
-		return unmarshalGeneric[InstancePrepareEventPayload](payload)
-	case InstancePrepared:
-		return unmarshalGeneric[InstancePreparedEventPayload](payload)
-	case InstancePreparationFailed:
-		return unmarshalGeneric[InstancePreparationFailedEventPayload](payload)
-	case InstanceExited:
-		return unmarshalGeneric[InstanceExitedEventPayload](payload)
-	case InstanceStart:
-		return unmarshalGeneric[InstanceStartEventPayload](payload)
-	case InstanceStartFailed:
-		return unmarshalGeneric[InstanceStartFailedEventPayload](payload)
-	case InstanceStarted:
-		return unmarshalGeneric[InstanceStartedEventPayload](payload)
-	case InstanceStop:
-		return unmarshalGeneric[InstanceStopEventPayload](payload)
-	case InstanceDestroy:
-		return unmarshalGeneric[InstanceDestroyEventPayload](payload)
-	case InstanceDestroyed:
-		return unmarshalGeneric[InstanceDestroyedEventPayload](payload)
-	default:
-		return nil, errors.New("unknown event type")
-	}
+type InstanceEventPayload struct {
+	Created           *InstanceCreatedEventPayload           `json:"created,omitempty"`
+	Prepare           *InstancePrepareEventPayload           `json:"prepare,omitempty"`
+	Prepared          *InstancePreparedEventPayload          `json:"prepared,omitempty"`
+	PreparationFailed *InstancePreparationFailedEventPayload `json:"preparation_failed,omitempty"`
+	Exited            *InstanceExitedEventPayload            `json:"exited,omitempty"`
+	Start             *InstanceStartEventPayload             `json:"start,omitempty"`
+	StartFailed       *InstanceStartFailedEventPayload       `json:"start_failed,omitempty"`
+	Started           *InstanceStartedEventPayload           `json:"started,omitempty"`
+	Stop              *InstanceStopEventPayload              `json:"stop,omitempty"`
+	StopFailed        *InstanceStopFailedEventPayload        `json:"stop_failed,omitempty"`
+	Destroy           *InstanceDestroyEventPayload           `json:"destroy,omitempty"`
+	Destroyed         *InstanceDestroyedEventPayload         `json:"destroyed,omitempty"`
 }

@@ -8,7 +8,8 @@
         "resources": {
             "cpus": 28000,
             "memory": 30000
-        }
+        },
+        "database_path": "./agent.db"
     },
     "nats": {
         "url": "nats://127.0.0.1:4222",

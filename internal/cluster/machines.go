@@ -8,6 +8,7 @@ import (
 
 	"github.com/oklog/ulid"
 	"github.com/valyentdev/corroclient"
+	"github.com/valyentdev/ravel/internal/dbutil"
 	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/valyentdev/ravel/pkg/core/api"
 )
@@ -133,7 +134,7 @@ const baseSelectAPIMachine = `SELECT m.id, m.namespace, m.fleet_id, m.instance_i
 							  JOIN instances i ON m.instance_id = i.id
 							  JOIN machine_versions mv ON m.machine_version = mv.id`
 
-func scanAPIMachine(row scannable) (*api.Machine, error) {
+func scanAPIMachine(row dbutil.Scannable) (*api.Machine, error) {
 	var m api.Machine
 	var config []byte
 	var createdAt int64

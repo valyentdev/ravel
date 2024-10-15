@@ -2,7 +2,6 @@ package reservations
 
 import (
 	"context"
-	"log/slog"
 	"net"
 	"sync"
 	"time"
@@ -16,9 +15,13 @@ import (
 var ErrNotEnoughResources = core.NewResourcesExhausted("not enough resources")
 
 type ReservationService struct {
-	lock                 sync.Mutex
-	store                *store.Store
-	max                  core.Resources
+	store *store.Store
+	max   core.Resources
+
+	reservations map[string]structs.Reservation
+	lock         sync.RWMutex
+	current      core.Resources
+
 	localSubnetAllocator *networking.BasicSubnetAllocator
 }
 
@@ -42,11 +45,14 @@ func NewReservationService(store *store.Store, totalResources core.Resources) *R
 		store:                store,
 		max:                  totalResources,
 		localSubnetAllocator: subnetAllocator,
+		reservations:         make(map[string]structs.Reservation),
 	}
 }
 
-func (rs *ReservationService) Init(ctx context.Context) error {
-	reservations, err := rs.store.ListReservations(ctx)
+func (rs *ReservationService) Init() error {
+	rs.lock.Lock()
+	defer rs.lock.Unlock()
+	reservations, err := rs.store.LoadReservations()
 	if err != nil {
 		return err
 	}
@@ -57,12 +63,18 @@ func (rs *ReservationService) Init(ctx context.Context) error {
 		if err := rs.localSubnetAllocator.Allocate(subnet); err != nil {
 			return err
 		}
+
+		rs.reservations[res.Id] = res
+
+		if res.Status == structs.ReservationStatusConfirmed {
+			rs.current = rs.current.Add(res.Resources)
+		}
 	}
 
 	return nil
 }
 
-func (rs *ReservationService) CreateReservation(ctx context.Context, id string, res core.Resources, status structs.ReservationStatus) (reservation structs.Reservation, before core.Resources, after core.Resources, err error) {
+func (rs *ReservationService) CreateReservation(ctx context.Context, id string, res core.Resources) (reservation structs.Reservation, before core.Resources, after core.Resources, err error) {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
 
@@ -70,8 +82,6 @@ func (rs *ReservationService) CreateReservation(ctx context.Context, id string, 
 	if err != nil {
 		return
 	}
-
-	slog.Info("Allocated local subnet", "subnet", localIPV4Subnet)
 
 	defer func() {
 		if err != nil {
@@ -81,49 +91,49 @@ func (rs *ReservationService) CreateReservation(ctx context.Context, id string, 
 
 	alloc := structs.Reservation{
 		Id:              id,
-		Cpus:            res.Cpus,
-		Memory:          res.Memory,
+		Resources:       res,
 		LocalIPV4Subnet: networking.LocalIPV4Subnet(localIPV4Subnet.String()),
-		Status:          status,
+		Status:          structs.ReservationStatusDangling,
 		CreatedAt:       time.Now(),
 	}
 
-	before, err = rs.store.GetReservedResources(ctx)
-	if err != nil {
-		return
-	}
+	before = rs.current
 
-	after = core.Resources{
-		Cpus:   before.Cpus + res.Cpus,
-		Memory: before.Memory + res.Memory,
-	}
+	after = before.Add(res)
 
-	if after.Cpus > rs.max.Cpus || after.Memory > rs.max.Memory {
+	if after.GT(rs.max) {
 		err = ErrNotEnoughResources
 		return
 	}
 
-	if err = rs.store.CreateReservation(ctx, alloc); err != nil {
-		return
-	}
+	rs.current = after
+
+	rs.reservations[id] = alloc
+
+	go rs.gc(id)
 
 	return
 }
 
-func (rs *ReservationService) GetReservation(ctx context.Context, id string) (structs.Reservation, error) {
-	return rs.store.GetReservation(ctx, id)
+func (rs *ReservationService) GetReservation(id string) (structs.Reservation, error) {
+	rs.lock.RLock()
+	defer rs.lock.RUnlock()
+
+	reservation, ok := rs.reservations[id]
+	if !ok {
+		return structs.Reservation{}, core.NewNotFound("reservation not found")
+	}
+
+	return reservation, nil
 }
 
-func (rs *ReservationService) DeleteReservation(ctx context.Context, id string) error {
+func (rs *ReservationService) DeleteReservation(id string) error {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
 
-	reservation, err := rs.store.GetReservation(ctx, id)
-	if err != nil {
-		if core.IsNotFound(err) {
-			return nil
-		}
-		return err
+	reservation, ok := rs.reservations[id]
+	if !ok {
+		return nil
 	}
 
 	subnet := reservation.LocalIPV4Subnet.LocalConfig().Network
@@ -132,35 +142,42 @@ func (rs *ReservationService) DeleteReservation(ctx context.Context, id string) 
 		return err
 	}
 
-	if err := rs.store.DeleteReservation(ctx, id); err != nil {
+	if err := rs.store.DeleteReservation(id); err != nil {
 		return err
 	}
+
+	delete(rs.reservations, id)
 
 	return nil
 }
 
-func (rs *ReservationService) ListReservations(ctx context.Context) ([]structs.Reservation, error) {
-	return rs.store.ListReservations(ctx)
+func (rs *ReservationService) ListReservations(ctx context.Context) []structs.Reservation {
+	rs.lock.RLock()
+
+	reservations := make([]structs.Reservation, len(rs.reservations))
+	for _, res := range rs.reservations {
+		reservations = append(reservations, res)
+	}
+	rs.lock.RUnlock()
+	return reservations
 }
 
 func (rs *ReservationService) ConfirmReservation(ctx context.Context, id string) (structs.Reservation, error) {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
 
-	reservation, err := rs.store.GetReservation(ctx, id)
-	if err != nil {
-		return structs.Reservation{}, err
-	}
-
-	if reservation.Status == structs.ReservationStatusConfirmed {
-		return reservation, nil
+	reservation, ok := rs.reservations[id]
+	if !ok {
+		return structs.Reservation{}, core.NewNotFound("reservation not found")
 	}
 
 	reservation.Status = structs.ReservationStatusConfirmed
 
-	if err := rs.store.UpdateReservation(ctx, reservation); err != nil {
-		return reservation, err
+	if err := rs.store.PutReservation(reservation); err != nil {
+		return structs.Reservation{}, err
 	}
+
+	rs.reservations[id] = reservation
 
 	return reservation, nil
 }

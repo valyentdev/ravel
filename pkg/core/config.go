@@ -18,7 +18,6 @@ type (
 	}
 
 	Workload struct {
-		Runtime       string              `json:"type"`
 		Image         string              `json:"image"`
 		RestartPolicy RestartPolicyConfig `json:"restart_policy,omitempty"`
 		Env           []string            `json:"env,omitempty"`

@@ -34,7 +34,7 @@ func (a *AgentClient) CreateInstance(ctx context.Context, options core.CreateIns
 func (a *AgentClient) DestroyInstance(ctx context.Context, id string, force bool) error {
 	var opts []httpclient.ReqOpt
 	if force {
-		opts = append(opts, httpclient.WithQuery("force", ""))
+		opts = append(opts, httpclient.WithQuery("force", "true"))
 	}
 	err := a.client.Delete(ctx, "/instances/"+id, opts...)
 	if err != nil {
