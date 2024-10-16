@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	vminit "github.com/valyentdev/ravel-init/client"
+	"github.com/valyentdev/ravel-init/proto"
 	"github.com/valyentdev/ravel/pkg/runtimes"
-	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit"
-	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit/proto"
 )
 
 func (r *Runtime) Exec(ctx context.Context, instanceId string, cmd []string, timeout time.Duration) (*runtimes.ExecResult, error) {

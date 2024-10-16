@@ -7,11 +7,12 @@ import (
 	"syscall"
 	"time"
 
+	vminit "github.com/valyentdev/ravel-init/client"
+	"github.com/valyentdev/ravel-init/proto"
 	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/valyentdev/ravel/pkg/helper/cloudhypervisor"
 	"github.com/valyentdev/ravel/pkg/runtimes"
-	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit"
-	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit/proto"
+
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

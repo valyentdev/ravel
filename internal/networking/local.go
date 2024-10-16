@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/netip"
 
-	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit"
+	"github.com/valyentdev/ravel-init/vminit"
 )
 
 type LocalIPV4Subnet string

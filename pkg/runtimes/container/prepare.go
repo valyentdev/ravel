@@ -11,10 +11,10 @@ import (
 	"github.com/containerd/errdefs"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/u-root/u-root/pkg/cpio"
+	"github.com/valyentdev/ravel-init/vminit"
 	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/valyentdev/ravel/pkg/helper/cloudhypervisor"
 	"github.com/valyentdev/ravel/pkg/runtimes"
-	"github.com/valyentdev/ravel/pkg/runtimes/container/vminit"
 	"golang.org/x/sys/unix"
 )
 

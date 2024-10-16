@@ -3,8 +3,6 @@ package networking
 import (
 	"net"
 	"net/netip"
-
-	"tailscale.com/net/interfaces"
 )
 
 func First(ipnet *net.IPNet) net.IP {
@@ -41,10 +39,6 @@ func PrevBy(ip netip.Addr, by int) netip.Addr {
 		newIp = newIp.Prev()
 	}
 	return newIp
-}
-
-func DefaultInterface() (string, error) {
-	return interfaces.DefaultRouteInterface()
 }
 
 func Overlap(a, b *net.IPNet) bool {
