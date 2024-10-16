@@ -1,0 +1,9 @@
+project_name: ravel
+builds:
+  - env: [CGO_ENABLED=0]
+    main: ./cmd/ravel/ravel.go
+    binary: ravel
+    goos:
+      - linux
+    goarch:
+      - amd64
