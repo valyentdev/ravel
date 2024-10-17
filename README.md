@@ -85,6 +85,12 @@ Ravel is a **bidding-style orchestrator** for _microVMs_. It allows you to creat
 
 For more details, please refer to our [documentation](https://ravel.sh).
 
+### Installation
+
+```bash
+curl -L https://raw.githubusercontent.com/valyentdev/ravel/refs/heads/main/scripts/install.sh | bash
+```
+
 ## FAQ
 
 ### Why is it named Ravel?
