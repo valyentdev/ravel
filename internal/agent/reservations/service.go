@@ -136,6 +136,8 @@ func (rs *ReservationService) DeleteReservation(id string) error {
 		return nil
 	}
 
+	rs.current = rs.current.Sub(reservation.Resources)
+
 	subnet := reservation.LocalIPV4Subnet.LocalConfig().Network
 
 	if err := rs.localSubnetAllocator.Release(subnet); err != nil {

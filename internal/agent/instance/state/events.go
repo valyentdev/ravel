@@ -7,7 +7,9 @@ import (
 	"github.com/valyentdev/ravel/pkg/core"
 )
 
-func (is *instanceState) persistChange(event core.InstanceEvent) error {
+func (is *instanceState) persistAndReportChange(event core.InstanceEvent) error {
+	is.eventer.Report(event)
+
 	is.lastEvent = event
 	is.instance.State.Status = event.Status
 
@@ -21,15 +23,15 @@ func (is *instanceState) persistChange(event core.InstanceEvent) error {
 	return nil
 }
 
-func newInstanceEvent(eventType core.InstanceEventType, origin core.Origin, instanceId string, status core.MachineStatus, payload core.InstanceEventPayload) core.InstanceEvent {
+func (s *instanceState) newInstanceEvent(eventType core.InstanceEventType, origin core.Origin, status core.MachineStatus, payload core.InstanceEventPayload) core.InstanceEvent {
 	return core.InstanceEvent{
 		Id:         eventId(),
 		Type:       eventType,
 		Origin:     origin,
 		Payload:    payload,
-		InstanceId: instanceId,
+		InstanceId: s.instance.Id,
+		MachineId:  s.instance.MachineId,
 		Status:     status,
-		Reported:   false,
 		Timestamp:  time.Now(),
 	}
 }
@@ -38,10 +40,9 @@ func (s *instanceState) PushInstancePrepareEvent(ctx context.Context, retries in
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstancePrepare,
 		core.OriginRavel,
-		s.instance.Id,
 		core.MachineStatusPreparing,
 		core.InstanceEventPayload{
 			Prepare: &core.InstancePrepareEventPayload{
@@ -50,7 +51,7 @@ func (s *instanceState) PushInstancePrepareEvent(ctx context.Context, retries in
 		},
 	)
 
-	err = s.persistChange(event)
+	err = s.persistAndReportChange(event)
 	if err != nil {
 		return
 	}
@@ -62,17 +63,16 @@ func (s *instanceState) PushInstancePreparedEvent(ctx context.Context) (err erro
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstancePrepared,
 		core.OriginRavel,
-		s.instance.Id,
 		core.MachineStatusStopped,
 		core.InstanceEventPayload{
 			Prepared: &core.InstancePreparedEventPayload{},
 		},
 	)
 
-	err = s.persistChange(event)
+	err = s.persistAndReportChange(event)
 	if err != nil {
 		return
 	}
@@ -84,10 +84,9 @@ func (s *instanceState) PushInstancePreparationFailedEvent(ctx context.Context, 
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstancePreparationFailed,
 		core.OriginRavel,
-		s.instance.Id,
 		core.MachineStatusStopped,
 		core.InstanceEventPayload{
 			PreparationFailed: &core.InstancePreparationFailedEventPayload{
@@ -98,7 +97,7 @@ func (s *instanceState) PushInstancePreparationFailedEvent(ctx context.Context, 
 
 	s.instance.State.DesiredStatus = core.MachineStatusDestroying
 
-	err = s.persistChange(event)
+	err = s.persistAndReportChange(event)
 
 	return nil
 }
@@ -114,10 +113,9 @@ func (s *instanceState) PushInstanceStartEvent(ctx context.Context, isRestart bo
 		origin = core.OriginUser
 	}
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstanceStart,
 		origin,
-		s.instance.Id,
 		core.MachineStatusStarting,
 		core.InstanceEventPayload{
 			Start: &core.InstanceStartEventPayload{
@@ -134,7 +132,7 @@ func (s *instanceState) PushInstanceStartEvent(ctx context.Context, isRestart bo
 		s.instance.State.Restarts = 0
 	}
 
-	if err = s.persistChange(event); err != nil {
+	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
 
@@ -145,10 +143,9 @@ func (s *instanceState) PushInstanceStartFailedEvent(ctx context.Context, errMsg
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstanceStartFailed,
 		core.OriginRavel,
-		s.instance.Id,
 		core.MachineStatusStopped,
 		core.InstanceEventPayload{
 			StartFailed: &core.InstanceStartFailedEventPayload{
@@ -157,7 +154,7 @@ func (s *instanceState) PushInstanceStartFailedEvent(ctx context.Context, errMsg
 		},
 	)
 
-	if err = s.persistChange(event); err != nil {
+	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
 
@@ -168,17 +165,16 @@ func (s *instanceState) PushInstanceStartedEvent(ctx context.Context) (err error
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstanceStarted,
 		core.OriginRavel,
-		s.instance.Id,
 		core.MachineStatusRunning,
 		core.InstanceEventPayload{
 			Started: &core.InstanceStartedEventPayload{},
 		},
 	)
 
-	if err = s.persistChange(event); err != nil {
+	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
 
@@ -189,10 +185,9 @@ func (s *instanceState) PushInstanceStopEvent(ctx context.Context) (err error) {
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstanceStop,
 		core.OriginUser,
-		s.instance.Id,
 		core.MachineStatusStopping,
 		core.InstanceEventPayload{
 			Stop: &core.InstanceStopEventPayload{},
@@ -203,7 +198,7 @@ func (s *instanceState) PushInstanceStopEvent(ctx context.Context) (err error) {
 	s.instance.State.DesiredStatus = core.MachineStatusStopped
 	s.instance.State.Restarts = 0
 
-	if err = s.persistChange(event); err != nil {
+	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
 	return nil
@@ -213,17 +208,16 @@ func (s *instanceState) PushInstanceExitedEvent(ctx context.Context, payload cor
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstanceExited,
 		core.OriginRavel,
-		s.instance.Id,
 		core.MachineStatusStopped,
 		core.InstanceEventPayload{
 			Exited: &payload,
 		},
 	)
 
-	if err = s.persistChange(event); err != nil {
+	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
 
@@ -245,13 +239,12 @@ func (s *instanceState) PushInstanceDestroyEvent(ctx context.Context, origin cor
 		},
 		InstanceId: s.instance.Id,
 		Status:     core.MachineStatusDestroying,
-		Reported:   false,
 		Timestamp:  time.Now(),
 	}
 
 	s.instance.State.DesiredStatus = core.MachineStatusDestroyed
 
-	if err = s.persistChange(event); err != nil {
+	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
 
@@ -271,11 +264,10 @@ func (s *instanceState) PushInstanceDestroyedEvent(ctx context.Context) (err err
 		},
 		InstanceId: s.instance.Id,
 		Status:     core.MachineStatusDestroyed,
-		Reported:   false,
 		Timestamp:  time.Now(),
 	}
 
-	if err = s.persistChange(event); err != nil {
+	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
 

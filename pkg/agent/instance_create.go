@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/internal/agent/instance"
+	"github.com/valyentdev/ravel/internal/agent/instance/eventer"
 	"github.com/valyentdev/ravel/internal/agent/instance/state"
 	"github.com/valyentdev/ravel/internal/id"
 	"github.com/valyentdev/ravel/pkg/core"
 )
 
-func (d *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePayload) (*core.Instance, error) {
-	reservation, err := d.reservations.ConfirmReservation(ctx, opt.MachineId)
+func (a *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePayload) (*core.Instance, error) {
+	reservation, err := a.reservations.ConfirmReservation(ctx, opt.MachineId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to confirm reservation: %w", err)
 	}
@@ -42,17 +43,17 @@ func (d *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePaylo
 	}
 
 	i.Config = config
-	i.NodeId = d.nodeId
+	i.NodeId = a.nodeId
 
-	is, err := state.CreateInstance(d.store, d.cluster, i)
+	is, err := state.CreateInstance(a.store, a.cluster, i, eventer.NewEventer(nil, i.MachineId, i.Id, a.nc, a.store))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create instance: %w", err)
 	}
 
-	manager := instance.NewInstanceManager(is, d.containerRuntime, reservation)
-	d.lock.Lock()
-	d.instances[i.Id] = manager
-	d.lock.Unlock()
+	manager := instance.NewInstanceManager(is, a.containerRuntime, reservation)
+	a.lock.Lock()
+	a.instances[i.Id] = manager
+	a.lock.Unlock()
 
 	go func() {
 		err := manager.Prepare()

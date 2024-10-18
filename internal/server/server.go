@@ -52,6 +52,7 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 }
 
 func (s *Server) Serve() error {
+	go s.ravel.ListenInstanceEvents()
 	slog.Info("Starting server", "address", s.server.Addr)
 	return s.server.ListenAndServe()
 }

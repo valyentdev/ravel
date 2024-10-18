@@ -40,6 +40,22 @@ CREATE TABLE public.gateways (
 
 
 --
+-- Name: instance_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.instance_events (
+    id text NOT NULL,
+    type text NOT NULL,
+    origin text NOT NULL,
+    payload jsonb NOT NULL,
+    instance_id text NOT NULL,
+    machine_id text NOT NULL,
+    status text NOT NULL,
+    "timestamp" timestamp without time zone NOT NULL
+);
+
+
+--
 -- Name: machine_versions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -104,6 +120,14 @@ ALTER TABLE ONLY public.gateways
 
 
 --
+-- Name: instance_events instance_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.instance_events
+    ADD CONSTRAINT instance_events_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: machine_versions machine_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -165,6 +189,13 @@ CREATE UNIQUE INDEX gateways_name_idx ON public.gateways USING btree (namespace,
 
 
 --
+-- Name: instance_events_machine_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX instance_events_machine_id_idx ON public.instance_events USING btree (machine_id);
+
+
+--
 -- Name: fleets fleets_namespace_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -186,6 +217,14 @@ ALTER TABLE ONLY public.gateways
 
 ALTER TABLE ONLY public.gateways
     ADD CONSTRAINT gateways_namespace_fkey FOREIGN KEY (namespace) REFERENCES public.namespaces(name);
+
+
+--
+-- Name: instance_events instance_events_machine_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.instance_events
+    ADD CONSTRAINT instance_events_machine_id_fkey FOREIGN KEY (machine_id) REFERENCES public.machines(id) ON DELETE CASCADE;
 
 
 --
@@ -215,4 +254,5 @@ ALTER TABLE ONLY public.machines
 
 INSERT INTO public.schema_migrations (version) VALUES
     ('20240809111759'),
-    ('20241005214512');
+    ('20241005214512'),
+    ('20241018074516');

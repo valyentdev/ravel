@@ -1,15 +1,50 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/valyentdev/ravel/pkg/core"
-	"github.com/valyentdev/ravel/pkg/helper/superbolt"
+	"go.etcd.io/bbolt"
 )
 
 type InstanceEntry struct {
-	Instance  core.Instance
-	LastEvent core.InstanceEvent
+	Instance         core.Instance
+	LastEvent        core.InstanceEvent
+	UnreportedEvents []core.InstanceEvent
+}
+
+func getInstance(b *bbolt.Bucket) (core.Instance, error) {
+	var instance core.Instance
+	bytes := b.Get(instanceKey)
+	if bytes == nil {
+		return instance, errors.New("instance not found in bucket")
+	}
+
+	err := json.Unmarshal(bytes, &instance)
+	if err != nil {
+		return instance, err
+	}
+
+	return instance, nil
+}
+
+func putInstance(b *bbolt.Bucket, instance core.Instance) error {
+	bytes, err := json.Marshal(instance)
+	if err != nil {
+		return err
+	}
+
+	return b.Put(instanceKey, bytes)
+}
+
+func putEvent(b *bbolt.Bucket, event core.InstanceEvent) error {
+	bytes, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	return b.Put(event.Id[:], bytes)
 }
 
 func (s *Store) LoadInstances() ([]InstanceEntry, error) {
@@ -19,33 +54,42 @@ func (s *Store) LoadInstances() ([]InstanceEntry, error) {
 	}
 	defer tx.Rollback()
 
-	instances, err := tx.Bucket(instancesBucket)
-	if err != nil {
-		return nil, err
+	instances := tx.Bucket(instancesBucket)
+	if instances == nil {
+		panic("instances bucket not found the Init function should have been called")
 	}
 
 	instanceList := []InstanceEntry{}
-	err = instances.ForEachBucket(func(key []byte, bucket *superbolt.Bucket) error {
+	err = instances.ForEachBucket(func(key []byte) error {
+		bucket := instances.Bucket(key)
 		var instance core.Instance
-		var lastEvent core.InstanceEvent
-		err := bucket.Get(instanceKey, &instance)
+
+		instance, err := getInstance(bucket)
 		if err != nil {
 			return err
 		}
 
-		events, err := bucket.Bucket(instancesEventsBucket)
-		if err != nil {
-			return err
+		events := bucket.Bucket(instancesEventsBucket)
+		if events == nil {
+			return errors.New("events bucket not found")
 		}
 
 		cursor := events.Cursor()
 
-		k, _ := cursor.Last()
+		k, value := cursor.Last()
 		if k == nil {
 			return errors.New("no events found")
 		}
 
-		err = events.Get(k, &lastEvent)
+		var lastEvent core.InstanceEvent
+
+		if err = json.Unmarshal(value, &lastEvent); err != nil {
+			return err
+		}
+
+		lastReported := bucket.Get(lastReportedEventIdKey)
+
+		unreportedEvents, err := getUnreportedInstanceEvents(events, lastReported)
 		if err != nil {
 			return err
 		}
@@ -53,6 +97,7 @@ func (s *Store) LoadInstances() ([]InstanceEntry, error) {
 		instanceList = append(instanceList, InstanceEntry{
 			Instance:  instance,
 			LastEvent: lastEvent,
+			UnreportedEvents: unreportedEvents,
 		})
 		return nil
 	})
@@ -66,17 +111,15 @@ func (s *Store) CreateInstance(instance core.Instance, event core.InstanceEvent)
 		return err
 	}
 	defer tx.Rollback()
-	instances, err := tx.Bucket(instancesBucket)
-	if err != nil {
-		return err
-	}
+
+	instances := tx.Bucket(instancesBucket)
 
 	ib, err := instances.CreateBucket([]byte(instance.Id))
 	if err != nil {
 		return err
 	}
 
-	err = ib.Put(instanceKey, instance)
+	err = putInstance(ib, instance)
 	if err != nil {
 		return err
 	}
@@ -86,7 +129,7 @@ func (s *Store) CreateInstance(instance core.Instance, event core.InstanceEvent)
 		return err
 	}
 
-	err = events.Put(event.Id[:], event)
+	err = putEvent(events, event)
 	if err != nil {
 		return err
 	}
@@ -98,34 +141,25 @@ func (s *Store) CreateInstance(instance core.Instance, event core.InstanceEvent)
 	return nil
 }
 
-func (store *Store) UpdateInstance(instance core.Instance, event core.InstanceEvent) error {
-	tx, err := store.db.Begin(true)
+func (s *Store) UpdateInstance(instance core.Instance, event core.InstanceEvent) error {
+	tx, err := s.db.Begin(true)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	instances, err := tx.Bucket(instancesBucket)
+	instances := tx.Bucket(instancesBucket)
+
+	ib := instances.Bucket([]byte(instance.Id))
+
+	err = putInstance(ib, instance)
 	if err != nil {
 		return err
 	}
 
-	ib, err := instances.Bucket([]byte(instance.Id))
-	if err != nil {
-		return err
-	}
+	events := ib.Bucket(instancesEventsBucket)
 
-	err = ib.Put(instanceKey, instance)
-	if err != nil {
-		return err
-	}
-
-	events, err := ib.Bucket(instancesEventsBucket)
-	if err != nil {
-		return err
-	}
-
-	err = events.Put(event.Id[:], event)
+	err = putEvent(events, event)
 	if err != nil {
 		return err
 	}
@@ -137,17 +171,14 @@ func (store *Store) UpdateInstance(instance core.Instance, event core.InstanceEv
 	return nil
 }
 
-func (store *Store) DestroyInstanceBucket(id string) error {
-	tx, err := store.db.Begin(true)
+func (s *Store) DestroyInstanceBucket(id string) error {
+	tx, err := s.db.Begin(true)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	instances, err := tx.Bucket(instancesBucket)
-	if err != nil {
-		return err
-	}
+	instances := tx.Bucket(instancesBucket)
 
 	if err = instances.DeleteBucket([]byte(id)); err != nil {
 		return err

@@ -1,10 +1,15 @@
 package core
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/oklog/ulid"
 )
+
+func InstanceEventSubject(m, i string) string {
+	return fmt.Sprintf("events.machines.%s.%s", m, i)
+}
 
 type InstanceEventType string
 
@@ -27,10 +32,10 @@ type InstanceEvent struct {
 	Type       InstanceEventType    `json:"type"`
 	Origin     Origin               `json:"origin"`
 	Payload    InstanceEventPayload `json:"payload"`
+	MachineId  string               `json:"machine_id"`
 	InstanceId string               `json:"instance_id"`
 	Status     InstanceStatus       `json:"status"`
-	Reported   bool                 `json:"reported"`
-	Timestamp  time.Time            `json:"time"`
+	Timestamp  time.Time            `json:"timestamp"`
 }
 
 type InstanceCreatedEventPayload struct {

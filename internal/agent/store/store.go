@@ -1,9 +1,11 @@
 package store
 
-import "github.com/valyentdev/ravel/pkg/helper/superbolt"
+import (
+	"go.etcd.io/bbolt"
+)
 
 type Store struct {
-	db *superbolt.DB
+	db *bbolt.DB
 }
 
 /**
@@ -11,6 +13,7 @@ Schema:
 instances/
 	  <instance_id>/
 	  		instance -> core.Instance
+			last_reported_event_id -> ulid.ULID ([]bytes)
 			events/
 				  <event_id> -> core.InstanceEvent
 reservations/
@@ -22,11 +25,12 @@ var (
 	instanceKey           = []byte("instance")
 	instancesEventsBucket = []byte("events")
 
-	reservationsBucket = []byte("reservations")
+	reservationsBucket     = []byte("reservations")
+	lastReportedEventIdKey = []byte("last_reported_event_id")
 )
 
 func NewStore(path string) (*Store, error) {
-	db, err := superbolt.Open(path, 0600, nil)
+	db, err := bbolt.Open(path, 0600, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -92,4 +93,49 @@ func (q *Queries) DestroyMachine(ctx context.Context, namespace, fleetId, id str
 	}
 
 	return nil
+}
+
+const insertEventQuery = `INSERT INTO machine_events (id, type, origin, payload, instance_id, machine_id, status, timestamp) 
+								VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+								ON CONFLICT DO NOTHING`
+
+func (q *Queries) PushMachineEvent(ctx context.Context, event core.InstanceEvent) error {
+	payload, err := json.Marshal(event.Payload)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.db.Exec(ctx, insertEventQuery, event.Id.String(), event.Type, event.Origin, json.RawMessage(payload), event.InstanceId, event.MachineId, event.Status, event.Timestamp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (q *Queries) ListMachineEvents(ctx context.Context, machineId string) ([]core.InstanceEvent, error) {
+	rows, err := q.db.Query(ctx, `SELECT id, type, origin, payload, instance_id, machine_id, status, timestamp FROM machine_events WHERE machine_id = $1`, machineId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	events := []core.InstanceEvent{}
+	for rows.Next() {
+		var payload json.RawMessage
+		var event core.InstanceEvent
+		err := rows.Scan(&event.Id, &event.Type, &event.Origin, &payload, &event.InstanceId, &event.MachineId, &event.Status, &event.Timestamp)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(payload, &event.Payload)
+		if err != nil {
+			return nil, err
+		}
+
+		events = append(events, event)
+	}
+
+	return events, nil
+
 }

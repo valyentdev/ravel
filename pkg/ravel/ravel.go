@@ -13,6 +13,7 @@ import (
 )
 
 type Ravel struct {
+	nc             *nats.Conn
 	o              *orchestrator.Orchestrator
 	db             *db.DB
 	clusterState   *cluster.ClusterState
@@ -36,7 +37,7 @@ func New(config config.RavelConfig) (*Ravel, error) {
 
 	natsOptions := []nats.Option{}
 	if config.Nats.CredFile != "" {
-		natsOptions = append(natsOptions, nats.UserCredentials(config.Nats.CredFile, config.Nats.CredFile))
+		natsOptions = append(natsOptions, nats.UserCredentials(config.Nats.CredFile, config.Nats.CredFile), nats.MaxReconnects(-1))
 	}
 
 	nc, err := nats.Connect(config.Nats.Url, natsOptions...)
@@ -59,6 +60,7 @@ func New(config config.RavelConfig) (*Ravel, error) {
 	db := db.New(pgpool)
 
 	return &Ravel{
+		nc:             nc,
 		o:              o,
 		db:             db,
 		clusterState:   clusterstate,

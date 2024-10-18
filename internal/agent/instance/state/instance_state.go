@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/oklog/ulid"
+	"github.com/valyentdev/ravel/internal/agent/instance/eventer"
 	"github.com/valyentdev/ravel/internal/agent/store"
 	"github.com/valyentdev/ravel/internal/cluster"
 	"github.com/valyentdev/ravel/pkg/core"
@@ -22,6 +23,7 @@ type instanceState struct {
 	instance   core.Instance
 	lastEvent  core.InstanceEvent
 	updateCh   chan struct{}
+	eventer    *eventer.Eventer
 }
 
 func (s *instanceState) triggerUpdate() {
@@ -74,8 +76,9 @@ func NewInstanceState(
 	lastEvent core.InstanceEvent,
 	nodeId string,
 	c *cluster.ClusterState,
+	eventer *eventer.Eventer,
 ) InstanceState {
-	return newInstanceState(state, instance, lastEvent, c, false)
+	return newInstanceState(state, instance, lastEvent, c, eventer, false)
 }
 
 func newInstanceState(
@@ -83,6 +86,7 @@ func newInstanceState(
 	instance core.Instance,
 	lastEvent core.InstanceEvent,
 	c *cluster.ClusterState,
+	eventer *eventer.Eventer,
 	new bool,
 ) *instanceState {
 	is := &instanceState{
@@ -90,6 +94,7 @@ func newInstanceState(
 		instance: instance,
 		cluster:  c,
 		updateCh: make(chan struct{}, 1),
+		eventer:  eventer,
 	}
 
 	go is.sync()
@@ -106,8 +111,9 @@ func CreateInstance(
 	state *store.Store,
 	cs *cluster.ClusterState,
 	instance core.Instance,
+	eventer *eventer.Eventer,
 ) (InstanceState, error) {
-	is := newInstanceState(state, instance, core.InstanceEvent{}, cs, true)
+	is := newInstanceState(state, instance, core.InstanceEvent{}, cs, eventer, true)
 
 	if err := is.create(); err != nil {
 		return nil, err
@@ -120,10 +126,9 @@ func (s *instanceState) create() (err error) {
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := newInstanceEvent(
+	event := s.newInstanceEvent(
 		core.InstanceCreated,
 		core.OriginRavel,
-		s.instance.Id,
 		core.MachineStatusCreated,
 		core.InstanceEventPayload{
 			Created: &core.InstanceCreatedEventPayload{},
@@ -136,5 +141,6 @@ func (s *instanceState) create() (err error) {
 	}
 	s.lastEvent = event
 	s.triggerUpdate()
+	s.eventer.Report(event)
 	return nil
 }

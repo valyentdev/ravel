@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/valyentdev/ravel/internal/agent/instance"
@@ -38,15 +37,6 @@ func (s *Agent) DestroyInstance(ctx context.Context, id string, force bool) erro
 	if err != nil {
 		return err
 	}
-
-	err = s.store.DestroyInstanceBucket(id)
-	if err != nil {
-		slog.Error("failed to destroy instance bucket", "instance_id", id, "error", err)
-	}
-
-	s.lock.Lock()
-	delete(s.instances, id)
-	s.lock.Unlock()
 
 	return nil
 }
@@ -88,7 +78,7 @@ func (s *Agent) InstanceExec(ctx context.Context, id string, opt core.InstanceEx
 		return nil, err
 	}
 
-	if opt.Cmd == nil || len(opt.Cmd) == 0 {
+	if len(opt.Cmd) == 0 {
 		return nil, core.NewInvalidArgument("cmd is required")
 	}
 

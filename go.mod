@@ -8,6 +8,7 @@ require (
 	github.com/coreos/go-iptables v0.7.0
 	github.com/danielgtaylor/huma/v2 v2.23.0
 	github.com/distribution/reference v0.5.0
+	github.com/gammazero/deque v0.2.1
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/mattn/go-sqlite3 v1.14.22

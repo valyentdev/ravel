@@ -185,3 +185,23 @@ func (e *Endpoints) getMachineLogs(ctx context.Context, req *GetMachineLogsReque
 		},
 	}, nil
 }
+
+type ListMachineEventsRequest struct {
+	MachineResolver
+}
+
+type ListMachineEventsResponse struct {
+	Body []core.InstanceEvent
+}
+
+func (e *Endpoints) listMachineEvents(ctx context.Context, req *ListMachineEventsRequest) (*ListMachineEventsResponse, error) {
+	events, err := e.ravel.ListMachineEvents(ctx, req.Namespace, req.Fleet, req.MachineId)
+	if err != nil {
+		e.log("Failed to list machine events", err)
+		return nil, err
+	}
+
+	return &ListMachineEventsResponse{
+		Body: events,
+	}, nil
+}

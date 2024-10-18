@@ -160,6 +160,14 @@ func (e *Endpoints) Register(api huma.API) {
 	}, e.listMachineVersions)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "listMachineEvents",
+		Summary:     "List machine events",
+		Method:      http.MethodGet,
+		Path:        "/fleets/{fleet}/machines/{machine_id}/events",
+		Tags:        []string{"machines"},
+	}, e.listMachineEvents)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "getMachineLogs",
 		Summary:     "Get machine logs",
 		Method:      http.MethodGet,

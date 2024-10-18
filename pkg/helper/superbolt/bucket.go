@@ -20,6 +20,10 @@ type Bucket struct {
 
 var ErrKeyNotFound = errors.New("key not found")
 
+func (b *Bucket) BoltBucket() *bbolt.Bucket {
+	return b.bucket
+}
+
 func (b *Bucket) Get(key []byte, dest any) error {
 	data := b.bucket.Get(key)
 	if data == nil {

@@ -195,3 +195,12 @@ func (r *Ravel) GetMachineLogsRaw(ctx context.Context, ns, fleet, machineId stri
 
 	return r.o.GetMachineLogsRaw(ctx, m, follow)
 }
+
+func (r *Ravel) ListMachineEvents(ctx context.Context, ns, fleet, machineId string) ([]core.InstanceEvent, error) {
+	m, err := r.getMachine(ctx, ns, fleet, machineId)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.db.ListMachineEvents(ctx, m.Id)
+}

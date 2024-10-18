@@ -9,6 +9,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/valyentdev/ravel/internal/agent/instance"
+	"github.com/valyentdev/ravel/internal/agent/instance/eventer"
 	"github.com/valyentdev/ravel/internal/agent/instance/state"
 	"github.com/valyentdev/ravel/internal/agent/reservations"
 	"github.com/valyentdev/ravel/internal/agent/store"
@@ -56,6 +57,7 @@ func New(config config.RavelConfig) (*Agent, error) {
 	natsOptions := []nats.Option{}
 	if config.Nats.CredFile != "" {
 		natsOptions = append(natsOptions, nats.UserCredentials(config.Nats.CredFile, config.Nats.CredFile))
+		natsOptions = append(natsOptions, nats.MaxReconnects(-1))
 	}
 
 	slog.Info("Initializing nats")
@@ -99,7 +101,7 @@ func New(config config.RavelConfig) (*Agent, error) {
 			slog.Error("failed to get reservation", "instanceId", i.Instance.Id, "machineId", i.Instance.MachineId, "error", err)
 			continue
 		}
-		state := state.NewInstanceState(store, i.Instance, i.LastEvent, config.NodeId, cs)
+		state := state.NewInstanceState(store, i.Instance, i.LastEvent, config.NodeId, cs, eventer.NewEventer(i.UnreportedEvents, i.Instance.MachineId, i.Instance.Id, nc, store))
 		manager := instance.NewInstanceManager(state, containerRuntime, reservation)
 		manager.Recover()
 		managers[i.Instance.Id] = manager

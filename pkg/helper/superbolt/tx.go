@@ -7,6 +7,10 @@ type Tx struct {
 	options *Options
 }
 
+func (tx *Tx) BoltTx() *bbolt.Tx {
+	return tx.tx
+}
+
 func (tx *Tx) Bucket(name []byte) (*Bucket, error) {
 	bucket := tx.tx.Bucket(name)
 	if bucket == nil {
