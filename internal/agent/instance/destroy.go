@@ -26,7 +26,7 @@ func (m *Manager) Destroy(ctx context.Context, force bool) error {
 		<-m.waitCh
 	}
 
-	err := m.destroyImpl(ctx, core.OriginUser, "requested by user")
+	err := m.destroyImpl(ctx, core.OriginUser, force, "requested by user")
 	if err != nil {
 		return err
 	}
@@ -34,8 +34,8 @@ func (m *Manager) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
-func (m *Manager) destroyImpl(ctx context.Context, origin core.Origin, reason string) error {
-	err := m.state.PushInstanceDestroyEvent(ctx, origin, reason)
+func (m *Manager) destroyImpl(ctx context.Context, origin core.Origin, force bool, reason string) error {
+	err := m.state.PushInstanceDestroyEvent(ctx, origin, force, reason)
 	if err != nil {
 		return err
 	}

@@ -224,23 +224,21 @@ func (s *instanceState) PushInstanceExitedEvent(ctx context.Context, payload cor
 	return nil
 }
 
-func (s *instanceState) PushInstanceDestroyEvent(ctx context.Context, origin core.Origin, reason string) (err error) {
+func (s *instanceState) PushInstanceDestroyEvent(ctx context.Context, origin core.Origin, force bool, reason string) (err error) {
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := core.InstanceEvent{
-		Id:     eventId(),
-		Type:   core.InstanceDestroy,
-		Origin: core.OriginRavel,
-		Payload: core.InstanceEventPayload{
+	event := s.newInstanceEvent(
+		core.InstanceDestroy,
+		origin,
+		core.MachineStatusDestroying,
+		core.InstanceEventPayload{
 			Destroy: &core.InstanceDestroyEventPayload{
 				Reason: reason,
+				Force:  force,
 			},
 		},
-		InstanceId: s.instance.Id,
-		Status:     core.MachineStatusDestroying,
-		Timestamp:  time.Now(),
-	}
+	)
 
 	s.instance.State.DesiredStatus = core.MachineStatusDestroyed
 
@@ -255,21 +253,20 @@ func (s *instanceState) PushInstanceDestroyedEvent(ctx context.Context) (err err
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
 
-	event := core.InstanceEvent{
-		Id:     eventId(),
-		Type:   core.InstanceDestroyed,
-		Origin: core.OriginRavel,
-		Payload: core.InstanceEventPayload{
+	event := s.newInstanceEvent(
+		core.InstanceDestroyed,
+		core.OriginRavel,
+		core.MachineStatusDestroyed,
+		core.InstanceEventPayload{
 			Destroyed: &core.InstanceDestroyedEventPayload{},
 		},
-		InstanceId: s.instance.Id,
-		Status:     core.MachineStatusDestroyed,
-		Timestamp:  time.Now(),
-	}
+	)
 
 	if err = s.persistAndReportChange(event); err != nil {
 		return
 	}
+
+	s.eventer.Stop()
 
 	return nil
 }

@@ -76,7 +76,7 @@ func (m *Manager) prepare() error {
 		reason = "instance preparation failed after maximum retries"
 	}
 
-	destroyErr := m.destroyImpl(ctx, core.OriginRavel, reason)
+	destroyErr := m.destroyImpl(ctx, core.OriginRavel, false, reason)
 	if destroyErr != nil {
 		slog.Error("failed to destroy instance after preparation failed", "error", destroyErr)
 		return err

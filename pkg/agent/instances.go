@@ -33,10 +33,19 @@ func (s *Agent) DestroyInstance(ctx context.Context, id string, force bool) erro
 		return err
 	}
 
-	err = s.reservations.DeleteReservation(instance.Instance().MachineId)
+	err = s.reservations.DeleteReservation(instance.Instance().ReservationId)
 	if err != nil {
 		return err
 	}
+
+	err = s.store.DestroyInstanceBucket(id)
+	if err != nil {
+		return err
+	}
+
+	s.lock.Lock()
+	delete(s.instances, id)
+	s.lock.Unlock()
 
 	return nil
 }

@@ -29,10 +29,12 @@ func (a *Agent) CreateInstance(ctx context.Context, opt core.CreateInstancePaylo
 
 	config := opt.Config
 	i := core.Instance{
-		Id:        id.GeneratePrefixed("instance"),
-		Namespace: opt.Namespace,
-		MachineId: opt.MachineId,
-		FleetId:   opt.FleetId,
+		Id:            id.GeneratePrefixed("instance"),
+		Namespace:     opt.Namespace,
+		MachineId:     opt.MachineId,
+		ReservationId: reservation.Id,
+
+		FleetId: opt.FleetId,
 		State: core.InstanceState{
 			DesiredStatus: desiredStatus,
 			Status:        core.MachineStatusCreated,

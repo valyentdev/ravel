@@ -50,7 +50,7 @@ type InstanceState interface {
 	PushInstanceStartFailedEvent(ctx context.Context, errMsg string) error
 	PushInstanceExitedEvent(ctx context.Context, payload core.InstanceExitedEventPayload) error
 	PushInstanceStopEvent(ctx context.Context) error
-	PushInstanceDestroyEvent(ctx context.Context, origin core.Origin, reason string) error
+	PushInstanceDestroyEvent(ctx context.Context, origin core.Origin, force bool, reason string) error
 	PushInstanceDestroyedEvent(ctx context.Context) error
 }
 

@@ -2,6 +2,7 @@ package reservations
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
@@ -130,9 +131,12 @@ func (rs *ReservationService) GetReservation(id string) (structs.Reservation, er
 func (rs *ReservationService) DeleteReservation(id string) error {
 	rs.lock.Lock()
 	defer rs.lock.Unlock()
+	slog.Info("deleting reservation", "id", id)
+	defer slog.Info("deleted reservation", "id", id)
 
 	reservation, ok := rs.reservations[id]
 	if !ok {
+		slog.Warn("reservation not found", "id", id)
 		return nil
 	}
 
@@ -143,6 +147,8 @@ func (rs *ReservationService) DeleteReservation(id string) error {
 	if err := rs.localSubnetAllocator.Release(subnet); err != nil {
 		return err
 	}
+
+	slog.Info("deleting reservation from store", "id", id)
 
 	if err := rs.store.DeleteReservation(id); err != nil {
 		return err

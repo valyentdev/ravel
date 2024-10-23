@@ -47,6 +47,10 @@ func (s *Store) DeleteReservation(id string) error {
 		return err
 	}
 
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

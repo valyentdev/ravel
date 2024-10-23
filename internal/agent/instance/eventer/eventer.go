@@ -18,22 +18,33 @@ type Eventer struct {
 	toReport *deque.Deque[core.InstanceEvent]
 	mutex    sync.RWMutex
 
-	nc     *nats.Conn
-	store  *store.Store
-	notify chan struct{}
-	stopCh chan struct{}
+	nc        *nats.Conn
+	store     *store.Store
+	notify    chan struct{}
+	stopCh    chan struct{}
+	stoppedCh chan struct{}
+	stopOnce  sync.Once
 }
 
 func NewEventer(unreportedEvents []core.InstanceEvent, machineId, instanceId string, nc *nats.Conn, store *store.Store) *Eventer {
 	toReport := deque.New[core.InstanceEvent](len(unreportedEvents))
 
 	e := &Eventer{
-		subject:  "events." + machineId + "." + instanceId,
-		toReport: toReport,
-		nc:       nc,
-		store:    store,
-		notify:   make(chan struct{}, 1),
-		stopCh:   make(chan struct{}),
+		subject:   "events." + machineId + "." + instanceId,
+		toReport:  toReport,
+		nc:        nc,
+		store:     store,
+		notify:    make(chan struct{}, 1),
+		stopCh:    make(chan struct{}),
+		stoppedCh: make(chan struct{}),
+	}
+
+	for _, event := range unreportedEvents {
+		e.toReport.PushBack(event)
+	}
+
+	if len(unreportedEvents) > 0 {
+		e.triggerNotify()
 	}
 
 	go e.start()
@@ -58,17 +69,18 @@ func (e *Eventer) Report(event core.InstanceEvent) {
 }
 
 func (e *Eventer) Stop() {
-	e.stopCh <- struct{}{}
-}
-
-func (e *Eventer) Start() {
-	go e.start()
+	e.stopOnce.Do(func() {
+		close(e.stopCh)
+	})
+	<-e.stoppedCh
 }
 
 func (e *Eventer) start() {
+	slog.Debug("starting eventer", "instance", e.subject)
 	for {
 		select {
 		case <-e.stopCh:
+			close(e.stoppedCh)
 			return
 		case <-e.notify:
 			e.reportEvents()
