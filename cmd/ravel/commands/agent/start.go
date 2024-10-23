@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/valyentdev/ravel/pkg/agent"
 	"github.com/valyentdev/ravel/pkg/core/config"
 
@@ -19,7 +18,6 @@ import (
 
 type agentStartOpt struct {
 	configFile string
-	debug      bool
 }
 
 func newStartAgentCmd() *cobra.Command {
@@ -35,16 +33,11 @@ func newStartAgentCmd() *cobra.Command {
 	}
 
 	startCmd.Flags().StringVarP(&opt.configFile, "config", "c", "ravel.json", "config file")
-	startCmd.Flags().BoolVar(&opt.debug, "debug", false, "enable debug logging")
-
 	return startCmd
 }
 
 func runAgentStart(opt agentStartOpt) error {
 	configFile := opt.configFile
-	if opt.debug {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
-	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
