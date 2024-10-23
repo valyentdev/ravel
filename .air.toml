@@ -3,7 +3,7 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  args_bin = ["server", "start", "-c", "ravel.json", "--env", ".env"]
+  args_bin = ["server", "start", "-c", "ravel.json"]
   bin = "./tmp/ravel"
   cmd = "go build -o ./tmp/ravel ./cmd/ravel/ravel.go"
   delay = 1000

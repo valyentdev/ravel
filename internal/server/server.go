@@ -53,8 +53,15 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 
 func (s *Server) Serve() error {
 	go s.ravel.ListenInstanceEvents()
-	slog.Info("Starting server", "address", s.server.Addr)
-	return s.server.ListenAndServe()
+
+	slog.Info("Starting http server", "address", s.server.Addr)
+
+	err := s.server.ListenAndServe()
+	if err == http.ErrServerClosed {
+		return nil
+	}
+
+	return err
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

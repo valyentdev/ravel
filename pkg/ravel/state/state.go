@@ -49,6 +49,30 @@ func (s *State) CreateMachine(machine core.Machine, mv core.MachineVersion) erro
 	return nil
 }
 
+func (s *State) UpdateMachine(machine core.Machine) error {
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	if err = tx.UpdateMachine(ctx, machine); err != nil {
+		return fmt.Errorf("failed to update machine on pg: %w", err)
+	}
+
+	if err = s.clusterState.UpdateMachine(ctx, machine); err != nil {
+		return fmt.Errorf("failed to update machine on corro: %w", err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
+
+	return nil
+}
+
 func (s *State) CreateGateway(gateway core.Gateway) error {
 	ctx := context.Background()
 	tx, err := s.db.BeginTx(ctx)

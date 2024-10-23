@@ -51,7 +51,28 @@ func (q *Queries) CreateMachine(ctx context.Context, machine core.Machine) error
 	return nil
 }
 
+const updateMachineQuery = `
+UPDATE machines SET
+	node = $1,
+	instance_id = $2,
+	machine_version = $3,
+	updated_at = $4 
+WHERE id = $5`
+
 func (q *Queries) UpdateMachine(ctx context.Context, machine core.Machine) error {
+	_, err := q.db.Exec(
+		ctx,
+		updateMachineQuery,
+		machine.Node,
+		machine.InstanceId,
+		machine.MachineVersion.String(),
+		machine.UpdatedAt,
+		machine.Id,
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

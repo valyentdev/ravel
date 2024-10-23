@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/oklog/ulid"
+
 	"github.com/valyentdev/ravel/internal/id"
 	"github.com/valyentdev/ravel/pkg/core"
 	"github.com/valyentdev/ravel/pkg/core/api"
@@ -67,8 +68,6 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 		return nil, core.NewInvalidArgument("Invalid CPU kind")
 	}
 
-	slog.Info("Creating machine", "machine_id", machine.Id, "fleet_id", f.Id, "namespace", namespace)
-
 	guestConfig, err := getInstanceGuestConfig(cputemplate, createOptions.Config.Guest.Cpus, createOptions.Config.Guest.MemoryMB)
 	if err != nil {
 		return nil, err
@@ -78,6 +77,11 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 		Guest:      guestConfig,
 		Workload:   createOptions.Config.Workload,
 		StopConfig: createOptions.Config.StopConfig,
+	}
+
+	err = r.state.CreateMachine(machine, mv)
+	if err != nil {
+		return nil, err
 	}
 
 	instance, err := r.o.CreateInstanceForMachine(ctx, namespace, f.Id, orchestrator.CreateInstanceOptions{
@@ -92,7 +96,7 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 	machine.InstanceId = instance.Id
 	machine.Node = instance.NodeId
 
-	err = r.state.CreateMachine(machine, mv)
+	err = r.state.UpdateMachine(machine)
 	if err != nil {
 		return nil, err // TODO: destroy instance on error here
 	}

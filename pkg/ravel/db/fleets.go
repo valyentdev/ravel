@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/valyentdev/ravel/internal/dbutil"
 	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/pkg/ravel/db/schema"
 )
 
 func scanFleet(row dbutil.Scannable) (*core.Fleet, error) {
@@ -29,7 +30,7 @@ func (q *Queries) CreateFleet(ctx context.Context, fleet core.Fleet) error {
 	if err != nil {
 		var pg *pgconn.PgError
 		if errors.As(err, &pg) {
-			if pg.ConstraintName == "unique_name_in_namespace" {
+			if pg.ConstraintName == schema.UniqueFleetNameConstraint {
 				return core.NewAlreadyExists("fleet name already exists in namespace")
 			}
 			if pg.ConstraintName == "fleets_namespace_fkey" {

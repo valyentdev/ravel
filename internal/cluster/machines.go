@@ -13,6 +13,27 @@ import (
 	"github.com/valyentdev/ravel/pkg/core/api"
 )
 
+func (c *ClusterState) UpdateMachine(ctx context.Context, m core.Machine) error {
+	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{{
+		Query: `UPDATE machines SET
+				instance_id = $1,
+				node = $2,
+				machine_version = $3,
+				updated_at = $4
+				WHERE id = $5`,
+		Params: []any{m.InstanceId, m.Node, m.MachineVersion.String(), time.Now().UTC().Unix(), m.Id},
+	}})
+	if err != nil {
+		return err
+	}
+
+	if err := result.Results[0].Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *ClusterState) CreateMachine(ctx context.Context, m core.Machine, mv core.MachineVersion) error {
 	configBytes, err := json.Marshal(mv.Config)
 	if err != nil {
@@ -110,9 +131,9 @@ func (c *ClusterState) ListMachines(ctx context.Context, namespace string, fleet
 func (c *ClusterState) DestroyMachine(ctx context.Context, id string) error {
 	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{
 		{
-			Query: `UPDATE machines
-					SET destroyed = true
-					SET updated_at = $1
+			Query: `UPDATE machines SET
+					 destroyed = true,
+					 updated_at = $1
 					WHERE id = $2`,
 			Params: []any{time.Now().UTC().Unix(), id},
 		},
