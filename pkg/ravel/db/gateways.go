@@ -9,8 +9,8 @@ import (
 
 const baseSelectGateway = `SELECT id, name, namespace, fleet_id, protocol, target_port FROM gateways`
 
-func (q Queries) GetGatewayByName(ctx context.Context, namespace, fleetId, name string) (gateway core.Gateway, err error) {
-	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1  AND fleet_id = $2 AND name = $3", namespace, fleetId, name).Scan(
+func (q Queries) GetGatewayByName(ctx context.Context, namespace, name string) (gateway core.Gateway, err error) {
+	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND name = $3", namespace, name).Scan(
 		&gateway.Id,
 		&gateway.Name,
 		&gateway.Namespace,
@@ -27,7 +27,7 @@ func (q Queries) GetGatewayByName(ctx context.Context, namespace, fleetId, name 
 	return gateway, nil
 }
 
-func (q Queries) GetGatewayById(ctx context.Context, namespace, fleet, id string) (gateway core.Gateway, err error) {
+func (q Queries) GetGatewayById(ctx context.Context, namespace, id string) (gateway core.Gateway, err error) {
 	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND id = $2", namespace, id).Scan(
 		&gateway.Id,
 		&gateway.Name,
@@ -45,8 +45,8 @@ func (q Queries) GetGatewayById(ctx context.Context, namespace, fleet, id string
 	return gateway, nil
 }
 
-func (q Queries) ListGateways(ctx context.Context, namespace string, fleetId string) ([]core.Gateway, error) {
-	rows, err := q.db.Query(ctx, baseSelectGateway+" WHERE namespace = $1 AND fleet_id = $2", namespace, fleetId)
+func (q Queries) ListGateways(ctx context.Context, namespace string) ([]core.Gateway, error) {
+	rows, err := q.db.Query(ctx, baseSelectGateway+" WHERE namespace = $1", namespace)
 	if err != nil {
 		return nil, err
 	}

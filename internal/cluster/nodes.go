@@ -10,7 +10,7 @@ import (
 )
 
 func (m *ClusterState) listNodes(ctx context.Context, where string, params ...any) ([]core.Node, error) {
-	rows, err := m.corroclient.Query(ctx, corroclient.Statement{Query: "SELECT id, address, region, heartbeated_at FROM nodes " + where, Params: params})
+	rows, err := m.corroclient.Query(ctx, corroclient.Statement{Query: "SELECT id, address, agent_port, http_proxy_port, region, heartbeated_at FROM nodes " + where, Params: params})
 	if err != nil {
 		if err == corroclient.ErrNoRows {
 			return []core.Node{}, nil
@@ -24,7 +24,7 @@ func (m *ClusterState) listNodes(ctx context.Context, where string, params ...an
 		var node core.Node
 		heartbeatedAt := int64(0)
 
-		err := rows.Scan(&node.Id, &node.Address, &node.Region, &heartbeatedAt)
+		err := rows.Scan(&node.Id, &node.Address, &node.AgentPort, &node.HttpProxyPort, &node.Region, &heartbeatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,7 @@ func (m *ClusterState) GetNode(ctx context.Context, id string) (core.Node, error
 	node := core.Node{}
 	slog.Info("Getting node", "id", id)
 	row, err := m.corroclient.QueryRow(ctx, corroclient.Statement{
-		Query: `SELECT id, address, region, heartbeated_at
+		Query: `SELECT id, address, agent_port, http_proxy_port, region, heartbeated_at
 				FROM nodes
 				WHERE id = $1`,
 		Params: []interface{}{id},
@@ -62,7 +62,7 @@ func (m *ClusterState) GetNode(ctx context.Context, id string) (core.Node, error
 
 	var heartbeatedAt int64
 
-	err = row.Scan(&node.Id, &node.Address, &node.Region, &heartbeatedAt)
+	err = row.Scan(&node.Id, &node.Address, &node.AgentPort, &node.HttpProxyPort, &node.Region, &heartbeatedAt)
 	if err != nil {
 		return node, err
 	}
@@ -74,11 +74,11 @@ func (m *ClusterState) GetNode(ctx context.Context, id string) (core.Node, error
 
 func (m *ClusterState) UpsertNode(ctx context.Context, node core.Node) error {
 	results, err := m.corroclient.Exec(ctx, []corroclient.Statement{{
-		Query: `INSERT INTO nodes (id, address, region, heartbeated_at)
-				VALUES ($1, $2, $3, $4)
+		Query: `INSERT INTO nodes (id, address, agent_port, http_proxy_port, region, heartbeated_at)
+				VALUES ($1, $2, $3, $4, $5, $6)
 				ON CONFLICT (id) DO UPDATE
-				SET address = $2, region = $3, heartbeated_at = $4`,
-		Params: []interface{}{node.Id, node.Address, node.Region, node.HeartbeatedAt.Unix()},
+				SET address = $2, agent_port = $3, http_proxy_port = $4, region = $5, heartbeated_at = $6`,
+		Params: []interface{}{node.Id, node.Address, node.AgentPort, node.HttpProxyPort, node.Region, node.HeartbeatedAt.Unix()},
 	}})
 	if err != nil {
 		return err

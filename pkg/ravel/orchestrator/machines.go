@@ -122,7 +122,7 @@ func (m *Orchestrator) getAgentClient(node string) (*api.AgentClient, error) {
 		return nil, fmt.Errorf("failed to get node: %w", err)
 	}
 
-	client := api.NewAgentClient(m.httpClient, fmt.Sprintf("http://%s", member.Address))
+	client := api.NewAgentClient(m.httpClient, fmt.Sprintf("http://%s", member.AgentAddress()))
 
 	return client, nil
 }

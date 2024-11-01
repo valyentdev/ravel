@@ -79,6 +79,8 @@ func New(config config.RavelConfig) (*Agent, error) {
 	node := clustering.NewNode(cs, core.Node{
 		Id:            config.NodeId,
 		Address:       config.Agent.Address,
+		AgentPort:     config.Agent.AgentPort,
+		HttpProxyPort: config.Agent.HttpProxyPort,
 		Region:        config.Agent.Region,
 		HeartbeatedAt: time.Now(),
 	})

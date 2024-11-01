@@ -61,7 +61,7 @@ func runAgentStart(opt agentStartOpt) error {
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
 
-	server := agent.NewAgentServer(a, ravelConfig.Agent.Address)
+	server := agent.NewAgentServer(a, fmt.Sprintf("%s:%d", ravelConfig.Agent.Address, ravelConfig.Agent.AgentPort))
 
 	go func() {
 		err := server.ListenAndServe()

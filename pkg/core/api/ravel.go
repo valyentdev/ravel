@@ -10,29 +10,12 @@ import (
 
 type RavelClient struct {
 	client *httpclient.Client
-}
-
-type ravelClientOptions struct {
-	apiUrl           string
-	defaultNamespace string
-}
-
-func WithDefaultNamespace(namespace string) RavelClientOpt {
-	return func(o *ravelClientOptions) {
-		o.defaultNamespace = namespace
-	}
-}
-
-type RavelClientOpt func(*ravelClientOptions)
-
-func WithApiUrl(url string) RavelClientOpt {
-	return func(o *ravelClientOptions) {
-		o.apiUrl = url
-	}
+	config RavelClientConfig
 }
 
 type opt struct {
-	namespace string
+	namespace     string
+	authorization string
 }
 
 type Opt func(*opt)
@@ -43,21 +26,52 @@ func WithNamespace(namespace string) Opt {
 	}
 }
 
-func NewRavelClient(opts ...RavelClientOpt) *RavelClient {
-	opt := &ravelClientOptions{
-		apiUrl: "https://api.ravel.sh",
+func WithAuthorization(authorization string) Opt {
+	return func(o *opt) {
+		o.authorization = authorization
+	}
+}
+
+type RavelClientConfig struct {
+	ApiUrl           string // Default: https://api.valyent.cloud
+	Authorization    string // Default: ""
+	DefaultNamespace string // Default: "" (to specify only on custom ravel cluster and not on valyent api)
+}
+
+func NewRavelClient(config RavelClientConfig) *RavelClient {
+
+	return &RavelClient{
+		client: httpclient.NewClient(config.ApiUrl, http.DefaultClient),
+		config: config,
+	}
+}
+
+func (rc *RavelClient) getReqOpts(opts []Opt, includeNS bool) []httpclient.ReqOpt {
+	opt := &opt{
+		namespace:     rc.config.DefaultNamespace,
+		authorization: rc.config.Authorization,
 	}
 
 	for _, o := range opts {
 		o(opt)
 	}
 
-	return &RavelClient{client: httpclient.NewClient(opt.apiUrl, http.DefaultClient)}
+	reqOpts := []httpclient.ReqOpt{}
+	if includeNS && opt.namespace != "" {
+		reqOpts = append(reqOpts, httpclient.WithQuery("namespace", opt.namespace))
+	}
+
+	if opt.authorization != "" {
+		reqOpts = append(reqOpts, httpclient.WithHeader("Authorization", opt.authorization))
+	}
+
+	return reqOpts
+
 }
 
-func (rc *RavelClient) ListNamespaces(ctx context.Context) ([]Namespace, error) {
+func (rc *RavelClient) ListNamespaces(ctx context.Context, opts ...Opt) ([]Namespace, error) {
 	var namespaces []Namespace
-	err := rc.client.Get(ctx, "/namespaces", &namespaces)
+	err := rc.client.Get(ctx, "/namespaces", &namespaces, rc.getReqOpts(opts, false)...)
 	if err != nil {
 		return nil, err
 	}
@@ -69,12 +83,12 @@ type CreateNamespaceBody struct {
 	Name string `json:"name"`
 }
 
-func (rc *RavelClient) CreateNamespace(ctx context.Context, name string) (*Namespace, error) {
+func (rc *RavelClient) CreateNamespace(ctx context.Context, name string, opts ...Opt) (*Namespace, error) {
 	var namespace Namespace
 	body := CreateNamespaceBody{
 		Name: name,
 	}
-	err := rc.client.Post(ctx, "/namespaces", body, &namespace)
+	err := rc.client.Post(ctx, "/namespaces", body, &namespace, rc.getReqOpts(opts, false)...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,29 +96,14 @@ func (rc *RavelClient) CreateNamespace(ctx context.Context, name string) (*Names
 	return &namespace, nil
 }
 
-func (rc *RavelClient) GetNamespace(ctx context.Context, namespace string) (*Namespace, error) {
+func (rc *RavelClient) GetNamespace(ctx context.Context, namespace string, opts ...Opt) (*Namespace, error) {
 	var ns Namespace
-	err := rc.client.Get(ctx, "/namespaces/"+namespace, &ns)
+	err := rc.client.Get(ctx, "/namespaces/"+namespace, &ns, rc.getReqOpts(opts, false)...)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ns, nil
-}
-
-func (rc *RavelClient) getReqOpt(opts []Opt) []httpclient.ReqOpt {
-	opt := opt{}
-	for _, o := range opts {
-		o(&opt)
-	}
-
-	reqOpts := []httpclient.ReqOpt{}
-
-	if opt.namespace != "" {
-		reqOpts = append(reqOpts, httpclient.WithQuery("namespace", opt.namespace))
-	}
-
-	return reqOpts
 }
 
 type CreateFleetBody struct {
@@ -139,4 +138,14 @@ func (rc *RavelClient) ListFleets(ctx context.Context, namespace string) ([]core
 	}
 
 	return fleets, nil
+}
+
+func (rc *RavelClient) ListMachines(ctx context.Context, namespace string) ([]Machine, error) {
+	var machines []Machine
+	err := rc.client.Get(ctx, "/fleets/"+namespace+"/machines", &machines)
+	if err != nil {
+		return nil, err
+	}
+
+	return machines, nil
 }

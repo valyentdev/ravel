@@ -8,5 +8,5 @@ import (
 )
 
 func GetClient(cmd *cobra.Command) *api.AgentClient {
-	return api.NewAgentClient(http.DefaultClient, "http://localhost:8080")
+	return api.NewAgentClient(http.DefaultClient, "http://127.0.0.1:8080")
 }

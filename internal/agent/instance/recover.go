@@ -31,6 +31,7 @@ func (m *Manager) recoverRunning(wasStarting bool) {
 
 	if stillRunning {
 		m.waitCh = make(chan struct{})
+		m.isRunning = true
 		go m.run(h)
 		return
 	}

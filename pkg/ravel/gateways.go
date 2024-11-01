@@ -10,21 +10,17 @@ import (
 
 type Gateway = core.Gateway
 
-func (r *Ravel) GetGateway(ctx context.Context, namespace string, fleet string, gateway string) (Gateway, error) {
-	f, err := r.GetFleet(ctx, namespace, fleet)
-	if err != nil {
-		return Gateway{}, err
-	}
-
+func (r *Ravel) GetGateway(ctx context.Context, namespace string, gateway string) (Gateway, error) {
 	var g Gateway
+	var err error
 
 	if strings.HasPrefix(gateway, "gw_") {
-		g, err = r.db.GetGatewayById(ctx, namespace, f.Id, gateway)
+		g, err = r.db.GetGatewayById(ctx, namespace, gateway)
 		if err != nil {
 			return Gateway{}, err
 		}
 	} else {
-		g, err = r.db.GetGatewayByName(ctx, namespace, f.Id, gateway)
+		g, err = r.db.GetGatewayByName(ctx, namespace, gateway)
 		if err != nil {
 			return Gateway{}, err
 		}
@@ -33,27 +29,28 @@ func (r *Ravel) GetGateway(ctx context.Context, namespace string, fleet string, 
 	return g, nil
 }
 
-func (r *Ravel) ListGateways(ctx context.Context, namespace string, fleet string) ([]Gateway, error) {
-	f, err := r.GetFleet(ctx, namespace, fleet)
+func (r *Ravel) ListGateways(ctx context.Context, namespace string) ([]Gateway, error) {
+	_, err := r.GetNamespace(ctx, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.db.ListGateways(ctx, namespace, f.Id)
+	return r.db.ListGateways(ctx, namespace)
 }
 
 type CreateGatewayOptions struct {
 	Name       string `json:"name"`
+	Fleet      string `json:"fleet"`
 	TargetPort int    `json:"target_port"`
 }
 
-func (r *Ravel) CreateGateway(ctx context.Context, namespace string, fleet string, options CreateGatewayOptions) (Gateway, error) {
+func (r *Ravel) CreateGateway(ctx context.Context, namespace string, options CreateGatewayOptions) (Gateway, error) {
 	err := validateObjectName(options.Name)
 	if err != nil {
 		return Gateway{}, err
 	}
 
-	f, err := r.GetFleet(ctx, namespace, fleet)
+	f, err := r.GetFleet(ctx, namespace, options.Fleet)
 	if err != nil {
 		return Gateway{}, err
 	}
@@ -74,8 +71,8 @@ func (r *Ravel) CreateGateway(ctx context.Context, namespace string, fleet strin
 	return gateway, nil
 }
 
-func (r *Ravel) DeleteGateway(ctx context.Context, namespace string, fleet string, gateway string) error {
-	g, err := r.GetGateway(ctx, namespace, fleet, gateway)
+func (r *Ravel) DeleteGateway(ctx context.Context, namespace string, gateway string) error {
+	g, err := r.GetGateway(ctx, namespace, gateway)
 	if err != nil {
 		return err
 	}

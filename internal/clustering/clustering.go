@@ -38,8 +38,7 @@ func (n *Node) Stop() {
 
 func (n *Node) heartbeat(ctx context.Context) error {
 	n.localNode.HeartbeatedAt = time.Now()
-	n.cluster.UpsertNode(ctx, n.localNode)
-	return nil
+	return n.cluster.UpsertNode(ctx, n.localNode)
 }
 
 func (n *Node) startHeartbeating(ctx context.Context) {

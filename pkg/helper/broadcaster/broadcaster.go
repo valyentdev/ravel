@@ -50,8 +50,13 @@ func NewBroadcaster[T any](opts BroadcasterOpts[T]) *Broadcaster[T] {
 
 func (b *Broadcaster[T]) unsubscribe(ch chan T) {
 	b.subsMutex.Lock()
+	defer b.subsMutex.Unlock()
+	_, ok := b.subs[ch]
+	if !ok {
+		return
+	}
+
 	delete(b.subs, ch)
-	b.subsMutex.Unlock()
 	close(ch)
 }
 
@@ -99,10 +104,12 @@ func (b *Broadcaster[T]) Start() {
 				}
 				b.subsMutex.RUnlock()
 			case <-b.stopCh:
+				b.subsMutex.Lock()
 				for ch := range b.subs {
 					close(ch)
 					delete(b.subs, ch)
 				}
+				b.subsMutex.Unlock()
 				return
 			}
 		}

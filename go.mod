@@ -16,6 +16,7 @@ require (
 	github.com/nrednav/cuid2 v1.0.0
 	github.com/oklog/ulid v1.3.1
 	github.com/opencontainers/image-spec v1.1.0
+	github.com/rs/xid v1.6.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tmaxmax/go-sse v0.8.0
@@ -110,7 +111,7 @@ require (
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/net v0.28.0
+	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0
 	golang.org/x/text v0.18.0 // indirect

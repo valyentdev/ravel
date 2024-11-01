@@ -11,6 +11,8 @@ type Resources = core.Resources
 type AgentConfig struct {
 	Region        string    `json:"region"`
 	Address       string    `json:"address"`
+	AgentPort     int       `json:"agent_port"`
+	HttpProxyPort int       `json:"http_proxy_port"`
 	InitBinary    string    `json:"init_binary"`
 	LinuxKernel   string    `json:"linux_kernel"`
 	LogsDirectory string    `json:"logs_directory"`
