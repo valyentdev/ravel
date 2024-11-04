@@ -25,7 +25,7 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 		return nil, err
 	}
 
-	address := c.RavelApi.Address
+	address := c.Server.Address
 	if address == "" {
 		address = ":3000"
 	}

@@ -24,7 +24,7 @@ type Ravel struct {
 func New(config config.RavelConfig) (*Ravel, error) {
 	ctx := context.Background()
 
-	pgpool, err := pgxpool.New(ctx, config.PostgresURL)
+	pgpool, err := pgxpool.New(ctx, config.Server.PostgresURL)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func New(config config.RavelConfig) (*Ravel, error) {
 		}
 	}()
 
-	clusterstate, err := cluster.Connect(config.Corrosion)
+	clusterstate, err := cluster.Connect(config.Corrosion.Config())
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +65,6 @@ func New(config config.RavelConfig) (*Ravel, error) {
 		db:             db,
 		clusterState:   clusterstate,
 		state:          state.New(clusterstate, db),
-		vcpusTemplates: config.MachineTemplates,
+		vcpusTemplates: config.Server.MachineTemplates,
 	}, nil
 }

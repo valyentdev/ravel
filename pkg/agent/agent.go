@@ -37,7 +37,7 @@ type Agent struct {
 var _ core.Agent = (*Agent)(nil)
 
 func New(config config.RavelConfig) (*Agent, error) {
-	slog.Info("Initializing agent", "node_id", config.NodeId, "address", config.Agent.Address)
+	slog.Info("Initializing agent", "node_id", config.Agent.NodeId, "address", config.Agent.Address)
 	store, err := store.NewStore(config.Agent.DatabasePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create store: %w", err)
@@ -66,18 +66,18 @@ func New(config config.RavelConfig) (*Agent, error) {
 		return nil, err
 	}
 
-	reservations := reservations.NewReservationService(store, config.Agent.Resources)
+	reservations := reservations.NewReservationService(store, config.Agent.Resources.Resources())
 
 	if err := reservations.Init(); err != nil {
 		return nil, fmt.Errorf("failed to initialize reservation service: %w", err)
 	}
 
-	cs, err := cluster.Connect(config.Corrosion)
+	cs, err := cluster.Connect(config.Corrosion.Config())
 	if err != nil {
 		return nil, err
 	}
 	node := clustering.NewNode(cs, core.Node{
-		Id:            config.NodeId,
+		Id:            config.Agent.NodeId,
 		Address:       config.Agent.Address,
 		AgentPort:     config.Agent.AgentPort,
 		HttpProxyPort: config.Agent.HttpProxyPort,
@@ -103,7 +103,7 @@ func New(config config.RavelConfig) (*Agent, error) {
 			slog.Error("failed to get reservation", "instanceId", i.Instance.Id, "machineId", i.Instance.MachineId, "error", err)
 			continue
 		}
-		state := state.NewInstanceState(store, i.Instance, i.LastEvent, config.NodeId, cs, eventer.NewEventer(i.UnreportedEvents, i.Instance.MachineId, i.Instance.Id, nc, store))
+		state := state.NewInstanceState(store, i.Instance, i.LastEvent, config.Agent.NodeId, cs, eventer.NewEventer(i.UnreportedEvents, i.Instance.MachineId, i.Instance.Id, nc, store))
 		manager := instance.NewInstanceManager(state, containerRuntime, reservation)
 		manager.Recover()
 		managers[i.Instance.Id] = manager
@@ -111,7 +111,7 @@ func New(config config.RavelConfig) (*Agent, error) {
 
 	agent := &Agent{
 		node:             node,
-		nodeId:           config.NodeId,
+		nodeId:           config.Agent.NodeId,
 		nc:               nc,
 		reservations:     reservations,
 		config:           config.Agent,

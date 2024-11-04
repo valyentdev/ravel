@@ -3,8 +3,8 @@ package config
 import "errors"
 
 type NatsConfig struct {
-	Url      string `json:"url"`
-	CredFile string `json:"cred_file"`
+	Url      string `json:"url" toml:"url"`
+	CredFile string `json:"cred_file" toml:"cred_file"`
 }
 
 func (n NatsConfig) Validate() error {

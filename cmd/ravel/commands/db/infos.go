@@ -34,7 +34,7 @@ func runDBInfosCmd(cmd *cobra.Command, configPath string) error {
 		return err
 	}
 
-	conn, err := pgx.Connect(cmd.Context(), config.PostgresURL)
+	conn, err := pgx.Connect(cmd.Context(), config.Server.PostgresURL)
 	if err != nil {
 		return err
 	}

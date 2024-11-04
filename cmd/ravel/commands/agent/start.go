@@ -32,7 +32,7 @@ func newStartAgentCmd() *cobra.Command {
 		},
 	}
 
-	startCmd.Flags().StringVarP(&opt.configFile, "config", "c", "ravel.json", "config file")
+	startCmd.Flags().StringVarP(&opt.configFile, "config", "c", "/etc/ravel/ravel.toml", "config file")
 	return startCmd
 }
 

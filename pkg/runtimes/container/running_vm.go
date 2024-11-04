@@ -113,6 +113,7 @@ type RunResult struct {
 	InitFailed     bool
 	ProcessExited  bool
 	ExitCode       *int64
+	ExitedAt       time.Time
 }
 
 func (i *runningVM) Run() {
@@ -183,6 +184,8 @@ func (i *runningVM) Run() {
 	if i.stopRequested {
 		result.HasBeenStopped = true
 	}
+
+	result.ExitedAt = time.Now()
 
 	i.runResult = result
 

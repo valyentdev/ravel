@@ -1,0 +1,73 @@
+[nats]
+url = "nats://127.0.0.1:4222"
+cred_file = "./nats.creds"
+
+[corrosion]
+url = "http://127.0.0.1:8081"
+
+
+# Ravel Agent configuration
+[agent]
+node_id = "ravel-1"
+region = "fr"
+address = "127.0.0.1"
+agent_port = 8080
+http_proxy_port = 8082
+init_binary = "./bin/ravel-init"
+linux_kernel = "./vmlinux.bin"
+database_path = "./agent.db"
+resources = { cpus = 8, memory = 16_384 }
+
+
+# Ravel Server configuration
+[server]
+address = ":3000"
+postgres_url = "postgres://user:password@host:port/db"
+[server.machine_templates.eco]
+frequency_by_vcpu = 250
+combinations = [
+    { vcpus = 1, memory_configs = [
+        256,
+        512,
+        1_024,
+        2_048,
+    ] },
+    { vcpus = 2, memory_configs = [
+        512,
+        1_024,
+        2_048,
+        4_096,
+    ] },
+    { vcpus = 4, memory_configs = [
+        1_024,
+        2_048,
+        4_096,
+        8_192,
+    ] },
+    { vcpus = 8, memory_configs = [
+        2_048,
+        4_096,
+        8_192,
+        16_384,
+    ] },
+]
+
+[server.machine_templates.std]
+frequency_by_vcpu = 2200
+combinations = [
+    { vcpus = 1, memory_configs = [
+        1_024,
+        2_048,
+        4_096,
+    ] },
+    { vcpus = 2, memory_configs = [
+        2_048,
+        4_096,
+        8_192,
+    ] },
+    { vcpus = 4, memory_configs = [
+        4_096,
+        8_192,
+        16_384,
+    ] },
+]

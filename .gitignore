@@ -2,6 +2,7 @@
 bin/**/*
 agent.db
 ravel.json
+ravel.toml
 .devdbrc
 /.idea
 *.iml

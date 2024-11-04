@@ -2,26 +2,34 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
+	"strings"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/valyentdev/corroclient"
 )
 
 const LOGS_DIRECTORY = "/var/log/ravel"
 const DAEMON_DB_PATH = "/var/lib/ravel/daemon.db"
 
-type RavelConfig struct {
-	RavelApi         ApiConfig                            `json:"ravel_api"`
-	NodeId           string                               `json:"node_id"`
-	Agent            AgentConfig                          `json:"agent"`
-	Corrosion        corroclient.Config                   `json:"corrosion"`
-	PostgresURL      string                               `json:"postgres_url"`
-	MachineTemplates map[string]MachineResourcesTemplates `json:"machine_templates"`
-	Nats             NatsConfig                           `json:"nats"`
+type CorrosionConfig struct {
+	URL    string `json:"url" toml:"url"`
+	Bearer string `json:"bearer" toml:"bearer"`
 }
 
-type ApiConfig struct {
-	Address string `json:"address"`
+func (cc CorrosionConfig) Config() corroclient.Config {
+	return corroclient.Config{
+		URL:    cc.URL,
+		Bearer: cc.Bearer,
+	}
+}
+
+type RavelConfig struct {
+	Server    ServerConfig    `json:"server" toml:"server"`
+	Agent     AgentConfig     `json:"agent" toml:"agent"`
+	Corrosion CorrosionConfig `json:"corrosion" toml:"corrosion"`
+	Nats      NatsConfig      `json:"nats" toml:"nats"`
 }
 
 func ReadFile(path string) (RavelConfig, error) {
@@ -32,9 +40,20 @@ func ReadFile(path string) (RavelConfig, error) {
 		return config, err
 	}
 
-	err = json.Unmarshal(bytes, &config)
-	if err != nil {
-		return config, err
+	if strings.HasSuffix(path, ".toml") {
+		decoder := toml.NewDecoder(strings.NewReader(string(bytes)))
+		decoder = decoder.DisallowUnknownFields()
+		err = decoder.Decode(&config)
+		if err != nil {
+			if sme, ok := err.(*toml.StrictMissingError); ok {
+				return config, errors.New(sme.String())
+			}
+		}
+	} else {
+		err = json.Unmarshal(bytes, &config)
+		if err != nil {
+			return config, err
+		}
 	}
 
 	return config, nil

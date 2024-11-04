@@ -26,7 +26,7 @@ func newStartApiServerCmd() *cobra.Command {
 		},
 	}
 
-	startCmd.Flags().StringVarP(&opts.config, "config", "c", "ravel.json", "Path to config file")
+	startCmd.Flags().StringVarP(&opts.config, "config", "c", "/etc/ravel/ravel.toml", "Path to config file")
 	return startCmd
 }
 

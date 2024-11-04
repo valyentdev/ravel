@@ -51,7 +51,7 @@ func runMigrateCmd(cmd *cobra.Command, opt migrateOpts) error {
 		return err
 	}
 
-	conn, err := pgx.Connect(cmd.Context(), config.PostgresURL)
+	conn, err := pgx.Connect(cmd.Context(), config.Server.PostgresURL)
 	if err != nil {
 		return err
 	}

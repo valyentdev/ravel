@@ -31,6 +31,8 @@ loop:
 		return exitResult, nil
 	}
 
+	exitResult.ExitedAt = runResult.ExitedAt
+
 	exitResult.ExitCode = runResult.ExitCode
 	exitResult.Requested = runResult.HasBeenStopped
 
