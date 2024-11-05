@@ -14,7 +14,7 @@
 
 <div align="center">
   <picture>
-    <img src="./illustration.webp" alt="Illustration" />
+    <img src="./docs/images/illustration.webp" alt="Illustration" />
   </picture>
 </div>
 
