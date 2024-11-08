@@ -57,7 +57,7 @@ Ravel is a **bidding-style orchestrator** for _microVMs_. It allows you to creat
 
 ## Documentation
 
-For more details, please refer to our [documentation](https://docs.valyent.dev).
+For more details, please refer to our [documentation](https://docs.valyent.cloud).
 
 ### Installation
 
