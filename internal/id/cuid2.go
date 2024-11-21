@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	generate, _ = cuid2.Init(cuid2.WithRandomFunc(RandomFloat), cuid2.WithLength(7))
+	generate, _ = cuid2.Init(cuid2.WithRandomFunc(RandomFloat))
 }
 
 var generate func() string

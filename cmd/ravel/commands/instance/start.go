@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/valyentdev/ravel/cmd/ravel/util"
 )
 
 func newStartInstanceCmd() *cobra.Command {
@@ -27,7 +28,7 @@ func runStartInstance(cmd *cobra.Command, args []string) error {
 
 	instanceId := args[0]
 
-	err := GetClient(cmd).StartInstance(cmd.Context(), instanceId)
+	err := util.GetAgentClient(cmd).StartInstance(cmd.Context(), instanceId)
 	if err != nil {
 		return fmt.Errorf("unable to start instance: %w", err)
 	}

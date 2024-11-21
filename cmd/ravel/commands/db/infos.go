@@ -5,8 +5,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/spf13/cobra"
-	"github.com/valyentdev/ravel/pkg/core/config"
-	"github.com/valyentdev/ravel/pkg/ravel/db/schema"
+	"github.com/valyentdev/ravel/core/config"
+	"github.com/valyentdev/ravel/ravel/db/schema"
 )
 
 func NewDBInfosCmd() *cobra.Command {

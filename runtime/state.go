@@ -1,0 +1,74 @@
+package runtime
+
+import (
+	"log/slog"
+	"sync"
+
+	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/core/instance"
+	instancemanager "github.com/valyentdev/ravel/runtime/manager"
+)
+
+type State struct {
+	mutex     sync.RWMutex
+	instances map[string]*instancemanager.Manager
+
+	idsMutex sync.RWMutex
+	ids      map[string]struct{}
+}
+
+func NewState() *State {
+	return &State{
+		instances: make(map[string]*instancemanager.Manager),
+		ids:       make(map[string]struct{}),
+	}
+}
+
+func (s *State) List() []instance.Instance {
+	s.mutex.RLock()
+	instances := []instance.Instance{}
+	for _, manager := range s.instances {
+		instances = append(instances, manager.Instance())
+	}
+	s.mutex.RUnlock()
+	return instances
+}
+
+func (s *State) AddInstance(id string, manager *instancemanager.Manager) {
+	s.mutex.Lock()
+	s.instances[id] = manager
+	s.mutex.Unlock()
+}
+
+func (s *State) Delete(id string) {
+	s.mutex.Lock()
+	delete(s.instances, id)
+	s.mutex.Unlock()
+}
+
+func (s *State) GetInstance(id string) (*instancemanager.Manager, error) {
+	slog.Debug("getting instance", "id", id)
+	s.mutex.RLock()
+	instance, ok := s.instances[id]
+	s.mutex.RUnlock()
+	if !ok {
+		return nil, errdefs.NewNotFound("instance not found")
+	}
+	return instance, nil
+}
+
+func (s *State) ReserveId(id string) bool {
+	s.idsMutex.Lock()
+	if _, ok := s.ids[id]; ok {
+		return false
+	}
+	s.ids[id] = struct{}{}
+	s.idsMutex.Unlock()
+	return true
+}
+
+func (s *State) ReleaseId(id string) {
+	s.idsMutex.Lock()
+	delete(s.ids, id)
+	s.idsMutex.Unlock()
+}

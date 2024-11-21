@@ -10,8 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/valyentdev/ravel/pkg/agent"
-	"github.com/valyentdev/ravel/pkg/core/config"
+	"github.com/valyentdev/ravel/agent"
+	"github.com/valyentdev/ravel/agent/server"
+	"github.com/valyentdev/ravel/core/config"
 
 	"github.com/spf13/cobra"
 )
@@ -61,7 +62,7 @@ func runAgentStart(opt agentStartOpt) error {
 		return fmt.Errorf("failed to start agent: %w", err)
 	}
 
-	server := agent.NewAgentServer(a, fmt.Sprintf("%s:%d", ravelConfig.Agent.Address, ravelConfig.Agent.AgentPort))
+	server := server.NewAgentServer(a, fmt.Sprintf("%s:%d", ravelConfig.Agent.Address, ravelConfig.Agent.AgentPort))
 
 	go func() {
 		err := server.ListenAndServe()

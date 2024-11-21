@@ -1,0 +1,36 @@
+package structs
+
+import (
+	"time"
+
+	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/core/cluster"
+)
+
+type MachineInstanceState struct {
+	DesiredStatus api.MachineStatus `json:"desired_status"`
+	Status        api.MachineStatus `json:"status"`
+	Restarts      int               `json:"restarts"`
+	CreatedAt     time.Time         `json:"created_at"`
+	UpdatedAt     time.Time         `json:"updated_at"`
+	LocalIPV4     string            `json:"local_ipv4"`
+}
+
+type MachineInstance struct {
+	Machine cluster.Machine      `json:"machine"`
+	Version api.MachineVersion   `json:"version"`
+	State   MachineInstanceState `json:"state"`
+}
+
+func (mi *MachineInstance) ClusterInstance() cluster.MachineInstance {
+	return cluster.MachineInstance{
+		Id:             mi.Machine.InstanceId,
+		Node:           mi.Machine.Node,
+		MachineId:      mi.Machine.Id,
+		MachineVersion: mi.Version.Id.String(),
+		Status:         mi.State.Status,
+		LocalIPV4:      mi.State.LocalIPV4,
+		CreatedAt:      mi.State.CreatedAt,
+		UpdatedAt:      mi.State.UpdatedAt,
+	}
+}

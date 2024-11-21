@@ -5,12 +5,13 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/valyentdev/ravel/cmd/ravel/util"
 )
 
 func newDestroyInstanceCmd() *cobra.Command {
 	var force bool
 	destroyCmd := &cobra.Command{
-		Use:     "destroy",
+		Use:     "destroy <instance_id>",
 		Aliases: []string{"rm"},
 		Short:   "Remove a instance",
 		Long:    `Remove a instance. The instance must be stopped.`,
@@ -32,7 +33,7 @@ func runDestroyInstance(cmd *cobra.Command, args []string, force bool) error {
 
 	instanceId := args[0]
 
-	err := GetClient(cmd).DestroyInstance(context.Background(), instanceId, force)
+	err := util.GetAgentClient(cmd).DestroyInstance(context.Background(), instanceId, force)
 	if err != nil {
 		return fmt.Errorf("unable to remove instance: %w", err)
 	}

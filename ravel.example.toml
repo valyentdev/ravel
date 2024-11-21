@@ -24,7 +24,7 @@ resources = { cpus = 8, memory = 16_384 }
 address = ":3000"
 postgres_url = "postgres://user:password@host:port/db"
 [server.machine_templates.eco]
-frequency_by_vcpu = 250
+vcpu_frequency = 250
 combinations = [
     { vcpus = 1, memory_configs = [
         256,

@@ -2,10 +2,10 @@ package commands
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/valyentdev/ravel/pkg/proxy"
-	"github.com/valyentdev/ravel/pkg/proxy/edge"
-	"github.com/valyentdev/ravel/pkg/proxy/local"
-	"github.com/valyentdev/ravel/pkg/proxy/server"
+	"github.com/valyentdev/ravel/proxy"
+	"github.com/valyentdev/ravel/proxy/edge"
+	"github.com/valyentdev/ravel/proxy/local"
+	"github.com/valyentdev/ravel/proxy/server"
 )
 
 func newStartCmd() *cobra.Command {

@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/agent"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/db"
+	"github.com/valyentdev/ravel/cmd/ravel/commands/images"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/instance"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/server"
 )
@@ -28,10 +29,13 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	rootCmd.PersistentFlags().BoolVar(&opt.debug, "debug", false, "Enable debug logging")
-	rootCmd.AddCommand(instance.NewInstanceCmd())
-	rootCmd.AddCommand(agent.NewAgentCmd())
-	rootCmd.AddCommand(server.NewServerCmd())
-	rootCmd.AddCommand(db.NewDBCmd())
+	rootCmd.AddCommand(
+		instance.NewInstanceCmd(),
+		agent.NewAgentCmd(),
+		server.NewServerCmd(),
+		db.NewDBCmd(),
+		images.NewImagesCmd(),
+	)
 
 	return rootCmd
 }

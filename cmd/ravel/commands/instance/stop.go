@@ -6,7 +6,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/cmd/ravel/util"
 )
 
 func newStopCmd() *cobra.Command {
@@ -28,7 +29,7 @@ func runStopInstance(cmd *cobra.Command, args []string) error {
 
 	instanceId := args[0]
 
-	err := GetClient(cmd).StopInstance(context.Background(), instanceId, &core.StopConfig{})
+	err := util.GetAgentClient(cmd).StopInstance(context.Background(), instanceId, &api.StopConfig{})
 	if err != nil {
 		bytes, _ := json.Marshal(err)
 		cmd.Println(string(bytes))

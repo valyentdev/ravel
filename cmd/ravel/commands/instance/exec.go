@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/valyentdev/ravel/pkg/core"
+	"github.com/valyentdev/ravel/cmd/ravel/util"
 )
 
 type execOptions struct {
@@ -64,12 +64,7 @@ func runInstanceExec(cmd *cobra.Command, args []string, timeout time.Duration) e
 
 	instanceId := args[0]
 
-	req := core.InstanceExecOptions{
-		Timeout: &timeout,
-		Cmd:     cmdLine,
-	}
-
-	res, err := GetClient(cmd).InstanceExec(context.Background(), instanceId, req)
+	res, err := util.GetAgentClient(cmd).InstanceExec(context.Background(), instanceId, cmdLine, timeout)
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}

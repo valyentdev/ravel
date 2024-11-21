@@ -6,8 +6,8 @@ import (
 	"log/slog"
 
 	"github.com/spf13/cobra"
-	"github.com/valyentdev/ravel/internal/server"
-	"github.com/valyentdev/ravel/pkg/core/config"
+	"github.com/valyentdev/ravel/core/config"
+	"github.com/valyentdev/ravel/ravel/server"
 )
 
 type startApiServerOptions struct {

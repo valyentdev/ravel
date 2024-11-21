@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/valyentdev/ravel/cmd/ravel/util"
 )
 
 func newGetInstanceLogsCmd() *cobra.Command {
@@ -40,9 +41,13 @@ func runGetInstanceLogs(cmd *cobra.Command, args []string, follow bool) error {
 }
 
 func followInstanceLogs(cmd *cobra.Command, instanceId string) error {
-	logs, err := GetClient(cmd).GetInstanceLogs(cmd.Context(), instanceId, true)
+	replay, logs, err := util.GetAgentClient(cmd).SubscribeToInstanceLogs(cmd.Context(), instanceId)
 	if err != nil {
 		return fmt.Errorf("unable to get instance logs: %w", err)
+	}
+
+	for _, log := range replay {
+		cmd.Println(log.Message)
 	}
 
 	for log := range logs {
@@ -55,12 +60,12 @@ func followInstanceLogs(cmd *cobra.Command, instanceId string) error {
 }
 
 func printInstanceLogs(cmd *cobra.Command, instanceId string) error {
-	logs, err := GetClient(cmd).GetInstanceLogs(cmd.Context(), instanceId, false)
+	logs, err := util.GetAgentClient(cmd).GetInstanceLogs(cmd.Context(), instanceId)
 	if err != nil {
 		return fmt.Errorf("unable to get instance logs: %w", err)
 	}
 
-	for log := range logs {
+	for _, log := range logs {
 		cmd.Println(log.Message)
 	}
 

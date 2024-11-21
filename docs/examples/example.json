@@ -1,0 +1,25 @@
+{
+    "region": "fr",
+    "skip_start": false,
+    "config": {
+        "image": "docker.io/codercom/code-server:latest",
+        "workload": {
+            "env": [
+                "SUDO_PASSWORD=password",
+                "PASSWORD=password"
+            ],
+            "restart_policy": {
+                "policy": "always",
+                "max_retries": 5
+            },
+            "init": {
+                "user": "root"
+            }
+        },
+        "guest": {
+            "cpu_kind": "eco",
+            "cpus": 1,
+            "memory_mb": 512
+        }
+    }
+}

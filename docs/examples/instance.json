@@ -1,0 +1,17 @@
+{
+    "image": "docker.io/codercom/code-server:latest",
+    "workload": {
+        "env": [
+            "SUDO_PASSWORD=password",
+            "PASSWORD=password"
+        ],
+        "init": {
+            "user": "root"
+        }
+    },
+    "guest": {
+        "vcpus": 1,
+        "cpus": 500,
+        "memory_mb": 512
+    }
+}
