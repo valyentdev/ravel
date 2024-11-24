@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/cmd/ravel/util"
+	"github.com/valyentdev/ravel/core/daemon"
 	"github.com/valyentdev/ravel/core/instance"
 	"sigs.k8s.io/yaml"
 )
@@ -46,7 +46,7 @@ func createInstance(cmd *cobra.Command, id string, opt createOptions) error {
 		return fmt.Errorf("unable to unmarshal config file %s: %w", opt.config, err)
 	}
 
-	res, err := util.GetAgentClient(cmd).CreateInstance(cmd.Context(), structs.InstanceOptions{
+	res, err := util.GetDaemonClient(cmd).CreateInstance(cmd.Context(), daemon.InstanceOptions{
 		Id:     id,
 		Config: config,
 	})

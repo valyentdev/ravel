@@ -64,7 +64,7 @@ func runInstanceExec(cmd *cobra.Command, args []string, timeout time.Duration) e
 
 	instanceId := args[0]
 
-	res, err := util.GetAgentClient(cmd).InstanceExec(context.Background(), instanceId, cmdLine, timeout)
+	res, err := util.GetDaemonClient(cmd).InstanceExec(context.Background(), instanceId, cmdLine, timeout)
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}

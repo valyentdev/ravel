@@ -23,7 +23,7 @@ func newListInstancesCmd() *cobra.Command {
 }
 
 func runListInstances(cmd *cobra.Command, args []string) error {
-	instances, err := util.GetAgentClient(cmd).ListInstances(context.Background())
+	instances, err := util.GetDaemonClient(cmd).ListInstances(context.Background())
 	if err != nil {
 		return fmt.Errorf("unable to list instances: %w", err)
 	}

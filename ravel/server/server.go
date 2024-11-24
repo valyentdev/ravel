@@ -68,7 +68,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func getHumaConfig() huma.Config {
-
 	return huma.Config{
 		OpenAPI: &huma.OpenAPI{
 			OpenAPI: "3.1.0",

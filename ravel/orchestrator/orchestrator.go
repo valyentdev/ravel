@@ -29,13 +29,13 @@ type Orchestrator struct {
 	broker       *placement.Broker
 }
 
-func (m *Orchestrator) getAgentClient(node string) (*agentclient.AgentClient, error) {
-	member, err := m.clusterState.GetNode(context.Background(), node)
+func (o *Orchestrator) getAgentClient(node string) (*agentclient.AgentClient, error) {
+	member, err := o.clusterState.GetNode(context.Background(), node)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node: %w", err)
 	}
 
-	client := agentclient.NewAgentClient(m.httpClient, fmt.Sprintf("http://%s", member.AgentAddress()))
+	client := agentclient.NewAgentClient(o.httpClient, fmt.Sprintf("http://%s", member.AgentAddress()))
 
 	return client, nil
 }

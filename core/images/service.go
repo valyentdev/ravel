@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -125,6 +126,7 @@ func parseAuth(auth *registry.RegistryAuthConfig, host string) (string, string, 
 }
 
 func (r *Service) DeleteImage(ctx context.Context, ref string) error {
+	slog.Info("Deleting image", "ref", ref)
 	err := r.ctrd.ImageService().Delete(ctx, ref)
 	if err != nil {
 		return fmt.Errorf("failed to delete image %q: %w", ref, err)

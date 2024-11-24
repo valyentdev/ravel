@@ -6,6 +6,19 @@ import (
 	"github.com/oklog/ulid"
 )
 
+const MaxStopTimeout = 30    // in seconds
+const DefaultStopTimeout = 5 // in seconds
+const DefaultStopSignal = "SIGTERM"
+
+func GetDefaultStopConfig() *StopConfig {
+	defaultStopTimeout := DefaultStopTimeout
+	defaultStopSignal := DefaultStopSignal
+	return &StopConfig{
+		Timeout: &defaultStopTimeout,
+		Signal:  &defaultStopSignal,
+	}
+}
+
 type Machine struct {
 	Id             string        `json:"id"`
 	Namespace      string        `json:"namespace"`
@@ -58,7 +71,7 @@ type (
 		Image       string      `json:"image"`
 		Guest       GuestConfig `json:"guest"`
 		Workload    Workload    `json:"workload"`
-		StopConfig  StopConfig  `json:"stop_config,omitempty"`
+		StopConfig  *StopConfig `json:"stop_config,omitempty"`
 		AutoDestroy bool        `json:"auto_destroy,omitempty"`
 	}
 
@@ -69,9 +82,9 @@ type (
 	}
 
 	Workload struct {
-		RestartPolicy RestartPolicyConfig `json:"restart_policy,omitempty"`
-		Env           []string            `json:"env,omitempty"`
-		Init          InitConfig          `json:"init,omitempty"`
+		Restart RestartPolicyConfig `json:"restart,omitempty"`
+		Env     []string            `json:"env,omitempty"`
+		Init    InitConfig          `json:"init,omitempty"`
 	}
 
 	InitConfig struct {
@@ -83,29 +96,15 @@ type (
 	RestartPolicy string
 
 	RestartPolicyConfig struct {
-		MaxRetries int           `json:"max_retries,omitempty"`
 		Policy     RestartPolicy `json:"policy,omitempty"`
+		MaxRetries int           `json:"max_retries,omitempty"`
 	}
 
 	StopConfig struct {
-		Timeout *int    `json:"timeout,omitempty"`
+		Timeout *int    `json:"timeout,omitempty"` // in seconds
 		Signal  *string `json:"signal,omitempty"`
 	}
 )
-
-func (s *StopConfig) GetTimeout() time.Duration {
-	if s.Timeout == nil {
-		return 10 * time.Second
-	}
-	return time.Duration(*s.Timeout) * time.Second
-}
-
-func (s *StopConfig) GetSignal() string {
-	if s.Signal == nil {
-		return "SIGINT"
-	}
-	return *s.Signal
-}
 
 type MachineEventType string
 
@@ -118,6 +117,7 @@ const (
 	MachineStartFailed   MachineEventType = "machine.start_failed"
 	MachineStarted       MachineEventType = "machine.started"
 	MachineStop          MachineEventType = "machine.stop"
+	MachineStopFailed    MachineEventType = "machine.stop_failed"
 	MachineExited        MachineEventType = "machine.exited"
 	MachineDestroy       MachineEventType = "machine.destroy"
 	MachineDestroyed     MachineEventType = "machine.destroyed"
@@ -125,6 +125,10 @@ const (
 
 type MachineStartEventPayload struct {
 	IsRestart bool `json:"is_restart"`
+}
+
+type MachineStopEventPayload struct {
+	Config *StopConfig `json:"config,omitempty"`
 }
 
 type MachinePrepareFailedEventPayload struct {
@@ -152,6 +156,7 @@ type MachineDestroyEventPayload struct {
 
 type MachineEventPayload struct {
 	PrepareFailed *MachinePrepareFailedEventPayload `json:"prepare_failed,omitempty"`
+	Stop          *MachineStopEventPayload          `json:"stop,omitempty"`
 	Start         *MachineStartEventPayload         `json:"start,omitempty"`
 	StartFailed   *MachineStartFailedEventPayload   `json:"start_failed,omitempty"`
 	Started       *MachineStartedEventPayload       `json:"started,omitempty"`

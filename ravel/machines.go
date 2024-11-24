@@ -23,7 +23,7 @@ func getResources(m config.MachineResourcesTemplates, vcpus int, memory int) (ap
 				if mc == memory {
 					return api.Resources{
 						MemoryMB: mc,
-						CpuMHz:   m.VCPUFrequency * vcpus,
+						CpusMHz:  m.VCPUFrequency * vcpus,
 					}, nil
 				}
 			}

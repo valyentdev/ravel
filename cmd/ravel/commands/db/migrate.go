@@ -39,7 +39,7 @@ func NewMigrateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&migrateOptions.config, "config", "c", "/etc/ravel/config.json", "Path to the configuration file")
+	cmd.Flags().StringVarP(&migrateOptions.config, "config", "c", "/etc/ravel/toml.json", "Path to the configuration file")
 	cmd.Flags().StringVar(&migrateOptions.to, "to", "", "Migrate to a specific version")
 	cmd.MarkFlagRequired("to")
 	return cmd

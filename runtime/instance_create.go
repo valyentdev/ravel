@@ -8,13 +8,8 @@ import (
 	"github.com/containerd/containerd/v2/client"
 	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
-	instancemanager "github.com/valyentdev/ravel/runtime/manager"
+	instancemanager "github.com/valyentdev/ravel/runtime/instancerunner"
 )
-
-type InstanceOptions struct {
-	Metadata instance.InstanceMetadata `json:"metadata"`
-	Config   instance.InstanceConfig   `json:"config"`
-}
 
 func (r *Runtime) PruneImages(ctx context.Context) error {
 	return nil
@@ -38,16 +33,17 @@ func (r *Runtime) releaseImage(ref string) {
 	r.imagesUsage.Unlock()
 }
 
-func (r *Runtime) newInstanceManager(i instance.Instance) *instancemanager.Manager {
-	return instancemanager.NewInstanceManager(r.instancesStore, i, r.networking, r.instanceBuilder, r.eventReporter)
+func (r *Runtime) newInstanceManager(i instance.Instance) *instancemanager.InstanceRunner {
+	return instancemanager.New(r.instancesStore, i, r.networking, r.instanceBuilder)
 }
 
-func (r *Runtime) CreateInstance(ctx context.Context, id string, opt InstanceOptions) (*instance.Instance, error) {
+func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptions) (*instance.Instance, error) {
+	id := opt.Id
+
 	network, err := r.networking.AllocateNext()
 	if err != nil {
 		return nil, fmt.Errorf("failed to allocate network resources: %w", err)
 	}
-
 	defer func() {
 		if err != nil {
 			r.networking.Release(network)
@@ -56,7 +52,8 @@ func (r *Runtime) CreateInstance(ctx context.Context, id string, opt InstanceOpt
 
 	ok := r.instances.ReserveId(id)
 	if !ok {
-		return nil, errdefs.NewAlreadyExists("instance id already in use")
+		err = errdefs.NewAlreadyExists("instance id already in use")
+		return nil, err
 	}
 	defer func() {
 		if err != nil {
@@ -81,7 +78,7 @@ func (r *Runtime) CreateInstance(ctx context.Context, id string, opt InstanceOpt
 		ImageRef: image.Name(),
 		Network:  network,
 		State: instance.State{
-			Status: instance.InstanceStatusStopped,
+			Status: instance.InstanceStatusCreated,
 		},
 		CreatedAt: time.Now(),
 	}
@@ -89,7 +86,6 @@ func (r *Runtime) CreateInstance(ctx context.Context, id string, opt InstanceOpt
 	if err := r.instanceBuilder.PrepareInstance(ctx, &i, image); err != nil {
 		return nil, fmt.Errorf("failed to prepare instance: %w", err)
 	}
-
 	defer func() {
 		if err != nil {
 			r.instanceBuilder.CleanupInstance(ctx, &i)

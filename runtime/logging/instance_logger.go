@@ -51,12 +51,12 @@ func (m *InstanceLogger) Start(path string) error {
 		return err
 	}
 
-	m.stop = make(chan struct{})
-
 	pty, err := console.ConsoleFromFile(file)
 	if err != nil {
 		return err
 	}
+
+	m.stop = make(chan struct{})
 
 	go func() {
 		m.bc.Start()

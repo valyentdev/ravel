@@ -13,6 +13,13 @@ func createTap(name string) error {
 		},
 		Mode: netlink.TUNTAP_MODE_TAP,
 	}
+
+	netlink.LinkDel(&netlink.Tuntap{
+		LinkAttrs: netlink.LinkAttrs{
+			Name: name,
+		},
+	})
+
 	if err := netlink.LinkAdd(tap); err != nil {
 		return err
 	}

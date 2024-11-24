@@ -6,10 +6,9 @@ require (
 	github.com/containerd/containerd/v2 v2.0.0-rc.0
 	github.com/containerd/errdefs v0.1.0
 	github.com/coreos/go-iptables v0.7.0
-	github.com/danielgtaylor/huma/v2 v2.23.0
+	github.com/danielgtaylor/huma/v2 v2.26.0
 	github.com/distribution/reference v0.5.0
 	github.com/gammazero/deque v0.2.1
-	github.com/go-playground/validator/v10 v10.19.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/jackc/tern/v2 v2.2.3
 	github.com/nats-io/nats.go v1.36.0
@@ -17,9 +16,8 @@ require (
 	github.com/oklog/ulid v1.3.1
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pelletier/go-toml/v2 v2.2.3
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
-	github.com/tmaxmax/go-sse v0.8.0
 	github.com/u-root/u-root v0.14.0
 	github.com/valyentdev/corroclient v0.1.0
 	github.com/valyentdev/ravel-init v0.1.0
@@ -51,11 +49,8 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-playground/locales v0.14.1 // indirect
-	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -65,8 +60,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
-	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/klauspost/compress v1.17.10 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -110,9 +104,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/net v0.28.0
+	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/net v0.30.0
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
 )

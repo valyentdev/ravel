@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path"
 	"syscall"
 
@@ -62,10 +63,13 @@ func (b *Builder) PrepareInstance(ctx context.Context, i *instance.Instance, ima
 
 // BuildInstanceVM implements instance.VMBuilder.
 func (b *Builder) BuildInstanceVM(ctx context.Context, instance *instance.Instance) (instance.VM, error) {
+	slog.Debug("building vm", "instance", instance.Id)
 	image, err := b.images.GetImage(ctx, instance.ImageRef)
 	if err != nil {
 		return nil, err
 	}
+
+	slog.Debug("preparing rootfs", "instance", instance.Id, "image", image.Name())
 
 	rootfs, err := b.prepareRootFS(ctx, instance.Id, image)
 	if err != nil {
@@ -76,6 +80,8 @@ func (b *Builder) BuildInstanceVM(ctx context.Context, instance *instance.Instan
 	if err != nil {
 		return nil, err
 	}
+
+	slog.Debug("vm built", "instance", instance.Id)
 	return vm, nil
 }
 

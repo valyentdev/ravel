@@ -9,23 +9,20 @@ import (
 )
 
 func newDestroyInstanceCmd() *cobra.Command {
-	var force bool
 	destroyCmd := &cobra.Command{
 		Use:     "destroy <instance_id>",
 		Aliases: []string{"rm"},
 		Short:   "Remove a instance",
 		Long:    `Remove a instance. The instance must be stopped.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDestroyInstance(cmd, args, force)
+			return runDestroyInstance(cmd, args)
 		},
 	}
-
-	destroyCmd.Flags().BoolVarP(&force, "force", "f", false, "Force remove instance")
 
 	return destroyCmd
 }
 
-func runDestroyInstance(cmd *cobra.Command, args []string, force bool) error {
+func runDestroyInstance(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		cmd.Println("Please specify a instance ID")
 		return fmt.Errorf("please specify a instance ID")
@@ -33,12 +30,12 @@ func runDestroyInstance(cmd *cobra.Command, args []string, force bool) error {
 
 	instanceId := args[0]
 
-	err := util.GetAgentClient(cmd).DestroyInstance(context.Background(), instanceId, force)
+	err := util.GetDaemonClient(cmd).DestroyInstance(context.Background(), instanceId)
 	if err != nil {
 		return fmt.Errorf("unable to remove instance: %w", err)
 	}
 
-	cmd.Println("Instance removed")
+	cmd.Println("Instance destroyed")
 
 	return nil
 }

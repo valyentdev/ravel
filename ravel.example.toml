@@ -16,7 +16,7 @@ http_proxy_port = 8082
 init_binary = "./bin/ravel-init"
 linux_kernel = "./vmlinux.bin"
 database_path = "./agent.db"
-resources = { cpus = 8, memory = 16_384 }
+resources = { cpus_mhz = 20000, memory_mb = 16_384 }
 
 
 # Ravel Server configuration

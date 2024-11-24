@@ -35,13 +35,13 @@ type LogEntry struct {
 }
 
 type Resources struct {
-	CpuMHz   int `json:"cpu_mhz"`   // in MHz
-	MemoryMB int `json:"memory_mb"` // in MB
+	CpusMHz  int `json:"cpus_mhz" toml:"cpus_mhz"`   // in MHz
+	MemoryMB int `json:"memory_mb" toml:"memory_mb"` // in MB
 }
 
 func (r *Resources) Sub(other Resources) Resources {
 	new := Resources{
-		CpuMHz:   r.CpuMHz - other.CpuMHz,
+		CpusMHz:  r.CpusMHz - other.CpusMHz,
 		MemoryMB: r.MemoryMB - other.MemoryMB,
 	}
 	return new
@@ -50,7 +50,7 @@ func (r *Resources) Sub(other Resources) Resources {
 // Add returns a new Resources object which is the sum of the resources.
 func (r *Resources) Add(other Resources) Resources {
 	new := Resources{
-		CpuMHz:   r.CpuMHz + other.CpuMHz,
+		CpusMHz:  r.CpusMHz + other.CpusMHz,
 		MemoryMB: r.MemoryMB + other.MemoryMB,
 	}
 	return new
@@ -58,5 +58,5 @@ func (r *Resources) Add(other Resources) Resources {
 
 // GT returns true if the resources are greater than the other resources.
 func (r *Resources) GT(other Resources) bool {
-	return r.CpuMHz > other.CpuMHz && r.MemoryMB > other.MemoryMB
+	return r.CpusMHz > other.CpusMHz || r.MemoryMB > other.MemoryMB
 }

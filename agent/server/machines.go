@@ -6,6 +6,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
+	"github.com/valyentdev/ravel/internal/streamutil"
 )
 
 type CreateMachineRequest struct {
@@ -80,8 +81,8 @@ func (s *AgentServer) startMachine(ctx context.Context, req *StartMachineRequest
 }
 
 type StopMachineRequest struct {
-	Id   string          `path:"id"`
-	Body *api.StopConfig `required:"false"`
+	Id   string `path:"id"`
+	Body *api.StopConfig
 }
 
 type StopMachineResponse struct {
@@ -109,7 +110,7 @@ func (s *AgentServer) followMachineLogs(ctx context.Context, req *FollowMachineL
 
 	return &huma.StreamResponse{
 		Body: func(ctx huma.Context) {
-			streamLogs(ctx, logs, ch)
+			streamutil.StreamLogs(ctx, logs, ch)
 		}}, nil
 }
 

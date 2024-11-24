@@ -26,10 +26,10 @@ func (cc CorrosionConfig) Config() corroclient.Config {
 }
 
 type RavelConfig struct {
-	Server    ServerConfig    `json:"server" toml:"server"`
-	Agent     AgentConfig     `json:"agent" toml:"agent"`
-	Corrosion CorrosionConfig `json:"corrosion" toml:"corrosion"`
-	Nats      NatsConfig      `json:"nats" toml:"nats"`
+	Daemon    DaemonConfig     `json:"daemon" toml:"daemon"`
+	Server    ServerConfig     `json:"server" toml:"server"`
+	Corrosion *CorrosionConfig `json:"corrosion" toml:"corrosion"`
+	Nats      *NatsConfig      `json:"nats" toml:"nats"`
 }
 
 func ReadFile(path string) (RavelConfig, error) {

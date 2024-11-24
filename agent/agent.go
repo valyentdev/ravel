@@ -2,196 +2,138 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/valyentdev/ravel/agent/allocator"
-	"github.com/valyentdev/ravel/agent/machine"
+	"github.com/valyentdev/ravel/agent/machinerunner"
+	"github.com/valyentdev/ravel/agent/machinerunner/state"
 	"github.com/valyentdev/ravel/agent/node"
-	"github.com/valyentdev/ravel/agent/store"
+	"github.com/valyentdev/ravel/agent/server"
 	"github.com/valyentdev/ravel/core/cluster"
+	"github.com/valyentdev/ravel/core/cluster/corrosion"
+	"github.com/valyentdev/ravel/core/cluster/placement"
 	"github.com/valyentdev/ravel/core/config"
-	"github.com/valyentdev/ravel/core/corrosion"
-	"github.com/valyentdev/ravel/core/instance"
 
-	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/api"
 
 	"github.com/valyentdev/ravel/runtime"
 )
 
 type Agent struct {
-	node          *node.Node
-	config        config.AgentConfig
-	nc            *nats.Conn
-	cluster       cluster.ClusterState
-	store         *store.Store
-	machines      machine.Store
-	eventer       *eventer
-	stateReporter *stateReporter
-	allocator     *allocator.Allocator
-	runtime       *runtime.Runtime
+	node      *node.Node
+	config    *config.AgentConfig
+	nc        *nats.Conn
+	cluster   cluster.ClusterState
+	store     Store
+	machines  machinerunner.Store
+	eventer   *eventer
+	allocator *allocator.Allocator
+	runtime   *runtime.Runtime
+	server    *server.AgentServer
+	placement *placement.Listener
 }
 
-var _ structs.Agent = (*Agent)(nil)
+type Config struct {
+	Agent     *config.AgentConfig
+	Nats      *config.NatsConfig
+	Corrosion *config.CorrosionConfig
+}
 
-func New(config config.RavelConfig) (*Agent, error) {
+type Store interface {
+	state.Store
+	allocator.AllocationsStore
+}
+
+func New(config Config, store Store, runtime *runtime.Runtime) (*Agent, error) {
 	slog.Info("Initializing agent", "node_id", config.Agent.NodeId, "address", config.Agent.Address)
-	store, err := store.NewStore(config.Agent.DatabasePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create store: %w", err)
-	}
 
-	err = store.Init()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize store: %w", err)
-	}
-
-	natsOptions := []nats.Option{}
-	if config.Nats.CredFile != "" {
-		natsOptions = append(natsOptions, nats.UserCredentials(config.Nats.CredFile, config.Nats.CredFile))
-		natsOptions = append(natsOptions, nats.MaxReconnects(-1))
-	}
-
-	slog.Info("Initializing nats")
-	nc, err := nats.Connect(config.Nats.Url, natsOptions...)
+	nc, err := config.Nats.Connect()
 	if err != nil {
 		return nil, err
 	}
 
-	allocator, err := allocator.New(store, config.Agent.Resources.Resources())
+	cs := corrosion.New(config.Corrosion.Config())
+
+	slog.Info("Initializing allocator")
+	allocator, err := allocator.New(store, config.Agent.Resources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reservation service: %w", err)
 	}
 
-	if err := allocator.Init(); err != nil {
-		return nil, fmt.Errorf("failed to initialize reservation service: %w", err)
-	}
-
-	cs, err := corrosion.Connect(config.Corrosion.Config())
-	if err != nil {
-		return nil, err
-	}
-
-	sr := newStateReporter(cs)
-
 	node := node.NewNode(cs, api.Node{
 		Id:            config.Agent.NodeId,
 		Address:       config.Agent.Address,
-		AgentPort:     config.Agent.AgentPort,
+		AgentPort:     config.Agent.Port,
 		HttpProxyPort: config.Agent.HttpProxyPort,
 		Region:        config.Agent.Region,
 		HeartbeatedAt: time.Now(),
 	})
 
 	agent := &Agent{
-		node:          node,
-		config:        config.Agent,
-		nc:            nc,
-		cluster:       cs,
-		store:         store,
-		machines:      machine.NewStore(),
-		stateReporter: sr,
-		allocator:     allocator,
+		node:      node,
+		config:    config.Agent,
+		nc:        nc,
+		cluster:   cs,
+		store:     store,
+		machines:  machinerunner.NewStore(),
+		eventer:   newEventer(store, nc),
+		allocator: allocator,
+		runtime:   runtime,
+		placement: placement.NewListener(nc),
 	}
 
-	eventer := newEventer(store, agent.reportEvent)
-
-	agent.eventer = eventer
-
-	er := newEventReporter(agent)
-
-	runtime, err := runtime.New(
-		store,
-		er,
-		config.Agent.InitBinary,
-		config.Agent.LinuxKernel,
-	)
+	err = agent.eventer.Start()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create runtime: %w", err)
+		return nil, err
 	}
-
-	agent.runtime = runtime
 
 	return agent, nil
 }
 
-func (d *Agent) Start(ctx context.Context) error {
-	machines, err := d.store.LoadMachineInstances()
+func (a *Agent) Start() error {
+	slog.Info("Starting agent")
+	machines, err := a.store.LoadMachineInstances()
 	if err != nil {
 		return err
 	}
 
 	for _, m := range machines {
-		machine := d.newMachine(m)
-		d.machines.AddMachine(machine)
+		machine := a.newMachine(m)
+		a.machines.AddMachine(machine)
+		go machine.Run()
 	}
 
-	if err := d.node.Start(); err != nil {
+	a.server = server.NewAgentServer(a)
+
+	agentListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", a.config.Address, a.config.Port))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			agentListener.Close()
+		}
+	}()
+
+	go a.server.Serve(agentListener)
+
+	if err = a.node.Start(); err != nil {
 		return err
 	}
 
-	if err := d.runtime.Start(); err != nil {
+	if err = a.startPlacementHandler(); err != nil {
 		return err
 	}
-
-	if err := d.startPlacementHandler(); err != nil {
-		return err
-	}
-
-	go d.eventer.Start()
-
-	d.machines.Foreach(func(m *machine.Machine) {
-		go m.Recover()
-	})
 
 	return nil
 }
 
-func (d *Agent) Stop() error {
-	return d.store.Close()
+func (d *Agent) Stop(ctx context.Context) error {
+	d.placement.Stop()
+
+	return d.server.Shutdown(ctx)
 }
-
-type eventReporter struct {
-	agent *Agent
-}
-
-func newEventReporter(agent *Agent) *eventReporter {
-	return &eventReporter{
-		agent: agent,
-	}
-}
-
-func (a *Agent) reportEvent(event api.MachineEvent) error {
-	bytes, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-
-	_, err = a.nc.Request("machines.events", bytes, time.Second)
-	if err != nil {
-		return err
-	}
-
-	return nil
-
-}
-
-func (e *eventReporter) ReportInstanceEvent(event instance.Event) {
-	if event.InstanceMetadata.MachineId == "" {
-		return
-	}
-
-	machine, err := e.agent.machines.GetMachine(event.InstanceMetadata.MachineId)
-	if err != nil {
-		slog.Error("Failed to get machine", "error", err)
-		return
-	}
-
-	machine.ProcessInstanceEvent(event)
-}
-
-var _ instance.EventReporter = (*eventReporter)(nil)

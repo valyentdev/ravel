@@ -53,12 +53,13 @@ func (r *RavelError) GetStatus() int {
 	return r.Status
 }
 
-func new(code Code, msg string) *RavelError {
+func new(code Code, msg string, details ...*ErrorDetail) *RavelError {
 	return &RavelError{
 		RavelCode: code,
 		Status:    getHTTPStatus(code),
 		Title:     string(code),
 		Detail:    msg,
+		Errors:    details,
 	}
 }
 
@@ -158,15 +159,18 @@ func getRavelCodeFromHTTPStatus(status int) Code {
 
 func OverrideHumaErrorBuilder() {
 	huma.NewError = func(status int, msg string, errs ...error) huma.StatusError {
-		details := make([]*huma.ErrorDetail, len(errs))
-		for i := 0; i < len(errs); i++ {
-			if converted, ok := errs[i].(huma.ErrorDetailer); ok {
-				details[i] = converted.ErrorDetail()
+		details := make([]*huma.ErrorDetail, 0, len(errs))
+		for _, err := range errs {
+			if err == nil {
+				continue
+			}
+			var detail *huma.ErrorDetail
+			if errors.As(err, &detail) {
+				details = append(details, detail)
 			} else {
-				if errs[i] == nil {
-					continue
-				}
-				details[i] = &huma.ErrorDetail{Message: errs[i].Error()}
+				details = append(details, &huma.ErrorDetail{
+					Message: err.Error(),
+				})
 			}
 		}
 
@@ -193,8 +197,8 @@ func NewUnknown(msg string) error {
 	return new(codeUnknown, msg)
 }
 
-func NewInvalidArgument(msg string) error {
-	return new(codeInvalidArgument, msg)
+func NewInvalidArgument(msg string, details ...*ErrorDetail) error {
+	return new(codeInvalidArgument, msg, details...)
 }
 
 func NewNotFound(msg string) error {

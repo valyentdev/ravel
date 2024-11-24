@@ -1,22 +1,23 @@
 package agent
 
 import (
+	"encoding/json"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/gammazero/deque"
-	"github.com/valyentdev/ravel/agent/machine/state"
-	"github.com/valyentdev/ravel/agent/store"
+	"github.com/nats-io/nats.go"
+	"github.com/valyentdev/ravel/agent/machinerunner/state"
 	"github.com/valyentdev/ravel/api"
 )
 
 type eventer struct {
-	store      *store.Store
-	mutex      sync.RWMutex
-	queue      *deque.Deque[api.MachineEvent]
-	notify     chan struct{}
-	reportFunc func(api.MachineEvent) error
+	store  state.Store
+	mutex  sync.RWMutex
+	queue  *deque.Deque[api.MachineEvent]
+	notify chan struct{}
+	nc     *nats.Conn
 }
 
 var _ state.Eventer = (*eventer)(nil)
@@ -41,12 +42,12 @@ func (e *eventer) nextEvent() (api.MachineEvent, bool) {
 	return event, true
 }
 
-func newEventer(store *store.Store, reportFunc func(api.MachineEvent) error) *eventer {
+func newEventer(store state.Store, nc *nats.Conn) *eventer {
 	return &eventer{
-		store:      store,
-		queue:      deque.New[api.MachineEvent](0),
-		notify:     make(chan struct{}, 1),
-		reportFunc: reportFunc,
+		store:  store,
+		queue:  deque.New[api.MachineEvent](0),
+		notify: make(chan struct{}, 1),
+		nc:     nc,
 	}
 }
 
@@ -82,12 +83,17 @@ func (e *eventer) start() {
 }
 
 func (e *eventer) report(event api.MachineEvent) error {
-	err := e.reportFunc(event)
+	bytes, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}
 
-	err = e.store.DeleteEvent(event.Id)
+	_, err = e.nc.Request("machines.events", bytes, time.Second)
+	if err != nil {
+		return err
+	}
+
+	err = e.store.DeleteMachineInstanceEvent(event.Id)
 	if err != nil {
 		slog.Error("failed to delete event", "error", err)
 	}

@@ -41,7 +41,7 @@ func runGetInstanceLogs(cmd *cobra.Command, args []string, follow bool) error {
 }
 
 func followInstanceLogs(cmd *cobra.Command, instanceId string) error {
-	replay, logs, err := util.GetAgentClient(cmd).SubscribeToInstanceLogs(cmd.Context(), instanceId)
+	replay, logs, err := util.GetDaemonClient(cmd).SubscribeToInstanceLogs(cmd.Context(), instanceId)
 	if err != nil {
 		return fmt.Errorf("unable to get instance logs: %w", err)
 	}
@@ -60,7 +60,7 @@ func followInstanceLogs(cmd *cobra.Command, instanceId string) error {
 }
 
 func printInstanceLogs(cmd *cobra.Command, instanceId string) error {
-	logs, err := util.GetAgentClient(cmd).GetInstanceLogs(cmd.Context(), instanceId)
+	logs, err := util.GetDaemonClient(cmd).GetInstanceLogs(cmd.Context(), instanceId)
 	if err != nil {
 		return fmt.Errorf("unable to get instance logs: %w", err)
 	}

@@ -11,10 +11,10 @@ import (
 	"github.com/valyentdev/ravel/core/errdefs"
 )
 
-func (m *Orchestrator) PlaceMachine(ctx context.Context, machine *cluster.Machine, mv api.MachineVersion, start bool) error {
+func (o *Orchestrator) PlaceMachine(ctx context.Context, machine *cluster.Machine, mv api.MachineVersion, start bool) error {
 	machineId := machine.Id
 
-	workers, err := m.broker.GetAvailableWorkers(placement.PlacementRequest{
+	workers, err := o.broker.GetAvailableWorkers(placement.PlacementRequest{
 		Region:       machine.Region,
 		AllocationId: machineId,
 		Resources:    mv.Resources,
@@ -29,14 +29,14 @@ func (m *Orchestrator) PlaceMachine(ctx context.Context, machine *cluster.Machin
 
 	candidate := workers[0]
 
-	member, err := m.clusterState.GetNode(ctx, candidate.NodeId)
+	member, err := o.clusterState.GetNode(ctx, candidate.NodeId)
 	if err != nil {
 		return fmt.Errorf("failed to get node: %w", err)
 	}
 
 	machine.Node = member.Id
 
-	ac, err := m.getAgentClient(member.Id)
+	ac, err := o.getAgentClient(member.Id)
 	if err != nil {
 		return fmt.Errorf("failed to get agent client: %w", err)
 	}

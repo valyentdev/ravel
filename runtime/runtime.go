@@ -7,6 +7,8 @@ import (
 
 	"github.com/containerd/containerd/v2/client"
 	ctrderr "github.com/containerd/errdefs"
+	"github.com/valyentdev/ravel/core/config"
+	"github.com/valyentdev/ravel/core/daemon"
 	"github.com/valyentdev/ravel/core/images"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/runtime/vm"
@@ -14,7 +16,6 @@ import (
 
 type Runtime struct {
 	instancesStore  instance.InstanceStore
-	eventReporter   instance.EventReporter
 	imagesUsage     *images.ImagesUsage
 	images          *images.Service
 	networking      *networkService
@@ -22,22 +23,27 @@ type Runtime struct {
 	instances       *State
 }
 
-func New(is instance.InstanceStore, es instance.EventReporter, initBinary string, linuxKernel string) (*Runtime, error) {
+var _ daemon.Runtime = (*Runtime)(nil)
+
+func New(config *config.RuntimeConfig, is instance.InstanceStore) (*Runtime, error) {
 	ctrd, err := initContainerd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create containerd client: %w", err)
 	}
 
-	imagesService := images.NewService(ctrd, "devmapper")
+	const snapshotter = "devmapper"
+	imagesService := images.NewService(ctrd, snapshotter)
 	imageUsage := images.NewImagesUsage()
 
 	state := NewState()
 
-	instanceBuilder := vm.NewBuilder("/var/run/ravel", "/var/lib/ravel", initBinary, linuxKernel, imagesService, ctrd, "devmapper")
+	initBinary := config.InitBinary
+	linuxKernel := config.LinuxKernel
+
+	instanceBuilder := vm.NewBuilder("/var/run/ravel", "/var/lib/ravel", initBinary, linuxKernel, imagesService, ctrd, snapshotter)
 
 	runtime := &Runtime{
 		instancesStore:  is,
-		eventReporter:   es,
 		imagesUsage:     imageUsage,
 		images:          imagesService,
 		networking:      newNetworkService(),
@@ -73,7 +79,11 @@ func (r *Runtime) Start() error {
 	}
 
 	for _, i := range instances {
-		r.networking.Allocate(i.Network)
+		err := r.networking.Allocate(i.Network)
+		if err != nil {
+			slog.Error("Failed to allocate network for instance %s: %v", i.Id, err)
+		}
+
 		r.imagesUsage.UseImage(i.ImageRef)
 		manager := r.newInstanceManager(i)
 		manager.Recover()

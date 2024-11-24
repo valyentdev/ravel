@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/valyentdev/ravel/agent/machine"
+	"github.com/valyentdev/ravel/agent/machinerunner"
 	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
@@ -25,12 +25,16 @@ func (a *Agent) onMachineDestroyed(m structs.MachineInstance) {
 	}
 }
 
-func (a *Agent) newMachine(machineInstance structs.MachineInstance) *machine.Machine {
-	return machine.NewMachine(
+func (a *Agent) reportState(mi cluster.MachineInstance) error {
+	return a.cluster.UpsertInstance(context.Background(), mi)
+}
+
+func (a *Agent) newMachine(machineInstance structs.MachineInstance) *machinerunner.MachineRunner {
+	return machinerunner.New(
 		a.store,
 		machineInstance,
 		a.runtime,
-		a.stateReporter,
+		a.reportState,
 		a.eventer,
 		a.onMachineDestroyed,
 	)
@@ -73,10 +77,8 @@ func (a *Agent) PutMachine(ctx context.Context, opt cluster.PutMachineOptions) (
 	}
 
 	machine := a.newMachine(machineInstance)
-
 	a.machines.AddMachine(machine)
-
-	go machine.Recover()
+	go machine.Run()
 
 	ci := machineInstance.ClusterInstance()
 
@@ -104,6 +106,7 @@ func (d *Agent) StartMachine(ctx context.Context, id string) error {
 func (d *Agent) StopMachine(ctx context.Context, id string, opt *api.StopConfig) error {
 	machine, err := d.machines.GetMachine(id)
 	if err != nil {
+		slog.Error("failed to get machine", "machine_id", id, "error", err)
 		return err
 	}
 

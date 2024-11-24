@@ -23,7 +23,7 @@ func NewDBInfosCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&infosOptions.config, "config", "c", "/etc/ravel/config.json", "Path to the configuration file")
+	cmd.Flags().StringVarP(&infosOptions.config, "config", "c", "/etc/ravel/config.toml", "Path to the configuration file")
 
 	return cmd
 }

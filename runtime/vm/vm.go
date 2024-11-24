@@ -153,7 +153,7 @@ func (vm *vm) run() {
 	defer cancel()
 
 	go func() {
-		time.Sleep(1 * time.Second)
+		time.Sleep(3 * time.Second)
 		if !initStarted.Load() {
 			cancel()
 		}
@@ -226,15 +226,15 @@ func (vm *vm) Stop(ctx context.Context, signal string) error {
 	return nil
 }
 
-func (vm *vm) Run() *instance.ExitResult {
+func (vm *vm) Run() instance.ExitResult {
 	<-vm.waitChan
-	er := &instance.ExitResult{
+	er := instance.ExitResult{
 		Requested: vm.runResult.HasBeenStopped,
 		ExitedAt:  vm.runResult.ExitedAt,
 	}
 
 	if vm.runResult.ExitCode != nil {
-		er.ExitCode = *vm.runResult.ExitCode
+		er.ExitCode = int(*vm.runResult.ExitCode)
 		er.Success = er.ExitCode == 0
 	} else {
 		er.ExitCode = unknownExitCode

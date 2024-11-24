@@ -12,6 +12,16 @@ type EventReporter interface {
 	ReportInstanceEvent(event Event)
 }
 
+type noopEventReporter struct {
+}
+
+func (n *noopEventReporter) ReportInstanceEvent(event Event) {
+}
+
+func NewNoopEventReporter() EventReporter {
+	return &noopEventReporter{}
+}
+
 type InstanceStore interface {
 	LoadInstances() ([]Instance, error)
 	PutInstance(instance Instance) error
@@ -22,12 +32,10 @@ type Handle struct {
 	Console string
 }
 
-type ExitResult = InstanceExitedEventPayload
-
 type VM interface {
 	Start(ctx context.Context) (Handle, error)
 	Exec(ctx context.Context, cmd []string, timeout time.Duration) (*api.ExecResult, error)
-	Run() *ExitResult
+	Run() ExitResult
 	WaitExit(ctx context.Context) bool
 	Signal(ctx context.Context, signal string) error
 	Stop(ctx context.Context, signal string) error

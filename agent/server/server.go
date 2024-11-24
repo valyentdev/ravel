@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 
-	"github.com/valyentdev/ravel/agent/structs"
+	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 type AgentServer struct {
 	server *http.Server
-	agent  structs.Agent
+	agent  cluster.Agent
 }
 
 func (e *AgentServer) log(msg string, err error) {
@@ -27,22 +28,22 @@ func (e *AgentServer) log(msg string, err error) {
 	}
 }
 
-func (s *AgentServer) ListenAndServe() error {
-	return s.server.ListenAndServe()
+func (s *AgentServer) Serve(listener net.Listener) {
+	s.server.Serve(listener)
 }
 
 func (s *AgentServer) Shutdown(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-func NewAgentServer(agent structs.Agent, address string) *AgentServer {
+func NewAgentServer(agent cluster.Agent) *AgentServer {
 	as := &AgentServer{agent: agent}
 
 	mux := http.NewServeMux()
+
 	as.registerEndpoints(mux)
 
 	server := &http.Server{
-		Addr:    address,
 		Handler: mux,
 	}
 

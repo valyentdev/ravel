@@ -1,12 +1,10 @@
 package util
 
 import (
-	"net/http"
-
 	"github.com/spf13/cobra"
-	agentclient "github.com/valyentdev/ravel/agent/client"
+	"github.com/valyentdev/ravel/client"
 )
 
-func GetAgentClient(cmd *cobra.Command) *agentclient.AgentClient {
-	return agentclient.NewAgentClient(http.DefaultClient, "http://127.0.0.1:8080")
+func GetDaemonClient(cmd *cobra.Command) *client.DaemonClient {
+	return client.NewDaemonClient("/var/run/ravel.sock")
 }

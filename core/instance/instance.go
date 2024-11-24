@@ -7,11 +7,12 @@ import (
 )
 
 const (
+	InstanceStatusCreated    InstanceStatus = "created"
 	InstanceStatusStopped    InstanceStatus = "stopped"
-	InstanceStatusStopping   InstanceStatus = "stopping"
 	InstanceStatusStarting   InstanceStatus = "starting"
 	InstanceStatusRunning    InstanceStatus = "running"
 	InstanceStatusDestroying InstanceStatus = "destroying"
+	InstanceStatusDestroyed  InstanceStatus = "destroyed"
 )
 
 type InstanceStatus = string
@@ -33,19 +34,20 @@ type Instance struct {
 
 type State struct {
 	Status     InstanceStatus `json:"status"`
+	Stopping   bool           `json:"stopping"`
 	ExitResult *ExitResult    `json:"exit_result,omitempty"`
 }
 
 type InstanceConfig struct {
-	Image      string              `json:"image"`
-	Guest      InstanceGuestConfig `json:"guest"`
-	Init       api.InitConfig      `json:"init"`
-	Env        []string            `json:"env"`
-	StopConfig api.StopConfig      `json:"stop_config"`
+	Image string              `json:"image"`
+	Guest InstanceGuestConfig `json:"guest"`
+	Init  api.InitConfig      `json:"init"`
+	Stop  *api.StopConfig     `json:"stop,omitempty"`
+	Env   []string            `json:"env"`
 }
 
 type InstanceGuestConfig struct {
-	MemoryMB int `json:"memory_mb"`
-	VCpus    int `json:"vcpus"` // number of virtual CPUs (correspond to vm vcpus)
-	Cpus     int `json:"cpus"`  // in MHz
+	MemoryMB int `json:"memory_mb" minimum:"1"` // in MB
+	VCpus    int `json:"vcpus" minimum:"1"`     // number of virtual CPUs (correspond to vm vcpus)
+	CpusMHz  int `json:"cpus_mhz" minimum:"1"`  // in MHz
 }

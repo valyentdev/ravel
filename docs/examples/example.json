@@ -8,9 +8,8 @@
                 "SUDO_PASSWORD=password",
                 "PASSWORD=password"
             ],
-            "restart_policy": {
-                "policy": "always",
-                "max_retries": 5
+            "restart": {
+                "policy": "always"
             },
             "init": {
                 "user": "root"

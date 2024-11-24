@@ -28,7 +28,7 @@ func runStartInstance(cmd *cobra.Command, args []string) error {
 
 	instanceId := args[0]
 
-	err := util.GetAgentClient(cmd).StartInstance(cmd.Context(), instanceId)
+	err := util.GetDaemonClient(cmd).StartInstance(cmd.Context(), instanceId)
 	if err != nil {
 		return fmt.Errorf("unable to start instance: %w", err)
 	}

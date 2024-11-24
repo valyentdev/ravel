@@ -6,12 +6,12 @@ import (
 
 	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
-	instancemanager "github.com/valyentdev/ravel/runtime/manager"
+	"github.com/valyentdev/ravel/runtime/instancerunner"
 )
 
 type State struct {
 	mutex     sync.RWMutex
-	instances map[string]*instancemanager.Manager
+	instances map[string]*instancerunner.InstanceRunner
 
 	idsMutex sync.RWMutex
 	ids      map[string]struct{}
@@ -19,7 +19,7 @@ type State struct {
 
 func NewState() *State {
 	return &State{
-		instances: make(map[string]*instancemanager.Manager),
+		instances: make(map[string]*instancerunner.InstanceRunner),
 		ids:       make(map[string]struct{}),
 	}
 }
@@ -34,7 +34,7 @@ func (s *State) List() []instance.Instance {
 	return instances
 }
 
-func (s *State) AddInstance(id string, manager *instancemanager.Manager) {
+func (s *State) AddInstance(id string, manager *instancerunner.InstanceRunner) {
 	s.mutex.Lock()
 	s.instances[id] = manager
 	s.mutex.Unlock()
@@ -46,7 +46,7 @@ func (s *State) Delete(id string) {
 	s.mutex.Unlock()
 }
 
-func (s *State) GetInstance(id string) (*instancemanager.Manager, error) {
+func (s *State) GetInstance(id string) (*instancerunner.InstanceRunner, error) {
 	slog.Debug("getting instance", "id", id)
 	s.mutex.RLock()
 	instance, ok := s.instances[id]

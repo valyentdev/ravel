@@ -3,7 +3,7 @@ package images
 import (
 	"github.com/spf13/cobra"
 	"github.com/valyentdev/ravel/cmd/ravel/util"
-	"github.com/valyentdev/ravel/runtime"
+	"github.com/valyentdev/ravel/core/daemon"
 )
 
 func NewImagesCmd() *cobra.Command {
@@ -30,7 +30,7 @@ func newListImagesCmd() *cobra.Command {
 }
 
 func listImages(cmd *cobra.Command, args []string) error {
-	client := util.GetAgentClient(cmd)
+	client := util.GetDaemonClient(cmd)
 
 	images, err := client.ListImages(cmd.Context())
 	if err != nil {
@@ -62,10 +62,10 @@ func pullImage(cmd *cobra.Command, args []string) error {
 
 	ref := args[0]
 
-	client := util.GetAgentClient(cmd)
+	client := util.GetDaemonClient(cmd)
 
 	cmd.Println("Pulling image...")
-	_, err := client.PullImage(cmd.Context(), runtime.PullImageOptions{
+	_, err := client.PullImage(cmd.Context(), daemon.ImagePullOptions{
 		Ref: ref,
 	})
 	if err != nil {
@@ -93,7 +93,7 @@ func deleteImage(cmd *cobra.Command, args []string) error {
 
 	ref := args[0]
 
-	client := util.GetAgentClient(cmd)
+	client := util.GetDaemonClient(cmd)
 
 	cmd.Println("Deleting image...")
 	err := client.DeleteImage(cmd.Context(), ref)

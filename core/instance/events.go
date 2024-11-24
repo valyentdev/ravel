@@ -35,13 +35,13 @@ type InstancePreparationFailedEventPayload struct {
 	Error string
 }
 
-type InstanceExitedEventPayload struct {
+type ExitResult struct {
 	Success   bool      `json:"success"`
-	ExitCode  int64     `json:"exit_code,omitempty"`
+	ExitCode  int       `json:"exit_code,omitempty"`
 	Requested bool      `json:"requested"`
 	ExitedAt  time.Time `json:"exited_at"`
 }
 
 type InstanceEventPayload struct {
-	Exited *InstanceExitedEventPayload `json:"exited,omitempty"`
+	Exited *ExitResult `json:"exited,omitempty"`
 }

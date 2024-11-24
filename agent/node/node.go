@@ -32,7 +32,6 @@ func NewNode(c cluster.ClusterState, node api.Node) *Node {
 
 func (n *Node) Start() error {
 	go n.startHeartbeating(n.ctx)
-
 	return nil
 }
 

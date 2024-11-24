@@ -52,7 +52,7 @@ func (q *Queries) ListMachineVersions(ctx context.Context, machineId string) ([]
 		var mv api.MachineVersion
 		var configBytes []byte
 		var resourcesBytes []byte
-		err := rows.Scan(&id, &mv.MachineId, &configBytes)
+		err := rows.Scan(&id, &mv.MachineId, &configBytes, &resourcesBytes)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return mvs, nil

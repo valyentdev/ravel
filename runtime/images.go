@@ -2,15 +2,14 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/containerd/containerd/v2/core/images"
+	"github.com/valyentdev/ravel/core/daemon"
 	"github.com/valyentdev/ravel/core/errdefs"
-	"github.com/valyentdev/ravel/core/registry"
 )
 
-type Image = images.Image
-
-func (r *Runtime) ListImages(ctx context.Context) ([]Image, error) {
+func (r *Runtime) ListImages(ctx context.Context) ([]daemon.Image, error) {
 	imagesList, err := r.images.ListImages(ctx)
 	if err != nil {
 		return nil, err
@@ -25,17 +24,14 @@ func (r *Runtime) ListImages(ctx context.Context) ([]Image, error) {
 	return result, nil
 }
 
-type PullImageOptions struct {
-	Ref  string                       `json:"ref"`
-	Auth *registry.RegistryAuthConfig `json:"auth,omitempty"`
-}
-
-func (r *Runtime) PullImage(ctx context.Context, opt PullImageOptions) (*Image, error) {
+func (r *Runtime) PullImage(ctx context.Context, opt daemon.ImagePullOptions) (*daemon.Image, error) {
 	if opt.Ref == "" {
 		return nil, errdefs.NewInvalidArgument("ref must be provided")
 	}
 	ref := opt.Ref
 	auth := opt.Auth
+
+	slog.Info("Pulling image", "ref", ref)
 	image, err := r.images.Pull(ctx, ref, auth)
 	if err != nil {
 		return nil, err

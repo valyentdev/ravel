@@ -29,7 +29,7 @@ func runStopInstance(cmd *cobra.Command, args []string) error {
 
 	instanceId := args[0]
 
-	err := util.GetAgentClient(cmd).StopInstance(context.Background(), instanceId, &api.StopConfig{})
+	err := util.GetDaemonClient(cmd).StopInstance(context.Background(), instanceId, &api.StopConfig{})
 	if err != nil {
 		bytes, _ := json.Marshal(err)
 		cmd.Println(string(bytes))

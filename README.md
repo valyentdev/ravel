@@ -8,7 +8,7 @@
   </a>
 
   <a href="https://x.com/intent/follow?screen_name=ValyentDev">
-    <img src="https://img.shields.io/twitter/follow/ValyentDev.svg?label=Follow%20@ValyentDev" alt="Follow @ValyentDev" />
+    <img src="https://img.shields.io/twitter/follow/valyentcloud.svg?label=Follow%20@valyentcloud" alt="Follow @valyentcloud" />
   </a>
 </div>
 
@@ -31,7 +31,7 @@
 
 ## About
 
-Ravel emerges as the building block for [Valyent](https://valyent.dev)'s cloud services.
+Ravel emerges as the building block for [Valyent](https://valyent.cloud)'s cloud services.
 
 Ravel is a **bidding-style orchestrator** for _microVMs_. It allows you to create, manage, and destroy microVMs on the fly. It supports running OCI images inside microVMs powered by CloudHypervisor.
 
@@ -62,7 +62,7 @@ For more details, please refer to our [documentation](https://docs.valyent.cloud
 ### Installation
 
 ```bash
-curl -L https://raw.githubusercontent.com/valyentdev/ravel/refs/heads/main/scripts/install.sh | bash
+curl -L https://raw.githubusercontent.com/valyentdev/ravel/refs/heads/main/install.sh | bash
 ```
 
 ## FAQ
@@ -79,7 +79,7 @@ Ravel is named after the famous composer Maurice Ravel, known for his orchestral
 
 ### How do I contribute?
 
-Please come and join us on our [Discord server](https://discord.valyent.dev), where you can ask questions, get help, and contribute to the project.
+Please come and join us on our [Discord server](https://discord.valyent.cloud), where you can ask questions, get help, and contribute to the project.
 
 ### How do I report a bug?
 

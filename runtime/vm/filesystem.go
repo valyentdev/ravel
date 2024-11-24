@@ -3,6 +3,8 @@ package vm
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/containerd/containerd/v2/client"
 	"github.com/containerd/errdefs"
@@ -12,7 +14,10 @@ import (
 func (b *Builder) removeRootFS(id string) error {
 	ss := b.ctrd.SnapshotService(b.snapshotter)
 
-	err := ss.Remove(context.Background(), rootFSName(id))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err := ss.Remove(ctx, rootFSName(id))
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			return nil
@@ -43,6 +48,7 @@ func rootFSName(id string) string {
 }
 
 func (b *Builder) prepareContainerRootFS(ctx context.Context, id string, image client.Image) (string, error) {
+	slog.Debug("preparing rootfs for container", "id", id)
 	diffIDs, err := image.RootFS(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get rootfs for image %q: %w", image.Name(), err)
@@ -50,10 +56,11 @@ func (b *Builder) prepareContainerRootFS(ctx context.Context, id string, image c
 
 	parent := identity.ChainID(diffIDs).String()
 
-	ss := b.ctrd.SnapshotService("devmapper")
+	slog.Debug("preparing snapshot", "id", id, "parent", parent)
 
-	b.removeRootFS(id)
+	ss := b.ctrd.SnapshotService(b.snapshotter)
 
+	slog.Debug("preparing snapshot", "id", id, "parent", parent)
 	mounts, err := ss.Prepare(context.Background(), rootFSName(id), parent)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)

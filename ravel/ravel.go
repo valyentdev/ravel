@@ -6,8 +6,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"github.com/valyentdev/ravel/core/cluster"
+	"github.com/valyentdev/ravel/core/cluster/corrosion"
 	"github.com/valyentdev/ravel/core/config"
-	"github.com/valyentdev/ravel/core/corrosion"
 	"github.com/valyentdev/ravel/ravel/db"
 	"github.com/valyentdev/ravel/ravel/orchestrator"
 	"github.com/valyentdev/ravel/ravel/state"
@@ -51,7 +51,7 @@ func New(config config.RavelConfig) (*Ravel, error) {
 		}
 	}()
 
-	clusterstate, err := corrosion.Connect(config.Corrosion.Config())
+	clusterstate := corrosion.New(config.Corrosion.Config())
 	if err != nil {
 		return nil, err
 	}

@@ -8,26 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/tmaxmax/go-sse"
 	"github.com/valyentdev/ravel/core/errdefs"
 )
-
-func getBody(body any) (io.Reader, error) {
-	if body == nil {
-		return nil, nil
-	}
-
-	if b, ok := body.(io.Reader); ok {
-		return b, nil
-	}
-
-	b, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewReader(b), nil
-}
 
 type Client struct {
 	baseURL string
@@ -41,38 +23,56 @@ func NewClient(baseURL string, c *http.Client, defaults ...ReqOpt) *Client {
 type reqOptions struct {
 	header http.Header
 	query  url.Values
+	body   io.Reader
 }
 
-type ReqOpt func(*reqOptions)
+type ReqOpt func(*reqOptions) error
 
 func WithHeader(key, value string) ReqOpt {
-	return func(o *reqOptions) {
+	return func(o *reqOptions) error {
 		o.header.Set(key, value)
+		return nil
 	}
 }
 
 func WithQuery(key, value string) ReqOpt {
-	return func(o *reqOptions) {
+	return func(o *reqOptions) error {
 		o.query.Add(key, value)
+		return nil
 	}
 }
 
-func buildHttpRequest(ctx context.Context, method, path string, body any, opts ...ReqOpt) (*http.Request, error) {
-	b, err := getBody(body)
-	if err != nil {
-		return nil, err
+func WithBody(body io.Reader) ReqOpt {
+	return func(o *reqOptions) error {
+		o.body = body
+		return nil
 	}
+}
 
+func WithJSONBody(body any) ReqOpt {
+	return func(o *reqOptions) error {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+
+		o.body = bytes.NewReader(b)
+		o.header.Set("Content-Type", "application/json")
+
+		return nil
+	}
+}
+
+func buildHttpRequest(ctx context.Context, method, path string, opts ...ReqOpt) (*http.Request, error) {
 	o := &reqOptions{
 		header: make(http.Header),
 		query:  make(url.Values),
 	}
-
 	for _, opt := range opts {
 		opt(o)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, path, b)
+	req, err := http.NewRequestWithContext(ctx, method, path, o.body)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (c *Client) do(req *http.Request, dest any) error {
 }
 
 func (c *Client) Get(ctx context.Context, path string, dest any, opts ...ReqOpt) error {
-	req, err := buildHttpRequest(ctx, http.MethodGet, c.baseURL+path, nil, opts...)
+	req, err := buildHttpRequest(ctx, http.MethodGet, c.baseURL+path, opts...)
 	if err != nil {
 		return err
 	}
@@ -128,8 +128,8 @@ func (c *Client) Get(ctx context.Context, path string, dest any, opts ...ReqOpt)
 	return c.do(req, dest)
 }
 
-func (c *Client) Post(ctx context.Context, path string, body, dest any, opts ...ReqOpt) error {
-	req, err := buildHttpRequest(ctx, http.MethodPost, c.baseURL+path, body, opts...)
+func (c *Client) Post(ctx context.Context, path string, dest any, opts ...ReqOpt) error {
+	req, err := buildHttpRequest(ctx, http.MethodPost, c.baseURL+path, opts...)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (c *Client) Post(ctx context.Context, path string, body, dest any, opts ...
 }
 
 func (c *Client) Delete(ctx context.Context, path string, opts ...ReqOpt) error {
-	req, err := buildHttpRequest(ctx, http.MethodDelete, c.baseURL+path, nil, opts...)
+	req, err := buildHttpRequest(ctx, http.MethodDelete, c.baseURL+path, opts...)
 	if err != nil {
 		return err
 	}
@@ -146,15 +146,21 @@ func (c *Client) Delete(ctx context.Context, path string, opts ...ReqOpt) error 
 	return c.do(req, nil)
 }
 
-func (c *Client) SSE(ctx context.Context, method string, path string, opts ...ReqOpt) (*sse.Connection, error) {
-	req, err := buildHttpRequest(ctx, method, c.baseURL+path, nil, opts...)
+func (c *Client) RawGet(ctx context.Context, path string, opts ...ReqOpt) (io.ReadCloser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	client := sse.Client{
-		HTTPClient: c.client,
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
 	}
 
-	return client.NewConnection(req), nil
+	if !isOk(resp.StatusCode) {
+		defer resp.Body.Close()
+		return nil, handleError(resp.Body)
+	}
+
+	return resp.Body, nil
 }

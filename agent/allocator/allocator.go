@@ -6,16 +6,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/valyentdev/ravel/agent/store"
 	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/errdefs"
 )
 
+type AllocationsStore interface {
+	LoadAllocations() ([]structs.Allocation, error)
+	PutAllocation(structs.Allocation) error
+	DeleteAllocation(string) error
+}
+
 var ErrNotEnoughResources = errdefs.NewResourcesExhausted("not enough resources")
 
 type Allocator struct {
-	store        *store.Store
+	store        AllocationsStore
 	max          api.Resources
 	current      api.Resources
 	lock         sync.RWMutex
@@ -26,7 +31,7 @@ func (a *Allocator) Max() api.Resources {
 	return a.max
 }
 
-func New(store *store.Store, totalResources api.Resources) (*Allocator, error) {
+func New(store AllocationsStore, totalResources api.Resources) (*Allocator, error) {
 	a := &Allocator{
 		store:        store,
 		max:          totalResources,
@@ -45,13 +50,6 @@ func New(store *store.Store, totalResources api.Resources) (*Allocator, error) {
 	}
 
 	return a, nil
-}
-
-func (a *Allocator) Init() error {
-	a.lock.Lock()
-	defer a.lock.Unlock()
-
-	return nil
 }
 
 func (a *Allocator) CreateAllocation(id string, res api.Resources) (reservation structs.Allocation, before api.Resources, after api.Resources, err error) {

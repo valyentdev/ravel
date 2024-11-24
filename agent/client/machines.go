@@ -7,11 +7,13 @@ import (
 
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
+	"github.com/valyentdev/ravel/internal/httpclient"
+	"github.com/valyentdev/ravel/internal/streamutil"
 )
 
 func (a *AgentClient) PutMachine(ctx context.Context, opt cluster.PutMachineOptions) (*cluster.MachineInstance, error) {
 	var machineInstance cluster.MachineInstance
-	err := a.client.Post(ctx, "/machines", opt, &machineInstance)
+	err := a.client.Post(ctx, "/machines", &machineInstance, httpclient.WithJSONBody(opt))
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +22,7 @@ func (a *AgentClient) PutMachine(ctx context.Context, opt cluster.PutMachineOpti
 }
 
 func (a *AgentClient) StartMachine(ctx context.Context, id string) error {
-	err := a.client.Post(ctx, "/machines/"+id+"/start", nil, nil)
+	err := a.client.Post(ctx, "/machines/"+id+"/start", nil)
 	if err != nil {
 		return err
 	}
@@ -29,7 +31,12 @@ func (a *AgentClient) StartMachine(ctx context.Context, id string) error {
 }
 
 func (a *AgentClient) StopMachine(ctx context.Context, id string, opt *api.StopConfig) error {
-	err := a.client.Post(ctx, "/machines/"+id+"/stop", opt, nil)
+	var opts []httpclient.ReqOpt
+	if opt != nil {
+		opts = append(opts, httpclient.WithJSONBody(opt))
+	}
+
+	err := a.client.Post(ctx, "/machines/"+id+"/stop", nil, opts...)
 	if err != nil {
 		return err
 	}
@@ -38,7 +45,11 @@ func (a *AgentClient) StopMachine(ctx context.Context, id string, opt *api.StopC
 }
 
 func (a *AgentClient) DestroyMachine(ctx context.Context, id string, force bool) error {
-	err := a.client.Delete(ctx, "/machines/"+id)
+	opts := []httpclient.ReqOpt{}
+	if force {
+		opts = append(opts, httpclient.WithQuery("force", "true"))
+	}
+	err := a.client.Delete(ctx, "/machines/"+id, opts...)
 	if err != nil {
 		return err
 	}
@@ -53,7 +64,7 @@ func (a *AgentClient) MachineExec(ctx context.Context, id string, cmd []string, 
 		TimeoutMs: int(timeout.Milliseconds()),
 	}
 
-	err := a.client.Post(ctx, "/instances/"+id+"/exec", opt, &result)
+	err := a.client.Post(ctx, "/instances/"+id+"/exec", &result, httpclient.WithJSONBody(opt))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +85,7 @@ func (a *AgentClient) GetMachineLogs(ctx context.Context, id string) ([]*api.Log
 func (a *AgentClient) SubscribeToMachineLogs(ctx context.Context, id string) ([]*api.LogEntry, <-chan *api.LogEntry, error) {
 	path := "/machines/" + id + "/logs/follow"
 
-	body, err := a.getLogsRaw(ctx, path)
+	body, err := a.client.RawGet(ctx, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,7 +95,7 @@ func (a *AgentClient) SubscribeToMachineLogs(ctx context.Context, id string) ([]
 		body.Close()
 	}()
 
-	return subscribeToLogs(body)
+	return streamutil.SubscribeToLogs(body)
 }
 
 func (a *AgentClient) GetMachineLogsRaw(ctx context.Context, id string, follow bool) (io.ReadCloser, error) {
@@ -92,5 +103,5 @@ func (a *AgentClient) GetMachineLogsRaw(ctx context.Context, id string, follow b
 	if follow {
 		path += "/follow"
 	}
-	return a.getLogsRaw(ctx, path)
+	return a.client.RawGet(ctx, path)
 }

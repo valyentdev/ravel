@@ -57,7 +57,7 @@ func (a *BasicSubnetAllocator) Allocate(network *Network) error {
 	}
 
 	if network.PrefixLength != a.subnetPrefixLen {
-		return fmt.Errorf("incompatible prefix length")
+		return fmt.Errorf("incompatible prefix length: %d & %d", network.PrefixLength, a.subnetPrefixLen)
 	}
 
 	if err := network.Validate(); err != nil {

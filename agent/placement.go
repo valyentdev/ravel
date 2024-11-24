@@ -7,6 +7,10 @@ import (
 	"github.com/valyentdev/ravel/core/cluster/placement"
 )
 
+func (a *Agent) stopPlacementHandler() {
+
+}
+
 func (a *Agent) startPlacementHandler() error {
 	l := placement.NewListener(a.nc)
 	max := a.allocator.Max()

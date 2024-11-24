@@ -3,6 +3,7 @@ package endpoints
 import (
 	"bufio"
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -131,13 +132,15 @@ func (e *Endpoints) startMachine(ctx context.Context, req *StartMachineRequest) 
 
 type StopMachineRequest struct {
 	MachineResolver
-	Body *api.StopConfig
+	Body    *api.StopConfig
+	RawBody []byte
 }
 
 type StopMachineResponse struct {
 }
 
 func (e *Endpoints) stopMachine(ctx context.Context, req *StopMachineRequest) (*StopMachineResponse, error) {
+	slog.Info("Stopping machine", "machine_id", req.Body)
 	err := e.ravel.StopMachine(ctx, req.Namespace, req.Fleet, req.MachineId, req.Body)
 	if err != nil {
 		e.log("Failed to stop machine", err)

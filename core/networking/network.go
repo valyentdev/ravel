@@ -8,9 +8,9 @@ import (
 )
 
 type networkJSON struct {
-	Family IPFamily `json:"family"`
-	IP     string   `json:"ip"`
-	Prefix int      `json:"prefix"`
+	Family       IPFamily `json:"family"`
+	IP           string   `json:"ip"`
+	PrefixLength int      `json:"prefix_length"`
 }
 
 type Network struct {
@@ -63,9 +63,9 @@ func (n *Network) LastAddress() netip.Addr {
 
 func (n *Network) MarshalJSON() ([]byte, error) {
 	return json.Marshal(networkJSON{
-		Family: n.Family,
-		IP:     n.IP.String(),
-		Prefix: n.PrefixLength,
+		Family:       n.Family,
+		IP:           n.IP.String(),
+		PrefixLength: n.PrefixLength,
 	})
 }
 
@@ -85,8 +85,8 @@ func (n *Network) UnmarshalJSON(data []byte) error {
 	}
 
 	n.IP = ip.AsSlice()
-
 	n.Family = j.Family
+	n.PrefixLength = j.PrefixLength
 
 	return nil
 }

@@ -52,6 +52,7 @@ func (n *networkService) AllocateNext() (instance.NetworkingConfig, error) {
 	if err != nil {
 		return instance.NetworkingConfig{}, err
 	}
+
 	local := instance.GetLocalNetwork(net)
 
 	return instance.NetworkingConfig{

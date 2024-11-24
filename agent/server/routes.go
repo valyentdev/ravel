@@ -32,60 +32,6 @@ func (s AgentServer) registerEndpoints(mux humago.Mux) {
 	api := humago.New(mux, humaConfig)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "createInstance",
-		Path:        "/instances",
-		Method:      http.MethodPost,
-	}, s.createInstance)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "listInstances",
-		Path:        "/instances",
-		Method:      http.MethodGet,
-	}, s.listInstances)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "getInstance",
-		Path:        "/instances/{id}",
-		Method:      http.MethodGet,
-	}, s.getInstance)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "destroyInstance",
-		Path:        "/instances/{id}",
-		Method:      http.MethodDelete,
-	}, s.destroyInstance)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "startInstance",
-		Path:        "/instances/{id}/start",
-		Method:      http.MethodPost,
-	}, s.startInstance)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "stopInstance",
-		Path:        "/instances/{id}/stop",
-		Method:      http.MethodPost,
-	}, s.stopInstance)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "exec",
-		Path:        "/instances/{id}/exec",
-		Method:      http.MethodPost,
-	}, s.exec)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "getInstanceLogs",
-		Path:        "/instances/{id}/logs",
-		Method:      http.MethodGet,
-	}, s.getInstanceLogs)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "followInstanceLogs",
-		Path:        "/instances/{id}/logs/follow",
-		Method:      http.MethodGet,
-	}, s.followInstanceLogs)
-
-	huma.Register(api, huma.Operation{
 		OperationID: "putMachine",
 		Path:        "/machines",
 		Method:      http.MethodPost,
@@ -126,23 +72,5 @@ func (s AgentServer) registerEndpoints(mux humago.Mux) {
 		Path:        "/machines/{id}",
 		Method:      http.MethodDelete,
 	}, s.destroyMachine)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "listImages",
-		Path:        "/images",
-		Method:      http.MethodGet,
-	}, s.listImages)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "pullImage",
-		Path:        "/images/pull",
-		Method:      http.MethodPost,
-	}, s.pullImage)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "deleteImage",
-		Path:        "/images/{ref}",
-		Method:      http.MethodDelete,
-	}, s.deleteImage)
 
 }
