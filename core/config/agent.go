@@ -9,4 +9,5 @@ type AgentConfig struct {
 	Port          int           `json:"port" toml:"port"`
 	HttpProxyPort int           `json:"http_proxy_port" toml:"http_proxy_port"`
 	Resources     api.Resources `json:"resources" toml:"resources"`
+	TLS           *TLSConfig    `json:"tls" toml:"tls"`
 }

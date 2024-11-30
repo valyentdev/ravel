@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -17,6 +18,7 @@ import (
 	"github.com/valyentdev/ravel/core/cluster/corrosion"
 	"github.com/valyentdev/ravel/core/cluster/placement"
 	"github.com/valyentdev/ravel/core/config"
+	"github.com/valyentdev/ravel/internal/mtls"
 
 	"github.com/valyentdev/ravel/api"
 
@@ -94,6 +96,40 @@ func New(config Config, store Store, runtime *runtime.Runtime) (*Agent, error) {
 	return agent, nil
 }
 
+func (a *Agent) startListener() (net.Listener, error) {
+	laddr := fmt.Sprintf("%s:%d", a.config.Address, a.config.Port)
+	if a.config.TLS == nil {
+		return net.Listen("tcp", laddr)
+	}
+
+	cert, err := a.config.TLS.LoadCert()
+	if err != nil {
+		return nil, err
+	}
+
+	ca, err := a.config.TLS.LoadCA()
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := tls.Config{
+		Certificates:     []tls.Certificate{cert},
+		ClientCAs:        ca,
+		VerifyConnection: mtls.VerifyAgentConnection,
+	}
+
+	if !a.config.TLS.SkipVerifyClient {
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
+	listener, err := tls.Listen("tcp", laddr, &tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return listener, nil
+}
+
 func (a *Agent) Start() error {
 	slog.Info("Starting agent")
 	machines, err := a.store.LoadMachineInstances()
@@ -109,17 +145,14 @@ func (a *Agent) Start() error {
 
 	a.server = server.NewAgentServer(a)
 
-	agentListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", a.config.Address, a.config.Port))
-	if err != nil {
-		return err
-	}
+	listener, err := a.startListener()
 	defer func() {
 		if err != nil {
-			agentListener.Close()
+			listener.Close()
 		}
 	}()
 
-	go a.server.Serve(agentListener)
+	go a.server.Serve(listener)
 
 	if err = a.node.Start(); err != nil {
 		return err

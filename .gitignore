@@ -1,5 +1,5 @@
 .env
-bin/**/*
+bin/
 agent.db
 ravel.json
 ravel.toml
@@ -11,3 +11,4 @@ nats.creds
 /tmp
 .DS_Store
 vmlinux.bin
+proxy.toml

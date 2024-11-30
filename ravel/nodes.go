@@ -7,7 +7,7 @@ import (
 )
 
 func (r *Ravel) ListNodes(ctx context.Context) ([]api.Node, error) {
-	nodes, err := r.s.ListNodes(ctx)
+	nodes, err := r.o.ListNodes(ctx)
 	if err != nil {
 		return nil, err
 	}

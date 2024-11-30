@@ -2,6 +2,7 @@ package ravel
 
 import (
 	"context"
+	"crypto/tls"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
@@ -15,11 +16,35 @@ import (
 
 type Ravel struct {
 	nc             *nats.Conn
-	s              *orchestrator.Orchestrator
+	o              *orchestrator.Orchestrator
 	db             *db.DB
 	clusterState   cluster.ClusterState
 	state          *state.State
 	vcpusTemplates map[string]config.MachineResourcesTemplates
+}
+
+func getClientTLSConfig(config config.RavelConfig) (*tls.Config, error) {
+	if config.Server.TLS == nil {
+		return nil, nil
+	}
+
+	cert, err := config.Server.TLS.LoadCert()
+	if err != nil {
+		return nil, err
+	}
+
+	ca, err := config.Server.TLS.LoadCA()
+	if err != nil {
+		return nil, err
+	}
+
+	insecureSkipVerify := config.Server.TLS.SkipVerifyServer
+
+	return &tls.Config{
+		RootCAs:            ca,
+		Certificates:       []tls.Certificate{cert},
+		InsecureSkipVerify: insecureSkipVerify,
+	}, nil
 }
 
 func New(config config.RavelConfig) (*Ravel, error) {
@@ -56,13 +81,18 @@ func New(config config.RavelConfig) (*Ravel, error) {
 		return nil, err
 	}
 
-	s := orchestrator.New(nc, clusterstate)
+	tlsConfig, err := getClientTLSConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	o := orchestrator.New(nc, clusterstate, tlsConfig)
 
 	db := db.New(pgpool)
 
 	return &Ravel{
 		nc:             nc,
-		s:              s,
+		o:              o,
 		db:             db,
 		clusterState:   clusterstate,
 		state:          state.New(clusterstate, db),

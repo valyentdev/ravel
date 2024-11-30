@@ -10,6 +10,6 @@
     "guest": {
         "vcpus": 1,
         "cpus_mhz": 500,
-        "memory_mb": 512
+        "memory_mb": 1024
     }
 }

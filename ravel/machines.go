@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"io"
-	"log/slog"
 	"time"
 
 	"github.com/oklog/ulid"
@@ -76,7 +75,7 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 		Resources: resources,
 	}
 
-	err = r.s.PlaceMachine(ctx, &machine, mv, !createOptions.SkipStart)
+	err = r.o.PlaceMachine(ctx, &machine, mv, !createOptions.SkipStart)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +109,7 @@ func (r *Ravel) StartMachine(ctx context.Context, ns, fleet, machineId string) e
 		return errdefs.NewFailedPrecondition("machine is destroyed")
 	}
 
-	return r.s.StartMachineInstance(ctx, machine)
+	return r.o.StartMachineInstance(ctx, machine)
 }
 
 func (r *Ravel) StopMachine(ctx context.Context, ns, fleet, machineId string, stopConfig *api.StopConfig) error {
@@ -123,7 +122,7 @@ func (r *Ravel) StopMachine(ctx context.Context, ns, fleet, machineId string, st
 		return errdefs.NewFailedPrecondition("machine is destroyed")
 	}
 
-	return r.s.StopMachineInstance(ctx, machine, stopConfig)
+	return r.o.StopMachineInstance(ctx, machine, stopConfig)
 }
 
 func (r *Ravel) ListMachines(ctx context.Context, ns, fleet string, includeDestroyed bool) ([]api.Machine, error) {
@@ -145,7 +144,7 @@ func (r *Ravel) DestroyMachine(ctx context.Context, ns, fleet, machineId string,
 		return nil
 	}
 
-	return r.s.DestroyMachine(ctx, m, force)
+	return r.o.DestroyMachine(ctx, m, force)
 }
 
 func (r *Ravel) getMachine(ctx context.Context, ns, fleet, machineId string) (cluster.Machine, error) {
@@ -162,8 +161,6 @@ func (r *Ravel) GetMachine(ctx context.Context, ns, fleet, machineId string) (*a
 	if err != nil {
 		return nil, err
 	}
-
-	slog.Info("Getting machine", "machine_id", machineId, "fleet_id", f.Id, "namespace", ns)
 
 	return r.clusterState.GetAPIMachine(ctx, ns, f.Id, machineId)
 }
@@ -182,7 +179,7 @@ func (r *Ravel) GetMachineLogsRaw(ctx context.Context, ns, fleet, machineId stri
 		return nil, err
 	}
 
-	return r.s.GetMachineLogsRaw(ctx, m, follow)
+	return r.o.GetMachineLogsRaw(ctx, m, follow)
 }
 
 func (r *Ravel) ListMachineEvents(ctx context.Context, ns, fleet, machineId string) ([]api.MachineEvent, error) {

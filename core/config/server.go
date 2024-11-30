@@ -13,4 +13,5 @@ type ServerConfig struct {
 	Address          string                               `json:"address" toml:"address"`
 	PostgresURL      string                               `json:"postgres_url" toml:"postgres_url"`
 	MachineTemplates map[string]MachineResourcesTemplates `json:"machine_templates" toml:"machine_templates"`
+	TLS              *TLSConfig                           `json:"tls" toml:"tls"`
 }

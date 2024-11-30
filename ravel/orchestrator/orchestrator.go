@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 
@@ -11,11 +12,16 @@ import (
 	"github.com/valyentdev/ravel/core/cluster/placement"
 )
 
-func New(nc *nats.Conn, clusterState cluster.ClusterState) *Orchestrator {
+func New(nc *nats.Conn, clusterState cluster.ClusterState, tlsConfig *tls.Config) *Orchestrator {
 	broker := placement.NewBroker(nc)
-
+	httpClient := http.Client{ // to be tuned in the future
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
 	return &Orchestrator{
-		httpClient:   http.DefaultClient, // to be tuned in the future
+		tlsEnabled:   tlsConfig != nil,
+		httpClient:   &httpClient,
 		nc:           nc,
 		clusterState: clusterState,
 		broker:       broker,
@@ -27,6 +33,7 @@ type Orchestrator struct {
 	clusterState cluster.ClusterState
 	nc           *nats.Conn
 	broker       *placement.Broker
+	tlsEnabled   bool
 }
 
 func (o *Orchestrator) getAgentClient(node string) (*agentclient.AgentClient, error) {
@@ -35,7 +42,14 @@ func (o *Orchestrator) getAgentClient(node string) (*agentclient.AgentClient, er
 		return nil, fmt.Errorf("failed to get node: %w", err)
 	}
 
-	client := agentclient.NewAgentClient(o.httpClient, fmt.Sprintf("http://%s", member.AgentAddress()))
+	var scheme string
+	if o.tlsEnabled {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+
+	client := agentclient.NewAgentClient(o.httpClient, fmt.Sprintf("%s://%s", scheme, member.AgentAddress()))
 
 	return client, nil
 }

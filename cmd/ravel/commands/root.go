@@ -9,6 +9,7 @@ import (
 	"github.com/valyentdev/ravel/cmd/ravel/commands/images"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/instance"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/server"
+	"github.com/valyentdev/ravel/cmd/ravel/commands/tls"
 )
 
 func NewRootCmd() *cobra.Command {
@@ -35,6 +36,7 @@ func NewRootCmd() *cobra.Command {
 		server.NewServerCmd(),
 		db.NewDBCmd(),
 		images.NewImagesCmd(),
+		tls.NewTLSCommand(),
 	)
 
 	return rootCmd
