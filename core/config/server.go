@@ -10,8 +10,14 @@ type MachineResourcesTemplates struct {
 }
 
 type ServerConfig struct {
-	Address          string                               `json:"address" toml:"address"`
 	PostgresURL      string                               `json:"postgres_url" toml:"postgres_url"`
 	MachineTemplates map[string]MachineResourcesTemplates `json:"machine_templates" toml:"machine_templates"`
-	TLS              *TLSConfig                           `json:"tls" toml:"tls"`
+	TLS              *TLSConfig                           `json:"tls" toml:"tls"` // used for client auth against agents internal API
+	API              ServerAPIConfig                      `json:"api" toml:"api"`
+}
+
+type ServerAPIConfig struct {
+	Address     string     `json:"address" toml:"address"`
+	BearerToken string     `json:"bearer_token" toml:"bearer_token"`
+	TLS         *TLSConfig `json:"tls" toml:"tls"` // used to protect the API with (m)TLS
 }

@@ -21,8 +21,10 @@ resources = { cpus_mhz = 20000, memory_mb = 16_384 }
 
 # Ravel Server configuration
 [server]
-address = ":3000"
 postgres_url = "postgres://user:password@host:port/db"
+[server.api]
+address = ":3000"
+bearer_token = "ravel"
 [server.machine_templates.eco]
 vcpu_frequency = 250
 combinations = [

@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"strings"
 
@@ -45,9 +44,7 @@ func ReadFile(path string) (RavelConfig, error) {
 		decoder = decoder.DisallowUnknownFields()
 		err = decoder.Decode(&config)
 		if err != nil {
-			if sme, ok := err.(*toml.StrictMissingError); ok {
-				return config, errors.New(sme.String())
-			}
+			return config, err
 		}
 	} else {
 		err = json.Unmarshal(bytes, &config)
