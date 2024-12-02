@@ -11,25 +11,26 @@ CREATE TABLE  namespaces (
 CREATE TABLE fleets (
     "id" text primary key,
     "name" text not null,
-    "namespace" text not null references namespaces(name),
+    "namespace" text not null references namespaces(name) on delete cascade,
     "created_at" timestamp not null default timezone('utc', now()),
-	"destroyed" boolean not null default FALSE
+	"status" text not null default 'active'
 );
 
-CREATE UNIQUE INDEX fleets_name_idx ON  fleets USING btree(namespace, name) WHERE destroyed = FALSE;
+CREATE UNIQUE INDEX fleets_name_idx ON  fleets USING btree(namespace, name) WHERE status = 'active';
 CREATE INDEX fleets_namespace_idx ON fleets(namespace);
+CREATE INDEX fleets_status_idx ON fleets(status);
 
 CREATE TABLE machines (
     "id" text primary key,
-    "namespace" text not null references namespaces(name),
-    "fleet_id" text not null references fleets(id),
+    "namespace" text not null references namespaces(name) on delete cascade,
+    "fleet_id" text not null references fleets(id) on delete cascade,
     "instance_id" text not null default '',
     "machine_version" text not null default '',
     "node" text not null default '',
     "region" text not null default '',
     "created_at" timestamp not null default timezone('utc', now()),
     "updated_at" timestamp not null default timezone('utc', now()),
-    "destroyed" boolean not null default FALSE
+    "destroyed_at" timestamp default null
 );
 
 CREATE INDEX machines_fleet_id_idx ON machines(fleet_id);
@@ -37,6 +38,7 @@ CREATE INDEX machines_namespace_idx ON machines(namespace);
 
 CREATE TABLE machine_versions (
     "id" text not null,
+    "namespace" text not null references namespaces(name) on delete cascade,
     "machine_id" text not null references machines(id) on delete cascade,
     "resources" jsonb not null default '{}',
     "config" jsonb not null default '{}',

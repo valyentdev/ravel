@@ -1,6 +1,7 @@
 package state
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/valyentdev/ravel/api"
@@ -8,8 +9,10 @@ import (
 
 func (s *MachineInstanceState) startSyncing() {
 	for range s.updateCh {
+		slog.Debug("triggering machine instance state sync")
 		finished, err := s.sync()
 		if err != nil {
+			slog.Debug("error syncing machine instance state", "err", err)
 			go func() {
 				time.Sleep(5 * time.Second)
 				s.triggerUpdate()

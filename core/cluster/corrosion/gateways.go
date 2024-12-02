@@ -23,6 +23,22 @@ func (c *CorrosionClusterState) CreateGateway(ctx context.Context, gateway api.G
 	return nil
 }
 
+func (c *CorrosionClusterState) DeleteFleetGateways(ctx context.Context, id string) error {
+	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{{
+		Query:  `DELETE FROM gateways WHERE fleet_id = $1`,
+		Params: []any{id},
+	}})
+	if err != nil {
+		return err
+	}
+
+	if result.Errors() != nil {
+		return result.Errors()[0]
+	}
+
+	return nil
+}
+
 func (c *CorrosionClusterState) DeleteGateway(ctx context.Context, id string) error {
 	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{{
 		Query:  `DELETE FROM gateways WHERE id = $1`,

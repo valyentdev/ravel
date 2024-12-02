@@ -11,30 +11,30 @@ import (
 	"github.com/valyentdev/ravel/core/errdefs"
 )
 
-func (o *Orchestrator) PlaceMachine(ctx context.Context, machine *cluster.Machine, mv api.MachineVersion, start bool) error {
-	machineId := machine.Id
-
+func (o *Orchestrator) PrepareAllocation(ctx context.Context, region string, allocationId string, resources api.Resources) (nodeId string, err error) {
 	workers, err := o.broker.GetAvailableWorkers(placement.PlacementRequest{
-		Region:       machine.Region,
-		AllocationId: machineId,
-		Resources:    mv.Resources,
+		Region:       region,
+		AllocationId: allocationId,
+		Resources:    resources,
 	})
 	if err != nil {
 		if err == placement.ErrPlacementFailed {
-			slog.Warn("Failed to place machine", "machine_id", machineId)
+			slog.Warn("Failed to place machine", "machine_id", allocationId)
 			err = errdefs.NewResourcesExhausted("failed to place machine")
 		}
-		return err
+		return
 	}
 
 	candidate := workers[0]
+	nodeId = candidate.NodeId
+	return
+}
 
-	member, err := o.clusterState.GetNode(ctx, candidate.NodeId)
+func (o *Orchestrator) PutMachine(ctx context.Context, nodeId string, machine *cluster.Machine, mv api.MachineVersion, start bool) error {
+	member, err := o.clusterState.GetNode(ctx, nodeId)
 	if err != nil {
 		return fmt.Errorf("failed to get node: %w", err)
 	}
-
-	machine.Node = member.Id
 
 	ac, err := o.getAgentClient(member.Id)
 	if err != nil {
@@ -42,7 +42,7 @@ func (o *Orchestrator) PlaceMachine(ctx context.Context, machine *cluster.Machin
 	}
 
 	_, err = ac.PutMachine(ctx, cluster.PutMachineOptions{
-		AllocationId: machineId,
+		AllocationId: machine.Id,
 		Machine:      *machine,
 		Version:      mv,
 		Start:        start,

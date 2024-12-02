@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/oklog/ulid"
 	"github.com/valyentdev/corroclient"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
@@ -22,7 +21,7 @@ func (c *CorrosionClusterState) UpdateMachine(ctx context.Context, m cluster.Mac
 				machine_version = $3,
 				updated_at = $4
 				WHERE id = $5`,
-		Params: []any{m.InstanceId, m.Node, m.MachineVersion.String(), time.Now().UTC().Unix(), m.Id},
+		Params: []any{m.InstanceId, m.Node, m.MachineVersion, time.Now().UTC().Unix(), m.Id},
 	}})
 	if err != nil {
 		return err
@@ -50,13 +49,13 @@ func (c *CorrosionClusterState) CreateMachine(ctx context.Context, m cluster.Mac
 			Query: `INSERT INTO machines 
 					(id, namespace, fleet_id, node, instance_id, region, created_at, updated_at, machine_version)
 					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			Params: []any{m.Id, m.Namespace, m.FleetId, m.Node, m.InstanceId, m.Region, m.CreatedAt.Unix(), m.UpdatedAt.Unix(), m.MachineVersion.String()},
+			Params: []any{m.Id, m.Namespace, m.FleetId, m.Node, m.InstanceId, m.Region, m.CreatedAt.Unix(), m.UpdatedAt.Unix(), m.MachineVersion},
 		},
 		{
 			Query: `INSERT INTO machine_versions
-					(id, machine_id, config, resources)
-					VALUES ($1, $2, $3, $4)`,
-			Params: []any{mv.Id, mv.MachineId, string(configBytes), string(resourcesBytes)},
+					(id, machine_id, namespace, config, resources)
+					VALUES ($1, $2, $3, $4, $5)`,
+			Params: []any{mv.Id, mv.MachineId, mv.Namespace, string(configBytes), string(resourcesBytes)},
 		},
 	})
 
@@ -71,74 +70,11 @@ func (c *CorrosionClusterState) CreateMachine(ctx context.Context, m cluster.Mac
 	return err
 }
 
-func (c *CorrosionClusterState) GetMachine(ctx context.Context, namespace string, fleetId string, id string, destroyed bool) (*cluster.Machine, error) {
-	row, err := c.corroclient.QueryRow(ctx,
-		corroclient.Statement{
-			Query: `SELECT id, namespace, fleet_id, node, instance_id, region, created_at, updated_at, destroyed
-					FROM machines
-					WHERE namespace = $1 AND fleet_id = $2 AND id = $3 AND destroyed = $4`,
-			Params: []any{namespace, fleetId, id, 0},
-		})
-	if err != nil {
-		if err == corroclient.ErrNoRows {
-			return nil, errdefs.NewNotFound("machine not found")
-		}
-		return nil, err
-	}
-
-	var m cluster.Machine
-	var createdAt int64
-	var updatedAt int64
-
-	err = row.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.Node, &m.InstanceId, &m.Region, &createdAt, &updatedAt, &m.Destroyed)
-	if err != nil {
-		return nil, err
-	}
-
-	m.CreatedAt = time.Unix(createdAt, 0)
-	m.UpdatedAt = time.Unix(updatedAt, 0)
-
-	return &m, nil
-}
-
-func (c *CorrosionClusterState) ListMachines(ctx context.Context, namespace string, fleet string, destroyed bool) ([]cluster.Machine, error) {
-	rows, err := c.corroclient.Query(ctx,
-		corroclient.Statement{
-			Query: `SELECT id, namespace, fleet_id, node, instance_id, region, created_at, updated_at, destroyed
-					FROM machines
-					WHERE namespace = $1 AND fleet_id = $2 AND destroyed = $3`,
-			Params: []any{namespace, fleet, destroyed},
-		})
-	if err != nil {
-		if err == corroclient.ErrNoRows {
-			return []cluster.Machine{}, nil
-		}
-		return nil, err
-	}
-
-	var machines []cluster.Machine
-	for rows.Next() {
-		var m cluster.Machine
-		var createdAt int64
-		var updatedAt int64
-
-		err := rows.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.Node, &m.InstanceId, &m.Region, &createdAt, &updatedAt, &m.Destroyed)
-		if err != nil {
-			return nil, err
-		}
-
-		m.CreatedAt = time.Unix(createdAt, 0)
-		m.UpdatedAt = time.Unix(updatedAt, 0)
-		machines = append(machines, m)
-	}
-	return machines, nil
-}
-
 func (c *CorrosionClusterState) DestroyMachine(ctx context.Context, id string) error {
 	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{
 		{
 			Query: `UPDATE machines SET
-					 destroyed = true,
+					 destroyed_at = $1,
 					 updated_at = $1
 					WHERE id = $2`,
 			Params: []any{time.Now().UTC().Unix(), id},
@@ -156,7 +92,7 @@ func (c *CorrosionClusterState) DestroyMachine(ctx context.Context, id string) e
 	return err
 }
 
-const baseSelectAPIMachine = `SELECT m.id, m.namespace, m.fleet_id, m.instance_id, m.machine_version, m.region, m.created_at, m.updated_at, i.status, mv.config
+const baseSelectAPIMachine = `SELECT m.id, m.namespace, m.fleet_id, m.instance_id, m.machine_version, m.region, m.created_at, m.updated_at, i.status, mv.config, i.events
 							  FROM machines m
 							  JOIN instances i ON m.instance_id = i.id
 							  JOIN machine_versions mv ON m.machine_version = mv.id`
@@ -164,13 +100,12 @@ const baseSelectAPIMachine = `SELECT m.id, m.namespace, m.fleet_id, m.instance_i
 func scanAPIMachine(row dbutil.Scannable) (*api.Machine, error) {
 	var m api.Machine
 	var config []byte
+	var events []byte
 	var createdAt int64
 	var updatedAt int64
-
 	var state string
-	var version string
 
-	err := row.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.InstanceId, &version, &m.Region, &createdAt, &updatedAt, &state, &config)
+	err := row.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.InstanceId, &m.MachineVersion, &m.Region, &createdAt, &updatedAt, &state, &config, &events)
 	if err != nil {
 		return nil, err
 	}
@@ -182,12 +117,10 @@ func scanAPIMachine(row dbutil.Scannable) (*api.Machine, error) {
 		return nil, err
 	}
 
-	machineVersion, err := ulid.Parse(version)
+	err = json.Unmarshal(events, &m.Events)
 	if err != nil {
 		return nil, err
 	}
-
-	m.MachineVersion = machineVersion
 
 	m.CreatedAt = time.Unix(createdAt, 0)
 	m.UpdatedAt = time.Unix(updatedAt, 0)

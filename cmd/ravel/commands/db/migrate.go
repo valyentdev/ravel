@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/spf13/cobra"
 	"github.com/valyentdev/ravel/core/config"
-	"github.com/valyentdev/ravel/ravel/db/schema"
+	"github.com/valyentdev/ravel/ravel/state/db/schema"
 )
 
 type migrateOpts struct {

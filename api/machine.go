@@ -20,16 +20,17 @@ func GetDefaultStopConfig() *StopConfig {
 }
 
 type Machine struct {
-	Id             string        `json:"id"`
-	Namespace      string        `json:"namespace"`
-	FleetId        string        `json:"fleet"`
-	InstanceId     string        `json:"instance_id"`
-	MachineVersion ulid.ULID     `json:"machine_version"`
-	Region         string        `json:"region"`
-	Config         MachineConfig `json:"config"`
-	CreatedAt      time.Time     `json:"created_at"`
-	UpdatedAt      time.Time     `json:"updated_at"`
-	Status         MachineStatus `json:"state"`
+	Id             string         `json:"id"`
+	Namespace      string         `json:"namespace"`
+	FleetId        string         `json:"fleet"`
+	InstanceId     string         `json:"instance_id"`
+	MachineVersion string         `json:"machine_version"`
+	Region         string         `json:"region"`
+	Config         MachineConfig  `json:"config"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	Events         []MachineEvent `json:"events"`
+	Status         MachineStatus  `json:"state"`
 }
 
 type MachineStatus string

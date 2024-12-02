@@ -2,8 +2,6 @@ package api
 
 import (
 	"time"
-
-	"github.com/oklog/ulid"
 )
 
 type Namespace struct {
@@ -11,17 +9,25 @@ type Namespace struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type FleetStatus string
+
+const (
+	FleetStatusActive    FleetStatus = "active"
+	FleetStatusDestroyed FleetStatus = "destroyed"
+)
+
 type Fleet struct {
-	Id        string    `json:"id"`
-	Namespace string    `json:"namespace"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	Destroyed bool      `json:"destroyed"`
+	Id        string      `json:"id"`
+	Namespace string      `json:"namespace"`
+	Name      string      `json:"name"`
+	CreatedAt time.Time   `json:"created_at"`
+	Status    FleetStatus `json:"status"`
 }
 
 type MachineVersion struct {
-	Id        ulid.ULID     `json:"id"`
+	Id        string        `json:"id"`
 	MachineId string        `json:"machine_id"`
+	Namespace string        `json:"namespace"`
 	Config    MachineConfig `json:"config"`
 	Resources Resources     `json:"resources"`
 }

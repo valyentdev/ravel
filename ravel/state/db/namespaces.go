@@ -69,15 +69,27 @@ func (q *Queries) GetNamespace(ctx context.Context, name string) (*api.Namespace
 	return namespace, nil
 }
 
+func (q *Queries) GetNamespaceForUpdate(ctx context.Context, name string) (*api.Namespace, error) {
+	row := q.db.QueryRow(ctx, `SELECT name, created_at FROM namespaces WHERE name = $1 FOR UPDATE`, name)
+	namespace, err := scanNamespace(row)
+	if err != nil {
+		return nil, err
+	}
+	return namespace, nil
+}
+
+func (q *Queries) GetNamespaceForShare(ctx context.Context, name string) (*api.Namespace, error) {
+	row := q.db.QueryRow(ctx, `SELECT name, created_at FROM namespaces WHERE name = $1 FOR SHARE`, name)
+	namespace, err := scanNamespace(row)
+	if err != nil {
+		return nil, err
+	}
+	return namespace, nil
+}
+
 func (q *Queries) DestroyNamespace(ctx context.Context, name string) error {
 	_, err := q.db.Exec(ctx, `DELETE FROM namespaces WHERE name = $1`, name)
 	if err != nil {
-		var pgerr *pgconn.PgError
-		if errors.As(err, &pgerr) {
-			if pgerr.ConstraintName == "fleets_namespace_fkey" {
-				return errdefs.NewFailedPrecondition("namespace still has fleets")
-			}
-		}
 		return err
 	}
 	return nil

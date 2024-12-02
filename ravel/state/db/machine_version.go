@@ -7,7 +7,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/oklog/ulid"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/errdefs"
 )
@@ -23,7 +22,7 @@ func (q *Queries) CreateMachineVersion(ctx context.Context, mv api.MachineVersio
 		return err
 	}
 
-	_, err = q.db.Exec(ctx, `INSERT INTO machine_versions (id, machine_id, config, resources) VALUES ($1, $2, $3, $4)`, mv.Id.String(), mv.MachineId, configBytes, resourcesBytes)
+	_, err = q.db.Exec(ctx, `INSERT INTO machine_versions (id, machine_id, config, resources, namespace) VALUES ($1, $2, $3, $4, $5)`, mv.Id, mv.MachineId, configBytes, resourcesBytes, mv.Namespace)
 	if err != nil {
 		var pgerr *pgconn.PgError
 		if errors.As(err, &pgerr) {
@@ -40,7 +39,7 @@ func (q *Queries) CreateMachineVersion(ctx context.Context, mv api.MachineVersio
 }
 
 func (q *Queries) ListMachineVersions(ctx context.Context, machineId string) ([]api.MachineVersion, error) {
-	rows, err := q.db.Query(ctx, `SELECT id, machine_id, config, resources FROM machine_versions WHERE machine_id = $1 ORDER BY id DESC`, machineId)
+	rows, err := q.db.Query(ctx, `SELECT id, machine_id, config, resources, namespace FROM machine_versions WHERE machine_id = $1 ORDER BY id DESC`, machineId)
 	if err != nil {
 		return nil, err
 	}
@@ -48,11 +47,10 @@ func (q *Queries) ListMachineVersions(ctx context.Context, machineId string) ([]
 	mvs := []api.MachineVersion{}
 
 	for rows.Next() {
-		var id string
 		var mv api.MachineVersion
 		var configBytes []byte
 		var resourcesBytes []byte
-		err := rows.Scan(&id, &mv.MachineId, &configBytes, &resourcesBytes)
+		err := rows.Scan(&mv.Id, &mv.MachineId, &configBytes, &resourcesBytes, &mv.Namespace)
 		if err != nil {
 			if err == pgx.ErrNoRows {
 				return mvs, nil
@@ -69,13 +67,6 @@ func (q *Queries) ListMachineVersions(ctx context.Context, machineId string) ([]
 		if err != nil {
 			return nil, err
 		}
-
-		uid, err := ulid.Parse(id)
-		if err != nil {
-			return nil, err
-		}
-
-		mv.Id = uid
 
 		mvs = append(mvs, mv)
 	}

@@ -38,7 +38,6 @@ type CreateMachineOptions struct {
 }
 
 func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet string, createOptions CreateMachineOptions) (*api.Machine, error) {
-	versionId := ulid.MustNew(ulid.Now(), rand.Reader)
 	f, err := r.GetFleet(ctx, namespace, fleet)
 	if err != nil {
 		return nil, err
@@ -46,6 +45,7 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 
 	ctx = context.Background() // from here we begin to use background context to avoid cancellation of the context passed in and data loss
 
+	versionId := ulid.MustNew(ulid.Now(), rand.Reader).String()
 	machine := cluster.Machine{
 		Id:             id.Generate(),
 		Namespace:      f.Namespace,
@@ -55,7 +55,6 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 		Region:         createOptions.Region,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
-		Destroyed:      false,
 	}
 
 	cputemplate, ok := r.vcpusTemplates[createOptions.Config.Guest.CpuKind]
@@ -71,18 +70,26 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 	mv := api.MachineVersion{
 		Id:        versionId,
 		MachineId: machine.Id,
+		Namespace: machine.Namespace,
 		Config:    createOptions.Config,
 		Resources: resources,
 	}
 
-	err = r.o.PlaceMachine(ctx, &machine, mv, !createOptions.SkipStart)
+	nodeId, err := r.o.PrepareAllocation(ctx, machine.Region, machine.Id, resources)
 	if err != nil {
 		return nil, err
 	}
 
+	machine.Node = nodeId
+
 	err = r.state.CreateMachine(machine, mv)
 	if err != nil {
-		return nil, err // TODO: destroy instance on error here
+		return nil, err
+	}
+
+	err = r.o.PutMachine(ctx, nodeId, &machine, mv, !createOptions.SkipStart)
+	if err != nil {
+		return nil, err
 	}
 
 	return &api.Machine{
@@ -100,26 +107,18 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 }
 
 func (r *Ravel) StartMachine(ctx context.Context, ns, fleet, machineId string) error {
-	machine, err := r.getMachine(ctx, ns, fleet, machineId)
+	machine, err := r.getMachine(ctx, ns, fleet, machineId, false)
 	if err != nil {
 		return err
-	}
-
-	if machine.Destroyed {
-		return errdefs.NewFailedPrecondition("machine is destroyed")
 	}
 
 	return r.o.StartMachineInstance(ctx, machine)
 }
 
 func (r *Ravel) StopMachine(ctx context.Context, ns, fleet, machineId string, stopConfig *api.StopConfig) error {
-	machine, err := r.getMachine(ctx, ns, fleet, machineId)
+	machine, err := r.getMachine(ctx, ns, fleet, machineId, false)
 	if err != nil {
 		return err
-	}
-
-	if machine.Destroyed {
-		return errdefs.NewFailedPrecondition("machine is destroyed")
 	}
 
 	return r.o.StopMachineInstance(ctx, machine, stopConfig)
@@ -131,29 +130,25 @@ func (r *Ravel) ListMachines(ctx context.Context, ns, fleet string, includeDestr
 		return nil, err
 	}
 
-	return r.clusterState.ListAPIMachines(ctx, ns, f.Id, includeDestroyed)
+	return r.state.ListAPIMachines(ctx, ns, f.Id, includeDestroyed)
 }
 
 func (r *Ravel) DestroyMachine(ctx context.Context, ns, fleet, machineId string, force bool) error {
-	m, err := r.getMachine(ctx, ns, fleet, machineId)
+	m, err := r.getMachine(ctx, ns, fleet, machineId, false)
 	if err != nil {
 		return err
-	}
-
-	if m.Destroyed {
-		return nil
 	}
 
 	return r.o.DestroyMachine(ctx, m, force)
 }
 
-func (r *Ravel) getMachine(ctx context.Context, ns, fleet, machineId string) (cluster.Machine, error) {
+func (r *Ravel) getMachine(ctx context.Context, ns, fleet, machineId string, showDestroyed bool) (cluster.Machine, error) {
 	f, err := r.GetFleet(ctx, ns, fleet)
 	if err != nil {
 		return cluster.Machine{}, err
 	}
 
-	return r.db.GetMachine(ctx, ns, f.Id, machineId)
+	return r.state.GetMachine(ctx, ns, f.Id, machineId, showDestroyed)
 }
 
 func (r *Ravel) GetMachine(ctx context.Context, ns, fleet, machineId string) (*api.Machine, error) {
@@ -162,19 +157,19 @@ func (r *Ravel) GetMachine(ctx context.Context, ns, fleet, machineId string) (*a
 		return nil, err
 	}
 
-	return r.clusterState.GetAPIMachine(ctx, ns, f.Id, machineId)
+	return r.state.GetAPIMachine(ctx, ns, f.Id, machineId)
 }
 
 func (r *Ravel) ListMachineVersions(ctx context.Context, ns, fleet, machineId string) ([]api.MachineVersion, error) {
-	_, err := r.getMachine(ctx, ns, fleet, machineId)
+	_, err := r.getMachine(ctx, ns, fleet, machineId, true)
 	if err != nil {
 		return nil, err
 	}
-	return r.db.ListMachineVersions(ctx, machineId)
+	return r.state.ListMachineVersions(ctx, machineId)
 }
 
 func (r *Ravel) GetMachineLogsRaw(ctx context.Context, ns, fleet, machineId string, follow bool) (io.ReadCloser, error) {
-	m, err := r.getMachine(ctx, ns, fleet, machineId)
+	m, err := r.getMachine(ctx, ns, fleet, machineId, false)
 	if err != nil {
 		return nil, err
 	}
@@ -183,10 +178,10 @@ func (r *Ravel) GetMachineLogsRaw(ctx context.Context, ns, fleet, machineId stri
 }
 
 func (r *Ravel) ListMachineEvents(ctx context.Context, ns, fleet, machineId string) ([]api.MachineEvent, error) {
-	m, err := r.getMachine(ctx, ns, fleet, machineId)
+	m, err := r.getMachine(ctx, ns, fleet, machineId, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.db.ListMachineEvents(ctx, m.Id)
+	return r.state.ListMachineEvents(ctx, m.Id)
 }

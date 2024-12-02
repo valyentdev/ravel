@@ -9,7 +9,7 @@ import (
 	"github.com/valyentdev/ravel/api"
 )
 
-func (r *Ravel) ListenInstanceEvents() error {
+func (r *Ravel) listenMachineEvents() error {
 	_, err := r.nc.QueueSubscribe("machines.events", "servers", func(msg *nats.Msg) {
 		var event api.MachineEvent
 		err := json.Unmarshal(msg.Data, &event)
@@ -26,7 +26,7 @@ func (r *Ravel) ListenInstanceEvents() error {
 			}
 		}
 
-		err = r.db.PushMachineEvent(context.Background(), event)
+		err = r.state.StoreMachineEvent(context.Background(), event)
 		if err != nil {
 			slog.Info("failed to push machine event", "error", err)
 			return
@@ -37,7 +37,6 @@ func (r *Ravel) ListenInstanceEvents() error {
 			slog.Info("failed to respond to message", "error", err)
 		}
 	})
-
 	if err != nil {
 		return err
 	}

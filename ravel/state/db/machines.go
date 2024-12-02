@@ -9,7 +9,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/oklog/ulid"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/errdefs"
@@ -17,8 +16,7 @@ import (
 )
 
 func scanMachine(s dbutil.Scannable) (m cluster.Machine, err error) {
-	var version string
-	err = s.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.Node, &m.InstanceId, &version, &m.Region, &m.CreatedAt, &m.UpdatedAt)
+	err = s.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.Node, &m.InstanceId, &m.MachineVersion, &m.Region, &m.CreatedAt, &m.UpdatedAt, &m.DestroyedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			err = errdefs.NewNotFound("machine not found")
@@ -26,19 +24,11 @@ func scanMachine(s dbutil.Scannable) (m cluster.Machine, err error) {
 		return
 	}
 
-	machineVersion, err := ulid.Parse(version)
-	if err != nil {
-		return
-	}
-
-	m.MachineVersion = machineVersion
-
 	return
 }
 
 func (q *Queries) CreateMachine(ctx context.Context, machine cluster.Machine) error {
-
-	_, err := q.db.Exec(ctx, `INSERT INTO machines (id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, machine.Id, machine.Namespace, machine.FleetId, machine.Node, machine.InstanceId, machine.MachineVersion.String(), machine.Region, machine.CreatedAt, machine.UpdatedAt)
+	_, err := q.db.Exec(ctx, `INSERT INTO machines (id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, machine.Id, machine.Namespace, machine.FleetId, machine.Node, machine.InstanceId, machine.MachineVersion, machine.Region, machine.CreatedAt, machine.UpdatedAt)
 	if err != nil {
 		var pgerr *pgconn.PgError
 		if errors.As(err, &pgerr) {
@@ -68,7 +58,7 @@ func (q *Queries) UpdateMachine(ctx context.Context, machine cluster.Machine) er
 		updateMachineQuery,
 		machine.Node,
 		machine.InstanceId,
-		machine.MachineVersion.String(),
+		machine.MachineVersion,
 		machine.UpdatedAt,
 		machine.Id,
 	)
@@ -79,7 +69,17 @@ func (q *Queries) UpdateMachine(ctx context.Context, machine cluster.Machine) er
 	return nil
 }
 
-const baseSelectMachine = `SELECT id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at FROM machines`
+func (q *Queries) CountExistingMachinesInFleet(ctx context.Context, fleetId string) (int, error) {
+	var count int
+	err := q.db.QueryRow(ctx, `SELECT COUNT(*) FROM machines WHERE fleet_id = $1 AND destroyed_at IS NULL`, fleetId).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+const baseSelectMachine = `SELECT id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at, destroyed_at FROM machines`
 
 func (q *Queries) ListMachines(ctx context.Context, fleetId string) ([]cluster.Machine, error) {
 	rows, err := q.db.Query(ctx, fmt.Sprintf("%s WHERE fleet_id = $1", baseSelectMachine), fleetId)
@@ -100,8 +100,13 @@ func (q *Queries) ListMachines(ctx context.Context, fleetId string) ([]cluster.M
 	return machines, nil
 }
 
-func (q *Queries) GetMachine(ctx context.Context, namespace, fleetId, id string) (cluster.Machine, error) {
-	row := q.db.QueryRow(ctx, fmt.Sprintf("%s WHERE namespace = $1 AND fleet_id = $2 AND id = $3", baseSelectMachine), namespace, fleetId, id)
+func (q *Queries) GetMachine(ctx context.Context, namespace, fleetId, id string, showDestroyed bool) (cluster.Machine, error) {
+	where := fmt.Sprintf("%s WHERE namespace = $1 AND fleet_id = $2 AND id = $3", baseSelectMachine)
+	if !showDestroyed {
+		where += " AND destroyed_at IS NULL"
+	}
+
+	row := q.db.QueryRow(ctx, where, namespace, fleetId, id)
 	machine, err := scanMachine(row)
 	if err != nil {
 		return machine, err
@@ -111,7 +116,7 @@ func (q *Queries) GetMachine(ctx context.Context, namespace, fleetId, id string)
 }
 
 func (q *Queries) DestroyMachine(ctx context.Context, id string) error {
-	_, err := q.db.Exec(ctx, `UPDATE machines SET destroyed = TRUE, updated_at = $1 WHERE  id = $2`, time.Now(), id)
+	_, err := q.db.Exec(ctx, `UPDATE machines SET destroyed_at = $1, updated_at = $1 WHERE  id = $2`, time.Now(), id)
 	if err != nil {
 		return err
 	}

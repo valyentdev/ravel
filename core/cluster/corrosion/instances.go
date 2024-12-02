@@ -2,25 +2,31 @@ package corrosion
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/valyentdev/corroclient"
 	"github.com/valyentdev/ravel/core/cluster"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/core/instance"
 )
 
 func (c *CorrosionClusterState) UpsertInstance(ctx context.Context, i cluster.MachineInstance) error {
+	eventsBytes, err := json.Marshal(i.Events)
+	if err != nil {
+		return err
+	}
 	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{
 		{
-			Query: `INSERT INTO instances (id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4)
-					VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			Query: `INSERT INTO instances (id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4, events, namespace)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 					ON CONFLICT (id, machine_id) DO UPDATE SET
 						status = $5,
 						updated_at = $7,
-						local_ipv4 = $8`,
+						local_ipv4 = $8,
+						events = $9
+						`,
 
-			Params: []any{i.Id, i.Node, i.MachineId, i.MachineVersion, i.Status, i.CreatedAt.Unix(), i.UpdatedAt.Unix(), i.LocalIPV4},
+			Params: []any{i.Id, i.Node, i.MachineId, i.MachineVersion, i.Status, i.CreatedAt.Unix(), i.UpdatedAt.Unix(), i.LocalIPV4, string(eventsBytes), i.Namespace},
 		},
 	})
 	if err != nil {
@@ -38,44 +44,16 @@ func (c *CorrosionClusterState) UpsertInstance(ctx context.Context, i cluster.Ma
 	return errors.Join(errs...)
 }
 
-func (c *CorrosionClusterState) GetInstance(ctx context.Context, id string) (*cluster.MachineInstance, error) {
-	row, err := c.corroclient.QueryRow(ctx, corroclient.Statement{
-		Query:  `SELECT id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4 FROM instances WHERE id = $1`,
-		Params: []interface{}{id},
-	})
-	if err != nil {
-		if err == corroclient.ErrNoRows {
-			return nil, errdefs.NewNotFound("instance not found")
-		}
-		return nil, err
-	}
-
-	var i cluster.MachineInstance
-	var createdAt int64
-	var updatedAt int64
-
-	err = row.Scan(&i.Id, &i.Node, &i.MachineId, &i.MachineVersion, &i.Status, &createdAt, &updatedAt, &i.LocalIPV4)
-	if err != nil {
-		return nil, err
-	}
-
-	i.CreatedAt = time.Unix(createdAt, 0)
-	i.UpdatedAt = time.Unix(updatedAt, 0)
-
-	return &i, nil
-}
-
-func (c *CorrosionClusterState) WatchInstance(ctx context.Context, machineId string, instanceId string) (context.CancelFunc, <-chan cluster.MachineInstance, error) {
+func (c *CorrosionClusterState) WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (context.CancelFunc, <-chan instance.InstanceStatus, error) {
 	sub, err := c.corroclient.PostSubscription(ctx, corroclient.Statement{
-		Query:  `SELECT id, node, machine_id, machine_version, status, created_at, updated_at FROM instances WHERE machine_id = $1 AND id = $2`,
+		Query:  `SELECT status FROM instances WHERE machine_id = $1 AND id = $2`,
 		Params: []any{machineId, instanceId},
 	})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	updates := make(chan cluster.MachineInstance)
-
+	updates := make(chan instance.InstanceStatus)
 	subCtx, cancel := context.WithCancel(context.Background())
 
 	go func() {
@@ -101,19 +79,12 @@ func (c *CorrosionClusterState) WatchInstance(ctx context.Context, machineId str
 
 					}
 
-					var i cluster.MachineInstance
+					var status string
 
-					var createdAt int64
-					var updatedAt int64
-
-					err := row.Scan(&i.Id, &i.Node, &i.MachineId, &i.MachineVersion, &i.Status, &createdAt, &updatedAt)
+					err := row.Scan(&status)
 					if err != nil {
 						continue
 					}
-
-					i.CreatedAt = time.Unix(createdAt, 0)
-					i.UpdatedAt = time.Unix(updatedAt, 0)
-					updates <- i
 
 				}
 			}

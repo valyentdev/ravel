@@ -57,7 +57,7 @@ func NewMachineInstanceState(
 	eventer Eventer,
 	reportState func(mi cluster.MachineInstance) error,
 ) *MachineInstanceState {
-	return newMachineInstanceState(store, machine, eventer, reportState, true)
+	return newMachineInstanceState(store, machine, eventer, reportState)
 }
 
 func newMachineInstanceState(
@@ -65,7 +65,6 @@ func newMachineInstanceState(
 	machine structs.MachineInstance,
 	eventer Eventer,
 	reportState func(mi cluster.MachineInstance) error,
-	new bool,
 ) *MachineInstanceState {
 	is := &MachineInstanceState{
 		id:          machine.Machine.Id,
@@ -77,9 +76,7 @@ func newMachineInstanceState(
 		reportState: reportState,
 	}
 
-	if !new {
-		go is.triggerUpdate()
-	}
+	is.triggerUpdate()
 
 	go is.startSyncing()
 

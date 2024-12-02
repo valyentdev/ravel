@@ -33,7 +33,7 @@ func (o *Orchestrator) StartMachineInstance(ctx context.Context, machine cluster
 
 	err = agentClient.StartMachine(ctx, machine.Id)
 	if err != nil {
-		return errdefs.NewUnknown("Failed to start machine")
+		return err
 	}
 
 	return nil
@@ -98,7 +98,7 @@ func (o *Orchestrator) WaitMachine(
 	for _, o := range opts {
 		o(opt)
 	}
-	cancel, updates, err := o.clusterState.WatchInstance(ctx, machine.Id, opt.instanceId)
+	cancel, updates, err := o.clusterState.WatchInstanceStatus(ctx, machine.Id, opt.instanceId)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (o *Orchestrator) WaitMachine(
 		case <-timeoutCtx.Done():
 			return errdefs.NewDeadlineExceeded("timeout reached while waiting for machine status")
 		case update := <-updates:
-			if update.Status == state {
+			if api.MachineStatus(update) == state {
 				return nil
 			}
 		}

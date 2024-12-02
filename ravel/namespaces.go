@@ -8,7 +8,7 @@ import (
 )
 
 func (r *Ravel) GetNamespace(ctx context.Context, name string) (*api.Namespace, error) {
-	namespace, err := r.db.GetNamespace(ctx, name)
+	namespace, err := r.state.GetNamespace(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (r *Ravel) CreateNamespace(ctx context.Context, name string) (*api.Namespac
 		Name:      name,
 		CreatedAt: time.Now(),
 	}
-	err = r.db.CreateNamespace(ctx, namespace)
+	err = r.state.CreateNamespace(ctx, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (r *Ravel) CreateNamespace(ctx context.Context, name string) (*api.Namespac
 }
 
 func (r *Ravel) ListNamespaces(ctx context.Context) ([]api.Namespace, error) {
-	namespaces, err := r.db.ListNamespaces(ctx)
+	namespaces, err := r.state.ListNamespaces(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (r *Ravel) DeleteNamespace(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	err = r.db.DestroyNamespace(ctx, namespace.Name)
+	err = r.state.DestroyNamespace(ctx, namespace.Name)
 	if err != nil {
 		return err
 	}

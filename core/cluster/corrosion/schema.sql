@@ -14,12 +14,14 @@ CREATE table gateways (
 CREATE TABLE instances (
     id text not null default '',
     node text not null default '',
+    namespace text not null default '',
     machine_id text not null default '',
     machine_version text not null default '',
     status text not null default '',
     created_at integer not null default 0,
     updated_at integer not null default 0,
     local_ipv4 text not null default '',
+    events text not null default '[]',
     primary key (id, machine_id)
 );
 
@@ -39,12 +41,13 @@ CREATE TABLE machines (
     region text not null default "",
     created_at integer not null default 0,
     updated_at integer not null default 0,
-    destroyed boolean not null default FALSE
+    destroyed_at integer
 );
 
 
 CREATE TABLE machine_versions (
     id text primary key not null default "",
+    namespace text not null default "",
     machine_id text not null default "",
     config text not null default "{}",
     resources text not null default "{}"

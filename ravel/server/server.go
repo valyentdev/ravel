@@ -3,7 +3,9 @@ package server
 import (
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -50,21 +52,42 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Serve() error {
-	go s.ravel.ListenInstanceEvents()
-
+func (s *Server) Start() error {
 	slog.Info("Starting http server", "address", s.server.Addr)
 
-	err := s.server.ListenAndServe()
-	if err == http.ErrServerClosed {
-		return nil
+	ln, err := net.Listen("tcp", s.server.Addr)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			ln.Close()
+		}
+	}()
+
+	go s.server.Serve(ln)
+
+	err = s.ravel.Start()
+	if err != nil {
+		slog.Error("Failed to start ravel", "error", err)
+		return err
 	}
 
-	return err
+	return nil
 }
 
-func (s *Server) Shutdown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
+func (s *Server) Run(runCtx context.Context) {
+	<-runCtx.Done()
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	slog.Info("Shutting down http server")
+	s.server.Shutdown(ctxTimeout)
+
+	err := s.ravel.Stop()
+	if err != nil {
+		slog.Error("Failed to stop ravel", "error", err)
+	}
 }
 
 func getHumaConfig() huma.Config {

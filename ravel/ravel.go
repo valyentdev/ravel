@@ -6,10 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
-	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/cluster/corrosion"
 	"github.com/valyentdev/ravel/core/config"
-	"github.com/valyentdev/ravel/ravel/db"
 	"github.com/valyentdev/ravel/ravel/orchestrator"
 	"github.com/valyentdev/ravel/ravel/state"
 )
@@ -17,9 +15,8 @@ import (
 type Ravel struct {
 	nc             *nats.Conn
 	o              *orchestrator.Orchestrator
-	db             *db.DB
-	clusterState   cluster.ClusterState
 	state          *state.State
+	pgpool         *pgxpool.Pool
 	vcpusTemplates map[string]config.MachineResourcesTemplates
 }
 
@@ -88,14 +85,20 @@ func New(config config.RavelConfig) (*Ravel, error) {
 
 	o := orchestrator.New(nc, clusterstate, tlsConfig)
 
-	db := db.New(pgpool)
-
 	return &Ravel{
 		nc:             nc,
 		o:              o,
-		db:             db,
-		clusterState:   clusterstate,
-		state:          state.New(clusterstate, db),
+		state:          state.New(pgpool, clusterstate),
 		vcpusTemplates: config.Server.MachineTemplates,
 	}, nil
+}
+
+func (r *Ravel) Start() error {
+	return r.listenMachineEvents()
+}
+
+func (r *Ravel) Stop() error {
+	r.nc.Close()
+	r.pgpool.Close()
+	return nil
 }

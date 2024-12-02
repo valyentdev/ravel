@@ -29,7 +29,7 @@ func (mi *MachineInstance) InstanceOptions() instance.InstanceOptions {
 		Id: mi.Machine.InstanceId,
 		Metadata: instance.InstanceMetadata{
 			MachineId:      mi.Machine.InstanceId,
-			MachineVersion: mi.Version.Id.String(),
+			MachineVersion: mi.Version.Id,
 		},
 		Config: instance.InstanceConfig{
 			Image: mi.Version.Config.Image,
@@ -49,8 +49,10 @@ func (mi *MachineInstance) ClusterInstance() cluster.MachineInstance {
 	return cluster.MachineInstance{
 		Id:             mi.Machine.InstanceId,
 		Node:           mi.Machine.Node,
+		Namespace:      mi.Machine.Namespace,
 		MachineId:      mi.Machine.Id,
-		MachineVersion: mi.Version.Id.String(),
+		MachineVersion: mi.Version.Id,
+		Events:         mi.State.LastEvents,
 		Status:         mi.State.Status,
 		LocalIPV4:      mi.State.LocalIPV4,
 		CreatedAt:      mi.State.CreatedAt,

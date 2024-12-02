@@ -2,7 +2,6 @@ package ravel
 
 import (
 	"context"
-	"strings"
 
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/internal/id"
@@ -11,22 +10,12 @@ import (
 type Gateway = api.Gateway
 
 func (r *Ravel) GetGateway(ctx context.Context, namespace string, gateway string) (Gateway, error) {
-	var g Gateway
-	var err error
-
-	if strings.HasPrefix(gateway, "gw_") {
-		g, err = r.db.GetGatewayById(ctx, namespace, gateway)
-		if err != nil {
-			return Gateway{}, err
-		}
-	} else {
-		g, err = r.db.GetGatewayByName(ctx, namespace, gateway)
-		if err != nil {
-			return Gateway{}, err
-		}
+	ns, err := r.GetNamespace(ctx, namespace)
+	if err != nil {
+		return Gateway{}, err
 	}
 
-	return g, nil
+	return r.state.GetGateway(ctx, ns.Name, gateway)
 }
 
 func (r *Ravel) ListGateways(ctx context.Context, namespace string) ([]Gateway, error) {
@@ -35,7 +24,7 @@ func (r *Ravel) ListGateways(ctx context.Context, namespace string) ([]Gateway, 
 		return nil, err
 	}
 
-	return r.db.ListGateways(ctx, namespace)
+	return r.state.ListGateways(ctx, namespace)
 }
 
 type CreateGatewayOptions struct {

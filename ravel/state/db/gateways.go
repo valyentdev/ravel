@@ -10,6 +10,14 @@ import (
 
 const baseSelectGateway = `SELECT id, name, namespace, fleet_id, protocol, target_port FROM gateways`
 
+func (q Queries) DeleteFleetGateways(ctx context.Context, fleetId string) error {
+	_, err := q.db.Exec(ctx, `DELETE FROM gateways WHERE fleet_id = $1`, fleetId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (q Queries) GetGatewayByName(ctx context.Context, namespace, name string) (gateway api.Gateway, err error) {
 	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND name = $3", namespace, name).Scan(
 		&gateway.Id,
