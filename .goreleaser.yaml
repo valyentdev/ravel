@@ -7,3 +7,10 @@ builds:
       - linux
     goarch:
       - amd64
+  - env: [CGO_ENABLED=0]
+    main: ./cmd/ravel-proxy/ravel.go
+    binary: ravel-proxy
+    goos:
+      - linux
+    goarch:
+      - amd64
