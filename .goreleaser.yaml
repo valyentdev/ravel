@@ -1,14 +1,17 @@
 project_name: ravel
+version: 2
 builds:
-  - env: [CGO_ENABLED=0]
+  - id : ravel
+    env: [CGO_ENABLED=0]
     main: ./cmd/ravel/ravel.go
     binary: ravel
     goos:
       - linux
     goarch:
       - amd64
-  - env: [CGO_ENABLED=0]
-    main: ./cmd/ravel-proxy/ravel.go
+  - id : ravel-proxy
+    env: [CGO_ENABLED=0]
+    main: ./cmd/ravel-proxy/ravel-proxy.go
     binary: ravel-proxy
     goos:
       - linux
