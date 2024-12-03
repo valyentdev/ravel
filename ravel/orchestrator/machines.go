@@ -62,53 +62,34 @@ func (o *Orchestrator) StopMachineInstance(ctx context.Context, machine cluster.
 	return nil
 }
 
-type waitOpt struct {
-	instanceId string
-	timeout    time.Duration
-}
-
-type WaitOpt func(*waitOpt)
-
-func WithInstanceId(instanceId string) WaitOpt {
-	return func(o *waitOpt) {
-		o.instanceId = instanceId
-	}
-}
-
-func WithTimeout(timeout time.Duration) WaitOpt {
-	return func(o *waitOpt) {
-		o.timeout = timeout
-	}
+type WaitOpt struct {
+	InstanceId string
+	Timeout    time.Duration
 }
 
 func (o *Orchestrator) WaitMachine(
 	ctx context.Context,
-	machine cluster.Machine,
+	machineId string,
 	state api.MachineStatus,
-	opts ...WaitOpt,
+	opt WaitOpt,
 ) error {
-	opt := &waitOpt{
-		instanceId: machine.InstanceId,
-		timeout:    time.Second * 30,
-	}
-
-	timeoutCtx, cancelTimeoutCtx := context.WithTimeout(ctx, opt.timeout)
+	timeoutCtx, cancelTimeoutCtx := context.WithTimeout(ctx, opt.Timeout)
 	defer cancelTimeoutCtx()
 
-	for _, o := range opts {
-		o(opt)
-	}
-	cancel, updates, err := o.clusterState.WatchInstanceStatus(ctx, machine.Id, opt.instanceId)
+	slog.Info("Watching machine status", "machineId", machineId, "status", state)
+	updates, err := o.clusterState.WatchInstanceStatus(timeoutCtx, machineId, opt.InstanceId)
 	if err != nil {
 		return err
 	}
-	defer cancel()
-
+	t1 := time.Now()
 	for {
+		slog.Debug("waiting")
 		select {
 		case <-timeoutCtx.Done():
+			slog.Debug("Timeout reached", "elapsed", time.Since(t1))
 			return errdefs.NewDeadlineExceeded("timeout reached while waiting for machine status")
 		case update := <-updates:
+			slog.Debug("Machine status update", "machineId", machineId, "status", update)
 			if api.MachineStatus(update) == state {
 				return nil
 			}

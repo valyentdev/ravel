@@ -175,6 +175,14 @@ func (e *Endpoints) Register(api huma.API) {
 	}, e.getMachineLogs)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "waitMachineStatus",
+		Summary:     "Wait for a machine to reach a given status",
+		Method:      http.MethodGet,
+		Path:        "/fleets/{fleet}/machines/{machine_id}/wait",
+		Tags:        []string{"machines"},
+	}, e.waitMachineStatus)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "createGateway",
 		Summary:     "Create a gateway",
 		Method:      http.MethodPost,

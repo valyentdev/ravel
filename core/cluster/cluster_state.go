@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/core/instance"
 )
 
 type ClusterState interface {
@@ -16,7 +17,7 @@ type ClusterState interface {
 	DestroyMachine(ctx context.Context, id string) error
 
 	UpsertInstance(ctx context.Context, i MachineInstance) error
-	WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (context.CancelFunc, <-chan string, error)
+	WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (<-chan instance.InstanceStatus, error)
 
 	GetNode(ctx context.Context, id string) (api.Node, error)
 	UpsertNode(ctx context.Context, node api.Node) error

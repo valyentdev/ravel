@@ -208,3 +208,32 @@ func (e *Endpoints) listMachineEvents(ctx context.Context, req *ListMachineEvent
 		Body: events,
 	}, nil
 }
+
+type WaitMachineStatusRequest struct {
+	MachineResolver
+	Timeout    int               `query:"timeout" minimum:"1" maximum:"300"`
+	Status     api.MachineStatus `query:"status" required:"true"`
+	InstanceId string            `query:"instance_id"`
+}
+
+type WaitMachineStatusResponse struct {
+}
+
+func (e *Endpoints) waitMachineStatus(ctx context.Context, req *WaitMachineStatusRequest) (*WaitMachineStatusResponse, error) {
+	opts := []ravel.WaitOpt{}
+	if req.InstanceId != "" {
+		opts = append(opts, ravel.WithInstanceId(req.InstanceId))
+	}
+
+	if req.Timeout > 0 {
+		opts = append(opts, ravel.WithTimeout(req.Timeout))
+	}
+
+	err := e.ravel.WaitMachineStatus(ctx, req.Namespace, req.Fleet, req.MachineId, req.Status, opts...)
+	if err != nil {
+		e.log("Failed to wait for machine status", err)
+		return nil, err
+	}
+
+	return nil, nil
+}

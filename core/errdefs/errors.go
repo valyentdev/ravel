@@ -134,7 +134,7 @@ func getHTTPStatus(code Code) int {
 	case codeAlreadyExists:
 		return http.StatusConflict
 	case codeDeadlineExceeded:
-		return http.StatusGatewayTimeout
+		return http.StatusRequestTimeout
 	case codeNotImplemented:
 		return http.StatusNotImplemented
 	case codeResourcesExhausted:

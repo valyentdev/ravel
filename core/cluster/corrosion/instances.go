@@ -44,23 +44,22 @@ func (c *CorrosionClusterState) UpsertInstance(ctx context.Context, i cluster.Ma
 	return errors.Join(errs...)
 }
 
-func (c *CorrosionClusterState) WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (context.CancelFunc, <-chan instance.InstanceStatus, error) {
+func (c *CorrosionClusterState) WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (<-chan instance.InstanceStatus, error) {
 	sub, err := c.corroclient.PostSubscription(ctx, corroclient.Statement{
 		Query:  `SELECT status FROM instances WHERE machine_id = $1 AND id = $2`,
 		Params: []any{machineId, instanceId},
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	updates := make(chan instance.InstanceStatus)
-	subCtx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		events := sub.Events()
 		for {
 			select {
-			case <-subCtx.Done():
+			case <-ctx.Done():
 				sub.Close()
 				return
 			case e := <-events:
@@ -76,7 +75,6 @@ func (c *CorrosionClusterState) WatchInstanceStatus(ctx context.Context, machine
 					} else {
 						change := e.(*corroclient.Change)
 						row = change.Row
-
 					}
 
 					var status string
@@ -86,11 +84,13 @@ func (c *CorrosionClusterState) WatchInstanceStatus(ctx context.Context, machine
 						continue
 					}
 
+					updates <- instance.InstanceStatus(status)
+
 				}
 			}
 
 		}
 	}()
 
-	return cancel, updates, nil
+	return updates, nil
 }
