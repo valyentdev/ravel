@@ -34,15 +34,15 @@ func (r *Reference) String() string {
 	return fmt.Sprintf("%s/%s:%s", r.Domain, r.Repository, tag)
 }
 
-func Parse(ref string, options ...name.Option) (Reference, error) {
-	if t, err := name.NewTag(ref, options...); err == nil {
+func Parse(ref string) (Reference, error) {
+	if t, err := name.NewTag(ref); err == nil {
 		return Reference{
 			Domain:     t.RegistryStr(),
 			Repository: t.RepositoryStr(),
 			Tag:        t.TagStr(),
 		}, nil
 	}
-	if d, err := name.NewDigest(ref, options...); err == nil {
+	if d, err := name.NewDigest(ref); err == nil {
 		return Reference{
 			Domain:     d.RegistryStr(),
 			Repository: d.RepositoryStr(),

@@ -8,7 +8,6 @@ require (
 	github.com/containerd/errdefs v0.1.0
 	github.com/coreos/go-iptables v0.7.0
 	github.com/danielgtaylor/huma/v2 v2.26.0
-	github.com/distribution/reference v0.5.0
 	github.com/gammazero/deque v0.2.1
 	github.com/google/go-containerregistry v0.20.2
 	github.com/jackc/pgx/v5 v5.6.0
@@ -49,6 +48,7 @@ require (
 	github.com/containerd/ttrpc v1.2.3 // indirect
 	github.com/containerd/typeurl/v2 v2.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/cli v27.1.1+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect

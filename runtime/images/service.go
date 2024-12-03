@@ -15,7 +15,6 @@ import (
 
 	containerdimages "github.com/containerd/containerd/v2/core/images"
 	"github.com/containerd/containerd/v2/core/remotes/docker"
-	distribution "github.com/distribution/reference"
 )
 
 type Service struct {
@@ -30,13 +29,7 @@ func NewService(ctrd *client.Client, snapshotter string) *Service {
 	}
 }
 
-func (s *Service) Pull(ctx context.Context, name string, auth registry.RegistriesConfig) (client.Image, error) {
-	namedRef, err := distribution.ParseDockerRef(name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse image reference %q: %w", name, err)
-	}
-	ref := namedRef.String()
-
+func (s *Service) Pull(ctx context.Context, ref string, auth registry.RegistriesConfig) (client.Image, error) {
 	authorizer := docker.NewDockerAuthorizer(
 		docker.WithAuthCreds(func(host string) (string, string, error) {
 			return auth.Get(host)
