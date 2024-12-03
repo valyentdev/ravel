@@ -19,7 +19,7 @@ func (q Queries) DeleteFleetGateways(ctx context.Context, fleetId string) error 
 }
 
 func (q Queries) GetGatewayByName(ctx context.Context, namespace, name string) (gateway api.Gateway, err error) {
-	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND name = $3", namespace, name).Scan(
+	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND name = $2", namespace, name).Scan(
 		&gateway.Id,
 		&gateway.Name,
 		&gateway.Namespace,
