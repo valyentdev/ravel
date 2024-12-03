@@ -54,32 +54,22 @@ func Parse(ref string, options ...name.Option) (Reference, error) {
 
 }
 
-type Option struct {
-	DefaultRegistry string
-	DefaultTag      string
-}
-
-func ResolveImageRef(ctx context.Context, image string, authConfig RegistriesConfig) (string, Reference, error) {
-	ref, err := Parse(image)
-	if err != nil {
-		return "", ref, err
-	}
-
+func CheckImageRef(ctx context.Context, ref Reference, authConfig RegistriesConfig) (string, error) {
 	i, err := crane.Pull(ref.String(), crane.WithContext(ctx), crane.WithAuthFromKeychain(NewKeychain(authConfig)))
 	if err != nil {
-		return "", ref, err
+		return "", err
 	}
 
 	if ref.HasDigest() {
-		return ref.String(), ref, nil
+		return ref.String(), nil
 	}
 
 	d, err := i.Digest()
 	if err != nil {
-		return "", ref, err
+		return "", err
 	}
 
 	ref.Digest = d.String()
 
-	return ref.String(), ref, nil
+	return ref.String(), nil
 }

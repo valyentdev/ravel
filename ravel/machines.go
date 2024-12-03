@@ -3,8 +3,9 @@ package ravel
 import (
 	"context"
 	"crypto/rand"
-	"fmt"
 	"io"
+	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/oklog/ulid"
@@ -47,9 +48,29 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 
 	config := createOptions.Config
 
-	imageRef, _, err := registry.ResolveImageRef(ctx, createOptions.Config.Image, r.registries)
+	ref, err := registry.Parse(config.Image)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve image ref: %w", err)
+		return nil, errdefs.NewInvalidArgument("Invalid image ref")
+	}
+
+	imageRef, err := registry.CheckImageRef(ctx, ref, r.config.Registries)
+	if err != nil {
+		return nil, errdefs.NewInvalidArgument("Failed to check image ref")
+	}
+
+	slog.Debug("Image ref checked", "imageRef", imageRef)
+
+	if r.config.Server.MainRegistry == ref.Domain && r.config.Server.NamespacedRegistry {
+		parts := strings.Split(ref.Repository, "/")
+		if len(parts) != 2 {
+			return nil, errdefs.NewInvalidArgument("Invalid image ref")
+		}
+
+		regNS := parts[0]
+
+		if regNS != namespace {
+			return nil, errdefs.NewInvalidArgument("Invalid image ref")
+		}
 	}
 
 	config.Image = imageRef

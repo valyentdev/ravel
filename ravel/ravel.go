@@ -8,7 +8,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/valyentdev/ravel/core/cluster/corrosion"
 	"github.com/valyentdev/ravel/core/config"
-	"github.com/valyentdev/ravel/core/registry"
 	"github.com/valyentdev/ravel/ravel/orchestrator"
 	"github.com/valyentdev/ravel/ravel/state"
 )
@@ -18,7 +17,7 @@ type Ravel struct {
 	o              *orchestrator.Orchestrator
 	state          *state.State
 	pgpool         *pgxpool.Pool
-	registries     registry.RegistriesConfig
+	config         *config.RavelConfig
 	vcpusTemplates map[string]config.MachineResourcesTemplates
 }
 
@@ -92,7 +91,8 @@ func New(config config.RavelConfig) (*Ravel, error) {
 		o:              o,
 		state:          state.New(pgpool, clusterstate),
 		vcpusTemplates: config.Server.MachineTemplates,
-		registries:     config.Registries,
+		pgpool:         pgpool,
+		config:         &config,
 	}, nil
 }
 
