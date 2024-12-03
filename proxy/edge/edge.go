@@ -22,7 +22,7 @@ func NewRavelProxy(config *proxy.Config) *RavelProxy {
 	return &RavelProxy{
 		backends:      newBackends(corro),
 		gateways:      newGateways(corro),
-		defaultDomain: "bigworld.app",
+		defaultDomain: config.Edge.DefaultDomain,
 	}
 }
 

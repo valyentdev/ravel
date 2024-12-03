@@ -14,6 +14,7 @@ func NewRootCmd() *cobra.Command {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if debug {
 				slog.SetLogLoggerLevel(slog.LevelDebug)
+				slog.Debug("Debug mode enabled")
 			}
 		},
 	}

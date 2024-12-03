@@ -1,0 +1,9 @@
+
+[edge]
+address = ":443"
+default_domain = "example.app"
+[corrosion]
+url = "http://localhost:8081"
+[local]
+address = ":8082"
+node_id = "ravel-1"

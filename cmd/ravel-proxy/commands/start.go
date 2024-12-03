@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/valyentdev/ravel/proxy"
 	"github.com/valyentdev/ravel/proxy/edge"
@@ -18,7 +20,7 @@ func newStartCmd() *cobra.Command {
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if mode != string(proxy.Edge) && mode != string(proxy.Local) {
-				return nil
+				return fmt.Errorf("invalid mode: %s", mode)
 			}
 
 			return runStart(proxy.Mode(mode), configPath)

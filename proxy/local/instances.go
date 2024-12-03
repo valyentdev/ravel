@@ -51,8 +51,6 @@ func scanInstance(row *corroclient.Row) (Instance, error) {
 		return i, err
 	}
 
-	slog.Debug("scanned instance", "instance_id", i.InstanceId, "gateway_id", i.GatewayId, "ip", i.Ip)
-
 	return i, nil
 }
 
@@ -80,7 +78,7 @@ func (i *instances) sync() error {
 			row := e.(*corroclient.Row)
 			ie, err := scanInstance(row)
 			if err != nil {
-				slog.Error("error during scanning instance", "err", err)
+				slog.Error("error scanning instance", "err", err)
 				continue
 			}
 

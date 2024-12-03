@@ -2,7 +2,6 @@ package edge
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -24,7 +23,6 @@ type Backend struct {
 }
 
 func (b *Backend) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("proxy request", "instance_id", b.instance.Id, "node", b.instance.Address, "port", b.instance.Port)
 	b.proxy.ServeHTTP(w, r)
 }
 
@@ -33,7 +31,6 @@ func newBackend(i Instance) *Backend {
 	return &Backend{
 		instance: i,
 		proxy: reverse.NewReverseProxy(url, func(pr *httputil.ProxyRequest) {
-			slog.Debug("rewriting request", "instance_id", i.Id, "gateway_id", i.Gatewayid)
 			pr.Out.Header.Set("Ravel-Instance-Id", i.Id)
 			pr.Out.Header.Set("Ravel-Gateway-Id", i.Gatewayid)
 		}),
