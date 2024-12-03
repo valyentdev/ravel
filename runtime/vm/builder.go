@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	"github.com/containerd/containerd/v2/client"
-	"github.com/valyentdev/ravel/core/images"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
+	"github.com/valyentdev/ravel/runtime/images"
 )
 
 type Builder struct {

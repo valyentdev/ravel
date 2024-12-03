@@ -13,8 +13,8 @@ import (
 type Image = images.Image
 
 type ImagePullOptions struct {
-	Ref  string                       `json:"ref"`
-	Auth *registry.RegistryAuthConfig `json:"auth,omitempty"`
+	Ref  string                    `json:"ref"`
+	Auth registry.RegistriesConfig `json:"auth,omitempty"`
 }
 
 type Runtime interface {

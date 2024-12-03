@@ -9,8 +9,9 @@ import (
 	ctrderr "github.com/containerd/errdefs"
 	"github.com/valyentdev/ravel/core/config"
 	"github.com/valyentdev/ravel/core/daemon"
-	"github.com/valyentdev/ravel/core/images"
 	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/core/registry"
+	"github.com/valyentdev/ravel/runtime/images"
 	"github.com/valyentdev/ravel/runtime/vm"
 )
 
@@ -21,11 +22,12 @@ type Runtime struct {
 	networking      *networkService
 	instanceBuilder instance.Builder
 	instances       *State
+	registries      registry.RegistriesConfig
 }
 
 var _ daemon.Runtime = (*Runtime)(nil)
 
-func New(config *config.RuntimeConfig, is instance.InstanceStore) (*Runtime, error) {
+func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, is instance.InstanceStore) (*Runtime, error) {
 	ctrd, err := initContainerd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create containerd client: %w", err)

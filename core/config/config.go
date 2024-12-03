@@ -7,6 +7,7 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/valyentdev/corroclient"
+	"github.com/valyentdev/ravel/core/registry"
 )
 
 const LOGS_DIRECTORY = "/var/log/ravel"
@@ -25,10 +26,11 @@ func (cc CorrosionConfig) Config() corroclient.Config {
 }
 
 type RavelConfig struct {
-	Daemon    DaemonConfig     `json:"daemon" toml:"daemon"`
-	Server    ServerConfig     `json:"server" toml:"server"`
-	Corrosion *CorrosionConfig `json:"corrosion" toml:"corrosion"`
-	Nats      *NatsConfig      `json:"nats" toml:"nats"`
+	Daemon     DaemonConfig              `json:"daemon" toml:"daemon"`
+	Server     ServerConfig              `json:"server" toml:"server"`
+	Corrosion  *CorrosionConfig          `json:"corrosion" toml:"corrosion"`
+	Nats       *NatsConfig               `json:"nats" toml:"nats"`
+	Registries registry.RegistriesConfig `json:"registries" toml:"registries"`
 }
 
 func ReadFile(path string) (RavelConfig, error) {

@@ -3,6 +3,7 @@ package ravel
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/config"
 	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/core/registry"
 	"github.com/valyentdev/ravel/internal/id"
 )
 
@@ -43,6 +45,15 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 		return nil, err
 	}
 
+	config := createOptions.Config
+
+	imageRef, _, err := registry.ResolveImageRef(ctx, createOptions.Config.Image, r.registries)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve image ref: %w", err)
+	}
+
+	config.Image = imageRef
+
 	ctx = context.Background() // from here we begin to use background context to avoid cancellation of the context passed in and data loss
 
 	versionId := ulid.MustNew(ulid.Now(), rand.Reader).String()
@@ -71,7 +82,7 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 		Id:        versionId,
 		MachineId: machine.Id,
 		Namespace: machine.Namespace,
-		Config:    createOptions.Config,
+		Config:    config,
 		Resources: resources,
 	}
 

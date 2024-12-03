@@ -37,7 +37,7 @@ func NewDaemon(config config.RavelConfig) (*Daemon, error) {
 		return nil, err
 	}
 
-	runtime, err := runtime.New(config.Daemon.Runtime, store)
+	runtime, err := runtime.New(config.Daemon.Runtime, config.Registries, store)
 	if err != nil {
 		return nil, err
 	}

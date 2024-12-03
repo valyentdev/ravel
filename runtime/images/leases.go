@@ -18,7 +18,7 @@ func NewImagesUsage() *ImagesUsage {
 // Lock should be held when calling this function
 func (iu *ImagesUsage) Usage() map[string]struct{} {
 	images := make(map[string]struct{})
-	for ref, _ := range iu.leases {
+	for ref := range iu.leases {
 		images[ref] = struct{}{}
 	}
 	return images

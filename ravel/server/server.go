@@ -77,7 +77,12 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 	api := humago.New(mux, humaConfig)
 	e := endpoints.New(r)
 
-	api.UseMiddleware(newAuthMiddleware([]byte(c.Server.API.BearerToken)))
+	var bearer []byte
+	if c.Server.API.BearerToken != "" {
+		bearer = []byte(c.Server.API.BearerToken)
+	}
+
+	api.UseMiddleware(newAuthMiddleware(bearer))
 
 	e.Register(api)
 

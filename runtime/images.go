@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/containerd/containerd/v2/core/images"
 	"github.com/valyentdev/ravel/core/daemon"
@@ -30,8 +29,10 @@ func (r *Runtime) PullImage(ctx context.Context, opt daemon.ImagePullOptions) (*
 	}
 	ref := opt.Ref
 	auth := opt.Auth
+	if auth == nil {
+		auth = r.registries
+	}
 
-	slog.Info("Pulling image", "ref", ref)
 	image, err := r.images.Pull(ctx, ref, auth)
 	if err != nil {
 		return nil, err
