@@ -36,7 +36,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	slog.Debug("proxy request", "instance_id", instanceId, "gateway_id", gatewayId)
 
-	instance, ok := p.instances.getInstance(gatewayId)
+	instance, ok := p.instances.getInstance(gatewayId, instanceId)
 	if !ok {
 		slog.Debug("instance not found", "instance_id", instanceId, "gateway_id", gatewayId)
 		w.WriteHeader(http.StatusBadGateway)

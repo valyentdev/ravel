@@ -83,21 +83,40 @@ func (i *instances) sync() error {
 			}
 
 			i.addInstance(ie)
+		case corroclient.EventTypeChange:
+			change := e.(*corroclient.Change)
+			ie, err := scanInstance(change.Row)
+			if err != nil {
+				slog.Error("error scanning instance", "err", err)
+				continue
+			}
+			switch change.ChangeType {
+			case corroclient.ChangeTypeInsert, corroclient.ChangeTypeUpdate:
+				i.addInstance(ie)
+			case corroclient.ChangeTypeDelete:
+				i.removeInstance(ie.GatewayId, ie.InstanceId)
+			}
+
 		}
 	}
-
 	return nil
 }
 
 func (i *instances) addInstance(ie Instance) {
 	i.mutex.Lock()
-	i.instances[ie.GatewayId] = newBackend(ie)
+	i.instances[ie.GatewayId+ie.InstanceId] = newBackend(ie)
 	i.mutex.Unlock()
 }
 
-func (i *instances) getInstance(gw string) (*Backend, bool) {
+func (i *instances) removeInstance(gw string, instanceId string) {
+	i.mutex.Lock()
+	delete(i.instances, gw+instanceId)
+	i.mutex.Unlock()
+}
+
+func (i *instances) getInstance(gw string, instanceId string) (*Backend, bool) {
 	i.mutex.RLock()
-	b, ok := i.instances[gw]
+	b, ok := i.instances[gw+instanceId]
 	i.mutex.RUnlock()
 	if !ok {
 		return nil, false
