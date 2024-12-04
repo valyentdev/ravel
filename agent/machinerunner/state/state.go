@@ -16,8 +16,8 @@ type Eventer interface {
 	ReportEvent(event api.MachineEvent)
 }
 
-func eventId() ulid.ULID {
-	return ulid.MustNew(ulid.Now(), rand.Reader)
+func eventId() string {
+	return ulid.MustNew(ulid.Now(), rand.Reader).String()
 }
 
 type Store interface {
@@ -25,7 +25,7 @@ type Store interface {
 	LoadMachineInstances() ([]structs.MachineInstance, error)
 	DeleteMachineInstance(id string) error
 	UpdateMachineInstanceState(id string, mi structs.MachineInstanceState) error
-	DeleteMachineInstanceEvent(eventId ulid.ULID) error
+	DeleteMachineInstanceEvent(eventId string) error
 	LoadMachineInstanceEvents() ([]api.MachineEvent, error)
 	PutMachineInstanceEvent(event api.MachineEvent) error
 }

@@ -134,7 +134,7 @@ func (q *Queries) PushMachineEvent(ctx context.Context, event api.MachineEvent) 
 		return err
 	}
 
-	_, err = q.db.Exec(ctx, insertEventQuery, event.Id.String(), event.Type, event.Origin, json.RawMessage(payload), event.InstanceId, event.MachineId, event.Status, event.Timestamp)
+	_, err = q.db.Exec(ctx, insertEventQuery, event.Id, event.Type, event.Origin, json.RawMessage(payload), event.InstanceId, event.MachineId, event.Status, event.Timestamp)
 	if err != nil {
 		return err
 	}

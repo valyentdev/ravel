@@ -2,8 +2,6 @@ package api
 
 import (
 	"time"
-
-	"github.com/oklog/ulid"
 )
 
 const MaxStopTimeout = 30    // in seconds
@@ -173,7 +171,7 @@ const (
 )
 
 type MachineEvent struct {
-	Id         ulid.ULID           `json:"id"`
+	Id         string              `json:"id"`
 	MachineId  string              `json:"machine_id"`
 	InstanceId string              `json:"instance_id"`
 	Status     MachineStatus       `json:"status"`

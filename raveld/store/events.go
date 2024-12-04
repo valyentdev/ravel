@@ -3,7 +3,6 @@ package store
 import (
 	"encoding/json"
 
-	"github.com/oklog/ulid"
 	"github.com/valyentdev/ravel/api"
 	"go.etcd.io/bbolt"
 )
@@ -14,7 +13,7 @@ func assertEventsBucketExists(bucket *bbolt.Bucket) {
 	}
 }
 
-func (s *Store) DeleteMachineInstanceEvent(eventId ulid.ULID) error {
+func (s *Store) DeleteMachineInstanceEvent(eventId string) error {
 	tx, err := s.db.Begin(true)
 	if err != nil {
 		return err
@@ -24,7 +23,7 @@ func (s *Store) DeleteMachineInstanceEvent(eventId ulid.ULID) error {
 	events := tx.Bucket(eventsBucket)
 	assertEventsBucketExists(events)
 
-	if err = events.Delete(eventId[:]); err != nil {
+	if err = events.Delete([]byte(eventId)); err != nil {
 		return err
 	}
 
@@ -46,7 +45,7 @@ func (s *Store) PutMachineInstanceEvent(event api.MachineEvent) error {
 		return err
 	}
 
-	if err = events.Put(event.Id[:], bytes); err != nil {
+	if err = events.Put([]byte(event.Id), bytes); err != nil {
 		return err
 	}
 

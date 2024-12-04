@@ -1,6 +1,8 @@
 module github.com/valyentdev/ravel
 
-go 1.22.5
+go 1.23.2
+
+replace github.com/valyentdev/ravel/api => ./api
 
 require (
 	github.com/cloudflare/cfssl v1.6.5
@@ -117,6 +119,7 @@ require (
 	github.com/opencontainers/runc v1.1.15 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.9.3
+	github.com/valyentdev/ravel/api v0.0.0-00010101000000-000000000000
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.4 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
