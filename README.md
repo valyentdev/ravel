@@ -7,7 +7,7 @@
     <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
   </a>
 
-  <a href="https://x.com/intent/follow?screen_name=ValyentDev">
+  <a href="https://x.com/intent/follow?screen_name=ValyentCloud">
     <img src="https://img.shields.io/twitter/follow/valyentcloud.svg?label=Follow%20@valyentcloud" alt="Follow @valyentcloud" />
   </a>
 </div>
