@@ -156,8 +156,13 @@ type ExecCmdRequest struct {
 }
 
 func (e *Endpoints) machineExec(ctx context.Context, req *ExecCmdRequest) (*api.ExecResult, error) {
-	slog.Info("Executing command", "fleet", req.Fleet, "machine", req.MachineId, "command", req.Body.Cmd)
-	return e.ravel.MachineExec(ctx, req.Namespace, req.Fleet, req.MachineId, req.Body)
+	res, err := e.ravel.MachineExec(ctx, req.Namespace, req.Fleet, req.MachineId, req.Body)
+	if err != nil {
+		e.log("Failed to execute command", err)
+		return nil, err
+	}
+
+	return res, nil
 }
 
 type GetMachineLogsRequest struct {
