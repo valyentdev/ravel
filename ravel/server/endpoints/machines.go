@@ -150,6 +150,21 @@ func (e *Endpoints) stopMachine(ctx context.Context, req *StopMachineRequest) (*
 	return nil, nil
 }
 
+type ExecCmdRequest struct {
+	MachineResolver
+	Body *api.ExecOptions
+}
+
+func (e *Endpoints) machineExec(ctx context.Context, req *ExecCmdRequest) (*api.ExecResult, error) {
+	res, err := e.ravel.MachineExec(ctx, req.Namespace, req.Fleet, req.MachineId, req.Body)
+	if err != nil {
+		e.log("Failed to execute command", err)
+		return nil, err
+	}
+
+	return res, nil
+}
+
 type GetMachineLogsRequest struct {
 	MachineResolver
 	Follow bool `query:"follow"`

@@ -98,6 +98,15 @@ func (o *Orchestrator) WaitMachine(
 
 }
 
+func (o *Orchestrator) MachineExec(ctx context.Context, machine cluster.Machine, execOpts *api.ExecOptions) (*api.ExecResult, error) {
+	agentClient, err := o.getAgentClient(machine.Node)
+	if err != nil {
+		return nil, err
+	}
+
+	return agentClient.MachineExec(ctx, machine.Id, execOpts.Cmd, execOpts.GetTimeout())
+}
+
 func (o *Orchestrator) GetMachineLogsRaw(ctx context.Context, machine cluster.Machine, follow bool) (io.ReadCloser, error) {
 	agentClient, err := o.getAgentClient(machine.Node)
 	if err != nil {

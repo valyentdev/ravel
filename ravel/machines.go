@@ -157,6 +157,15 @@ func (r *Ravel) StopMachine(ctx context.Context, ns, fleet, machineId string, st
 	return r.o.StopMachineInstance(ctx, machine, stopConfig)
 }
 
+func (r *Ravel) MachineExec(ctx context.Context, ns, fleet, machineId string, execOpts *api.ExecOptions) (*api.ExecResult, error) {
+	machine, err := r.getMachine(ctx, ns, fleet, machineId, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.o.MachineExec(ctx, machine, execOpts)
+}
+
 func (r *Ravel) ListMachines(ctx context.Context, ns, fleet string, includeDestroyed bool) ([]api.Machine, error) {
 	f, err := r.GetFleet(ctx, ns, fleet)
 	if err != nil {

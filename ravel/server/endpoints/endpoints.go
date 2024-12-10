@@ -151,6 +151,14 @@ func (e *Endpoints) Register(api huma.API) {
 	}, e.stopMachine)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "machineExec",
+		Summary:     "Execute a command inside a machine",
+		Path:        "/fleets/{fleet}/machines/{machine_id}/exec",
+		Method:      http.MethodPost,
+		Tags:        []string{"machines"},
+	}, e.machineExec)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "listMachineVersions",
 		Summary:     "List machine versions",
 		Path:        "/fleets/{fleet}/machines/{machine_id}/versions",
