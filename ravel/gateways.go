@@ -27,11 +27,7 @@ func (r *Ravel) ListGateways(ctx context.Context, namespace string) ([]Gateway, 
 	return r.state.ListGateways(ctx, namespace)
 }
 
-type CreateGatewayOptions struct {
-	Name       string `json:"name"`
-	Fleet      string `json:"fleet"`
-	TargetPort int    `json:"target_port"`
-}
+type CreateGatewayOptions = api.CreateGatewayPayload
 
 func (r *Ravel) CreateGateway(ctx context.Context, namespace string, options CreateGatewayOptions) (Gateway, error) {
 	err := validateObjectName(options.Name)

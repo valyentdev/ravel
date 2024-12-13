@@ -122,6 +122,12 @@ const (
 	MachineDestroyed     MachineEventType = "machine.destroyed"
 )
 
+type CreateMachinePayload struct {
+	Region    string        `json:"region"`
+	Config    MachineConfig `json:"config"`
+	SkipStart bool          `json:"skip_start"`
+}
+
 type MachineStartEventPayload struct {
 	IsRestart bool `json:"is_restart"`
 }
@@ -179,4 +185,31 @@ type MachineEvent struct {
 	Origin     Origin              `json:"origin"`
 	Payload    MachineEventPayload `json:"payload"`
 	Timestamp  time.Time           `json:"timestamp"`
+}
+
+type Resources struct {
+	CpusMHz  int `json:"cpus_mhz" toml:"cpus_mhz"`   // in MHz
+	MemoryMB int `json:"memory_mb" toml:"memory_mb"` // in MB
+}
+
+func (r *Resources) Sub(other Resources) Resources {
+	new := Resources{
+		CpusMHz:  r.CpusMHz - other.CpusMHz,
+		MemoryMB: r.MemoryMB - other.MemoryMB,
+	}
+	return new
+}
+
+// Add returns a new Resources object which is the sum of the resources.
+func (r *Resources) Add(other Resources) Resources {
+	new := Resources{
+		CpusMHz:  r.CpusMHz + other.CpusMHz,
+		MemoryMB: r.MemoryMB + other.MemoryMB,
+	}
+	return new
+}
+
+// GT returns true if the resources are greater than the other resources.
+func (r *Resources) GT(other Resources) bool {
+	return r.CpusMHz > other.CpusMHz || r.MemoryMB > other.MemoryMB
 }

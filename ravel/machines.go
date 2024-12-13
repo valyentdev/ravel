@@ -35,13 +35,7 @@ func getResources(m config.MachineResourcesTemplates, vcpus int, memory int) (ap
 	return api.Resources{}, errdefs.NewInvalidArgument("Invalid vcpus and memory config")
 }
 
-type CreateMachineOptions struct {
-	Region    string            `json:"region"`
-	Config    api.MachineConfig `json:"config"`
-	SkipStart bool              `json:"skip_start"`
-}
-
-func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet string, createOptions CreateMachineOptions) (*api.Machine, error) {
+func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet string, createOptions api.CreateMachinePayload) (*api.Machine, error) {
 	f, err := r.GetFleet(ctx, namespace, fleet)
 	if err != nil {
 		return nil, err

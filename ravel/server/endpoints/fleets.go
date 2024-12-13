@@ -6,9 +6,7 @@ import (
 	"github.com/valyentdev/ravel/api"
 )
 
-type CreateFleetBody struct {
-	Name string `json:"name"`
-}
+type CreateFleetBody = api.CreateFleetPayload
 
 type CreateFleetRequest struct {
 	NSResolver
