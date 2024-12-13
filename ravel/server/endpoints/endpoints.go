@@ -1,12 +1,9 @@
 package endpoints
 
 import (
-	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/ravel"
 )
 
@@ -14,66 +11,21 @@ type Endpoints struct {
 	ravel *ravel.Ravel
 }
 
-func (e *Endpoints) log(msg string, err error) {
-	var rerr *errdefs.RavelError
-	if errors.As(err, &rerr) {
-		if errdefs.IsUnknown(err) || errdefs.IsInternal(err) {
-			slog.Error(msg, "error", err)
-		}
-	} else {
-		slog.Error(msg, "error", err)
-	}
-}
-
 func New(r *ravel.Ravel) *Endpoints {
 	return &Endpoints{ravel: r}
 }
 
 func (e *Endpoints) Register(api huma.API) {
-	huma.Register(api, huma.Operation{
-		OperationID: "listNodes",
-		Path:        "/nodes",
-		Method:      http.MethodGet,
-		Tags:        []string{"nodes"},
-		Summary:     "List nodes",
-	}, e.listNodes)
+	e.registerFleetsEndpoints(api)
+	e.registerMachinesEndpoints(api)
+	e.registerGatewaysEndpoints(api)
+}
 
-	huma.Register(api, huma.Operation{
-		OperationID: "createNamespace",
-		Path:        "/namespaces",
-		Method:      "POST",
-		Summary:     "Create a new namespace.",
-		Tags:        []string{"namespaces"},
-	}, e.createNamespace)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "listNamespaces",
-		Path:        "/namespaces",
-		Method:      http.MethodGet,
-		Tags:        []string{"namespaces"},
-		Summary:     "List namespaces",
-	}, e.listNamespaces)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "getNamespace",
-		Path:        "/namespaces/{namespace}",
-		Method:      http.MethodGet,
-		Tags:        []string{"namespaces"},
-		Summary:     "Get a namespace",
-	}, e.getNamespace)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "destroyNamespace",
-		Path:        "/namespaces/{namespace}",
-		Method:      http.MethodDelete,
-		Tags:        []string{"namespaces"},
-		Summary:     "Delete a namespace",
-	}, e.destroyNamespace)
-
+func (e *Endpoints) registerFleetsEndpoints(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "createFleet",
 		Summary:     "Create a fleet",
-		Path:        "/fleets",
+		Path:        "/ns/{namespace}/fleets",
 		Method:      http.MethodPost,
 		Tags:        []string{"fleets"},
 	}, e.createFleet)
@@ -81,7 +33,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "listFleets",
 		Summary:     "List fleets",
-		Path:        "/fleets",
+		Path:        "/ns/{namespace}/fleets",
 		Method:      http.MethodGet,
 		Tags:        []string{"fleets"},
 	}, e.listFleets)
@@ -89,7 +41,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "getFleet",
 		Summary:     "Get a fleet",
-		Path:        "/fleets/{fleet}",
+		Path:        "/ns/{namespace}/fleets/{fleet}",
 		Method:      http.MethodGet,
 		Tags:        []string{"fleets"},
 	}, e.getFleet)
@@ -97,23 +49,25 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "destroyFleet",
 		Summary:     "Destroy a fleet",
-		Path:        "/fleets/{fleet}",
+		Path:        "/ns/{namespace}/fleets/{fleet}",
 		Method:      http.MethodDelete,
 		Tags:        []string{"fleets"},
 	}, e.destroyFleet)
+}
 
+func (e *Endpoints) registerMachinesEndpoints(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "createMachine",
 		Summary:     "Create a machine",
 		Method:      http.MethodPost,
-		Path:        "/fleets/{fleet}/machines",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines",
 		Tags:        []string{"machines"},
 	}, e.createMachine)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "destroyMachine",
 		Summary:     "Destroy a machine",
-		Path:        "/fleets/{fleet}/machines/{machine_id}",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}",
 		Method:      http.MethodDelete,
 		Tags:        []string{"machines"},
 	}, e.destroyMachine)
@@ -121,7 +75,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "listMachines",
 		Summary:     "List machines",
-		Path:        "/fleets/{fleet}/machines",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines",
 		Method:      http.MethodGet,
 		Tags:        []string{"machines"},
 	}, e.listMachines)
@@ -129,7 +83,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "getMachine",
 		Summary:     "Get a machine",
-		Path:        "/fleets/{fleet}/machines/{machine_id}",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}",
 		Method:      http.MethodGet,
 		Tags:        []string{"machines"},
 	}, e.getMachine)
@@ -137,7 +91,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "startMachine",
 		Summary:     "Start a machine",
-		Path:        "/fleets/{fleet}/machines/{machine_id}/start",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}/start",
 		Method:      http.MethodPost,
 		Tags:        []string{"machines"},
 	}, e.startMachine)
@@ -145,7 +99,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "stopMachine",
 		Summary:     "Stop a machine",
-		Path:        "/fleets/{fleet}/machines/{machine_id}/stop",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}/stop",
 		Method:      http.MethodPost,
 		Tags:        []string{"machines"},
 	}, e.stopMachine)
@@ -153,7 +107,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "machineExec",
 		Summary:     "Execute a command inside a machine",
-		Path:        "/fleets/{fleet}/machines/{machine_id}/exec",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}/exec",
 		Method:      http.MethodPost,
 		Tags:        []string{"machines"},
 	}, e.machineExec)
@@ -161,7 +115,7 @@ func (e *Endpoints) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "listMachineVersions",
 		Summary:     "List machine versions",
-		Path:        "/fleets/{fleet}/machines/{machine_id}/versions",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}/versions",
 		Method:      http.MethodGet,
 		Tags:        []string{"machines"},
 	}, e.listMachineVersions)
@@ -170,7 +124,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "listMachineEvents",
 		Summary:     "List machine events",
 		Method:      http.MethodGet,
-		Path:        "/fleets/{fleet}/machines/{machine_id}/events",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}/events",
 		Tags:        []string{"machines"},
 	}, e.listMachineEvents)
 
@@ -178,7 +132,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "getMachineLogs",
 		Summary:     "Get machine logs",
 		Method:      http.MethodGet,
-		Path:        "/fleets/{fleet}/machines/{machine_id}/logs",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}/logs",
 		Tags:        []string{"machines"},
 	}, e.getMachineLogs)
 
@@ -186,15 +140,17 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "waitMachineStatus",
 		Summary:     "Wait for a machine to reach a given status",
 		Method:      http.MethodGet,
-		Path:        "/fleets/{fleet}/machines/{machine_id}/wait",
+		Path:        "/ns/{namespace}/fleets/{fleet}/machines/{machine_id}/wait",
 		Tags:        []string{"machines"},
 	}, e.waitMachineStatus)
+}
 
+func (e *Endpoints) registerGatewaysEndpoints(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "createGateway",
 		Summary:     "Create a gateway",
 		Method:      http.MethodPost,
-		Path:        "/gateways",
+		Path:        "/ns/{namespace}/gateways",
 		Tags:        []string{"gateways"},
 	}, e.createGateway)
 
@@ -202,7 +158,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "listGateways",
 		Summary:     "List gateways",
 		Method:      http.MethodGet,
-		Path:        "/gateways",
+		Path:        "/ns/{namespace}/gateways",
 		Tags:        []string{"gateways"},
 	}, e.listGateways)
 
@@ -210,7 +166,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "getGateway",
 		Summary:     "Get a gateway",
 		Method:      http.MethodGet,
-		Path:        "/gateways/{gateway}",
+		Path:        "/ns/{namespace}/gateways/{gateway}",
 		Tags:        []string{"gateways"},
 	}, e.getGateway)
 
@@ -218,7 +174,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "destroyGateway",
 		Summary:     "Destroy a gateway",
 		Method:      http.MethodDelete,
-		Path:        "/gateways/{gateway}",
+		Path:        "/ns/{namespace}/gateways/{gateway}",
 		Tags:        []string{"gateways"},
 	}, e.destroyGateway)
 

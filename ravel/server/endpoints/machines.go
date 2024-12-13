@@ -24,7 +24,6 @@ type CreateMachineResponse struct {
 func (s *Endpoints) createMachine(ctx context.Context, req *CreateMachineRequest) (*CreateMachineResponse, error) {
 	m, err := s.ravel.CreateMachine(ctx, req.Namespace, req.Fleet, *req.Body)
 	if err != nil {
-		s.log("Failed to create machine", err)
 		return nil, err
 	}
 
@@ -45,7 +44,6 @@ type DestroyMachineResponse struct {
 func (e *Endpoints) destroyMachine(ctx context.Context, req *DestroyMachineRequest) (*DestroyMachineResponse, error) {
 	err := e.ravel.DestroyMachine(ctx, req.Namespace, req.Fleet, req.MachineId, req.Force)
 	if err != nil {
-		e.log("Failed to destroy machine", err)
 		return nil, err
 	}
 
@@ -64,7 +62,6 @@ type ListMachinesResponse struct {
 func (e *Endpoints) listMachines(ctx context.Context, req *ListMachinesRequest) (*ListMachinesResponse, error) {
 	machines, err := e.ravel.ListMachines(ctx, req.Namespace, req.Fleet, req.IncludeDestroyed)
 	if err != nil {
-		e.log("Failed to list machines", err)
 		return nil, err
 	}
 
@@ -84,7 +81,6 @@ type GetMachineResponse struct {
 func (e *Endpoints) getMachine(ctx context.Context, req *GetMachineRequest) (*GetMachineResponse, error) {
 	machine, err := e.ravel.GetMachine(ctx, req.Namespace, req.Fleet, req.MachineId)
 	if err != nil {
-		e.log("Failed to get machine", err)
 		return nil, err
 	}
 
@@ -104,7 +100,6 @@ type ListMachineVersionsResponse struct {
 func (e *Endpoints) listMachineVersions(ctx context.Context, req *ListMachineVersionsRequest) (*ListMachineVersionsResponse, error) {
 	mvs, err := e.ravel.ListMachineVersions(ctx, req.Namespace, req.Fleet, req.MachineId)
 	if err != nil {
-		e.log("Failed to list machine versions", err)
 		return nil, err
 	}
 
@@ -123,7 +118,6 @@ type StartMachineResponse struct {
 func (e *Endpoints) startMachine(ctx context.Context, req *StartMachineRequest) (*StartMachineResponse, error) {
 	err := e.ravel.StartMachine(ctx, req.Namespace, req.Fleet, req.MachineId)
 	if err != nil {
-		e.log("Failed to start machine", err)
 		return nil, err
 	}
 
@@ -143,7 +137,6 @@ func (e *Endpoints) stopMachine(ctx context.Context, req *StopMachineRequest) (*
 	slog.Info("Stopping machine", "machine_id", req.Body)
 	err := e.ravel.StopMachine(ctx, req.Namespace, req.Fleet, req.MachineId, req.Body)
 	if err != nil {
-		e.log("Failed to stop machine", err)
 		return nil, err
 	}
 
@@ -158,7 +151,6 @@ type ExecCmdRequest struct {
 func (e *Endpoints) machineExec(ctx context.Context, req *ExecCmdRequest) (*api.ExecResult, error) {
 	res, err := e.ravel.MachineExec(ctx, req.Namespace, req.Fleet, req.MachineId, req.Body)
 	if err != nil {
-		e.log("Failed to execute command", err)
 		return nil, err
 	}
 
@@ -177,7 +169,6 @@ type GetMachineLogsResponse struct {
 func (e *Endpoints) getMachineLogs(ctx context.Context, req *GetMachineLogsRequest) (*huma.StreamResponse, error) {
 	logs, err := e.ravel.GetMachineLogsRaw(ctx, req.Namespace, req.Fleet, req.MachineId, req.Follow)
 	if err != nil {
-		e.log("Failed to get machine logs", err)
 		return nil, err
 	}
 
@@ -215,7 +206,6 @@ type ListMachineEventsResponse struct {
 func (e *Endpoints) listMachineEvents(ctx context.Context, req *ListMachineEventsRequest) (*ListMachineEventsResponse, error) {
 	events, err := e.ravel.ListMachineEvents(ctx, req.Namespace, req.Fleet, req.MachineId)
 	if err != nil {
-		e.log("Failed to list machine events", err)
 		return nil, err
 	}
 
@@ -246,7 +236,6 @@ func (e *Endpoints) waitMachineStatus(ctx context.Context, req *WaitMachineStatu
 
 	err := e.ravel.WaitMachineStatus(ctx, req.Namespace, req.Fleet, req.MachineId, req.Status, opts...)
 	if err != nil {
-		e.log("Failed to wait for machine status", err)
 		return nil, err
 	}
 

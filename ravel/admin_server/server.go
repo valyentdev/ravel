@@ -136,6 +136,11 @@ func (s *AdminServer) Run(runCtx context.Context) {
 
 	slog.Info("Shutting down http server")
 	s.server.Shutdown(ctxTimeout)
+
+	err := s.ravel.Stop()
+	if err != nil {
+		slog.Error("Failed to stop ravel", "error", err)
+	}
 }
 
 func getHumaConfig() huma.Config {
