@@ -11,7 +11,7 @@ import (
 	"github.com/valyentdev/ravel/ravel"
 )
 
-type CreateMachineBody = ravel.CreateMachineOptions
+type CreateMachineBody = api.CreateMachinePayload
 type CreateMachineRequest struct {
 	FleetResolver
 	Body *CreateMachineBody
