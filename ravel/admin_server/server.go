@@ -19,50 +19,19 @@ import (
 )
 
 const (
-	DEFAULT_SERVER_ADDR = ":3000"
+	DEFAULT_ADMIN_SERVER_ADDR = ":3001"
 )
 
-type Server struct {
+// AdminServer represents an administration HTTP API server.
+type AdminServer struct {
 	config *config.ServerAPIConfig
 	bearer []byte
 	ravel  *ravel.Ravel
 	server *http.Server
 }
 
-func listen(c *config.ServerAPIConfig) (net.Listener, error) {
-	address := c.Address
-	if address == "" {
-		address = DEFAULT_SERVER_ADDR
-	}
-
-	if c.TLS == nil {
-		return net.Listen("tcp", address)
-	}
-
-	cert, err := c.TLS.LoadCert()
-	if err != nil {
-		return nil, err
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
-
-	if !c.TLS.SkipVerifyClient {
-		ca, err := c.TLS.LoadCA()
-		if err != nil {
-			return nil, err
-		}
-
-		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-		tlsConfig.ClientCAs = ca
-		tlsConfig.VerifyConnection = mtls.VerifyServerAPIConnection
-	}
-
-	return tls.Listen("tcp", address, tlsConfig)
-}
-
-func NewServer(c config.RavelConfig) (*Server, error) {
+// NewAdminServer creates a new instance of AdminServer.
+func NewAdminServer(c config.RavelConfig) (*AdminServer, error) {
 	r, err := ravel.New(c)
 	if err != nil {
 		return nil, err
@@ -70,7 +39,7 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 
 	address := c.Server.API.Address
 	if address == "" {
-		address = DEFAULT_SERVER_ADDR
+		address = DEFAULT_ADMIN_SERVER_ADDR
 	}
 
 	errdefs.OverrideHumaErrorBuilder()
@@ -95,7 +64,7 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 		Handler: mux,
 	}
 
-	return &Server{
+	return &AdminServer{
 		ravel:  r,
 		server: server,
 		bearer: []byte(c.Server.API.BearerToken),
@@ -103,10 +72,43 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Start() error {
-	slog.Info("Starting http server", "address", s.server.Addr)
+func (srv *AdminServer) listen() (net.Listener, error) {
+	address := srv.config.Address
+	if address == "" {
+		address = DEFAULT_ADMIN_SERVER_ADDR
+	}
 
-	ln, err := listen(s.config)
+	if srv.config.TLS == nil {
+		return net.Listen("tcp", address)
+	}
+
+	cert, err := srv.config.TLS.LoadCert()
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+
+	if !srv.config.TLS.SkipVerifyClient {
+		ca, err := srv.config.TLS.LoadCA()
+		if err != nil {
+			return nil, err
+		}
+
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		tlsConfig.ClientCAs = ca
+		tlsConfig.VerifyConnection = mtls.VerifyServerAPIConnection
+	}
+
+	return tls.Listen("tcp", address, tlsConfig)
+}
+
+func (srv *AdminServer) Start() error {
+	slog.Info("Starting http server", "address", srv.server.Addr)
+
+	ln, err := srv.listen()
 	if err != nil {
 		return err
 	}
@@ -116,9 +118,9 @@ func (s *Server) Start() error {
 		}
 	}()
 
-	go s.server.Serve(ln)
+	go srv.server.Serve(ln)
 
-	err = s.ravel.Start()
+	err = srv.ravel.Start()
 	if err != nil {
 		slog.Error("Failed to start ravel", "error", err)
 		return err
@@ -127,18 +129,13 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) Run(runCtx context.Context) {
+func (s *AdminServer) Run(runCtx context.Context) {
 	<-runCtx.Done()
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	slog.Info("Shutting down http server")
 	s.server.Shutdown(ctxTimeout)
-
-	err := s.ravel.Stop()
-	if err != nil {
-		slog.Error("Failed to stop ravel", "error", err)
-	}
 }
 
 func getHumaConfig() huma.Config {
@@ -146,7 +143,7 @@ func getHumaConfig() huma.Config {
 		OpenAPI: &huma.OpenAPI{
 			OpenAPI: "3.1.0",
 			Info: &huma.Info{
-				Title:   "Ravel API",
+				Title:   "Ravel Administration API",
 				Version: "1.0.0",
 			},
 		},
