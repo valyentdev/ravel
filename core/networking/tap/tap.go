@@ -6,8 +6,10 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func createTap(name string) error {
+func createTap(name string, uid, gid uint32) error {
 	tap := &netlink.Tuntap{
+		Owner: uid,
+		Group: gid,
 		LinkAttrs: netlink.LinkAttrs{
 			Name: name,
 		},

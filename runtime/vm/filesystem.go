@@ -34,11 +34,6 @@ func (b *Builder) prepareRootFS(ctx context.Context, id string, image client.Ima
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare rootfs for instance %q: %w", id, err)
 	}
-	defer func() {
-		if err != nil {
-			b.removeRootFS(id)
-		}
-	}()
 
 	return rootfs, nil
 }
@@ -63,7 +58,19 @@ func (b *Builder) prepareContainerRootFS(ctx context.Context, id string, image c
 	slog.Debug("preparing snapshot", "id", id, "parent", parent)
 	mounts, err := ss.Prepare(context.Background(), rootFSName(id), parent)
 	if err != nil {
-		return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)
+		if !errdefs.IsAlreadyExists(err) {
+			return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)
+
+		}
+
+		err = b.removeRootFS(id)
+		if err != nil {
+			return "", fmt.Errorf("failed to remove existing snapshot %q: %w", id, err)
+		}
+		mounts, err = ss.Prepare(context.Background(), rootFSName(id), parent)
+		if err != nil {
+			return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)
+		}
 	}
 
 	if len(mounts) == 0 {

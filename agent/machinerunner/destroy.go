@@ -18,10 +18,7 @@ func (m *MachineRunner) Destroy(ctx context.Context, force bool) error {
 	status := m.state.Status()
 
 	if status == api.MachineStatusStopped {
-		if err := m.state.PushDestroyEvent(api.OriginUser, force, "requested by user"); err != nil {
-			return err
-		}
-		go m.destroyImpl(ctx)
+		go m.destroyImpl(ctx, force, "requested by user")
 		return nil
 	}
 
@@ -37,12 +34,15 @@ func (m *MachineRunner) Destroy(ctx context.Context, force bool) error {
 		return err
 	}
 
-	go m.destroyImpl(ctx)
+	go m.destroyImpl(ctx, force, "requested by user")
 	return nil
 
 }
 
-func (m *MachineRunner) destroyImpl(ctx context.Context) error {
+func (m *MachineRunner) destroyImpl(ctx context.Context, force bool, reason string) error {
+	if err := m.state.PushDestroyEvent(api.OriginUser, force, reason); err != nil {
+		return err
+	}
 	err := m.runtime.DestroyInstance(ctx, m.state.InstanceId())
 	if err != nil && !errdefs.IsNotFound(err) {
 		slog.Error("failed to destroy instance", "instance", m.state.InstanceId(), "error", err)

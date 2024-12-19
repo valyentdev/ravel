@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"log/slog"
 	"sync"
 
 	"github.com/valyentdev/ravel/core/errdefs"
@@ -47,7 +46,6 @@ func (s *State) Delete(id string) {
 }
 
 func (s *State) GetInstance(id string) (*instancerunner.InstanceRunner, error) {
-	slog.Debug("getting instance", "id", id)
 	s.mutex.RLock()
 	instance, ok := s.instances[id]
 	s.mutex.RUnlock()

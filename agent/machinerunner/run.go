@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 )
 
@@ -21,6 +22,10 @@ func (m *MachineRunner) Run() {
 	ctx := context.Background()
 	updates, err := m.runtime.WatchInstanceState(ctx, m.state.InstanceId())
 	if err != nil {
+		if errdefs.IsNotFound(err) {
+			m.destroyImpl(ctx, true, "instance not found")
+		}
+
 		slog.Error("failed to watch instance state", "machine_id", m.state.Id(), "error", err)
 		return
 	}
@@ -52,7 +57,7 @@ func (m *MachineRunner) recover(ctx context.Context) bool {
 		return false
 
 	case api.MachineStatusDestroying:
-		err := m.destroyImpl(ctx)
+		err := m.destroyImpl(ctx, true, "recovering from destroy")
 		if err != nil {
 			slog.Error("failed to destroy machine", "machine_id", m.state.Id(), "error", err)
 		}

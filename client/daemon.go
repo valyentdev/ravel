@@ -34,7 +34,7 @@ func NewDaemonClient(socket string) *DaemonClient {
 
 func (a *DaemonClient) CreateInstance(ctx context.Context, options daemon.InstanceOptions) (*instance.Instance, error) {
 	var instance instance.Instance
-	err := a.client.Post(ctx, "/instances", options, httpclient.WithJSONBody(&options))
+	err := a.client.Post(ctx, "/instances", nil, httpclient.WithJSONBody(&options))
 	if err != nil {
 		return nil, err
 	}

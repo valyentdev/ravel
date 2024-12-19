@@ -1,7 +1,8 @@
 package config
 
 type RuntimeConfig struct {
-	InitBinary  string `json:"init_binary" toml:"init_binary"`
-	LinuxKernel string `json:"linux_kernel" toml:"linux_kernel"`
-	Snapshotter string `json:"snapshotter" toml:"snapshotter"`
+	CloudHypervisorBinary string `json:"cloud_hypervisor_binary" toml:"cloud_hypervisor_binary"`
+	JailerBinary          string `json:"jailer_binary" toml:"jailer_binary"`
+	InitBinary            string `json:"init_binary" toml:"init_binary"`
+	LinuxKernel           string `json:"linux_kernel" toml:"linux_kernel"`
 }

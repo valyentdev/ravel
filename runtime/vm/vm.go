@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os/exec"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	vminit "github.com/valyentdev/ravel-init/client"
@@ -22,13 +22,13 @@ const (
 )
 
 type vm struct {
+	cmd                    *exec.Cmd
 	successFullyShutdowned atomic.Bool
 	id                     string
 	runResult              *RunResult
 	vmConfig               cloudhypervisor.VmConfig
 	vmm                    *cloudhypervisor.VMM
 	vsock                  string
-	console                string
 	stopRequested          bool
 	waitChan               chan struct{}
 }
@@ -39,31 +39,27 @@ func (vm *vm) Id() string {
 	return vm.id
 }
 
-func newVM(id string, vmConfig cloudhypervisor.VmConfig, socket, vsock string) (*vm, error) {
-	vmm, err := cloudhypervisor.NewVMM(
-		socket,
-		cloudhypervisor.WithSysProcAttr(&syscall.SysProcAttr{
-			Setsid: true,
-		}),
-	)
+func newVM(id string, cmd *exec.Cmd, vmConfig cloudhypervisor.VmConfig) (*vm, error) {
+	slog.Debug("creating new VM", "id", id, "socket", getAPISocketPath(id))
+	vmm, err := cloudhypervisor.NewVMMClient(getAPISocketPath(id))
 	if err != nil {
 		return nil, err
 	}
 
 	return &vm{
 		id:       id,
+		cmd:      cmd,
 		vmConfig: vmConfig,
 		vmm:      vmm,
 		waitChan: make(chan struct{}),
-		vsock:    vsock,
+		vsock:    getVsockPath(id),
 	}, nil
 }
 
-func (vm *vm) Start(ctx context.Context) (instance.Handle, error) {
-	h := instance.Handle{}
-	err := vm.vmm.StartVMM(ctx)
+func (vm *vm) Start(ctx context.Context) error {
+	err := vm.cmd.Start()
 	if err != nil {
-		return h, fmt.Errorf("failed to start vmm for machine %q: %w", vm.Id(), err)
+		return fmt.Errorf("failed to start vmm for machine %q: %w", vm.Id(), err)
 	}
 	defer func() {
 		if err != nil {
@@ -73,31 +69,22 @@ func (vm *vm) Start(ctx context.Context) (instance.Handle, error) {
 
 	err = vm.vmm.WaitReady(ctx)
 	if err != nil {
-		return h, fmt.Errorf("failed to wait for vmm to be ready for machine %q: %w", vm.Id(), err)
+		return fmt.Errorf("failed to wait for vmm to be ready for machine %q: %w", vm.Id(), err)
 	}
 
 	err = vm.vmm.CreateVM(ctx, vm.vmConfig)
 	if err != nil {
-		return h, fmt.Errorf("failed to create vm for machine %q: %w", vm.Id(), err)
+		return fmt.Errorf("failed to create vm for machine %q: %w", vm.Id(), err)
 	}
 
 	err = vm.vmm.BootVM(ctx)
 	if err != nil {
-		return h, fmt.Errorf("failed to boot vm for machine %q: %w", vm.Id(), err)
+		return fmt.Errorf("failed to boot vm for machine %q: %w", vm.Id(), err)
 	}
-
-	vminfo, err := vm.vmm.VMInfo(ctx)
-	if err != nil {
-		return h, fmt.Errorf("failed to get vm info for machine %q: %w", vm.Id(), err)
-	}
-
-	vm.console = *vminfo.Config.Console.File
-
-	h.Console = vm.console
 
 	go vm.run()
 
-	return h, nil
+	return nil
 
 }
 
@@ -254,31 +241,24 @@ func (vm *vm) WaitExit(ctx context.Context) (exited bool) {
 	}
 }
 
-func (vm *vm) recover() (instance.Handle, bool) {
-	h := instance.Handle{}
+func (vm *vm) recover() bool {
 	ok := false
 	state := vm.determinateState()
 
 	if !state.isVMMRunning {
-		return h, ok
+		return ok
 	}
 	if !state.isVMRunning {
 		err := vm.Shutdown(context.Background())
 		if err != nil {
 			slog.Error("failed to shutdown VMM", "err", err)
 		}
-		return h, ok
+		return ok
 	}
-
-	serial := state.vminfo.Config.Console.File
-
-	vm.console = *serial
 
 	go vm.run()
 
-	h.Console = vm.console
-
-	return h, true
+	return true
 }
 
 type internalState struct {

@@ -2,6 +2,7 @@ package instancerunner
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -16,9 +17,7 @@ type vmRunner struct {
 	networking instance.NetworkingService
 	vmBuilder  instance.Builder
 	logger     *logging.InstanceLogger
-
-	i instance.Instance
-
+	i          instance.Instance
 	hasStarted atomic.Bool
 	vm         instance.VM
 	waitCh     chan struct{}
@@ -50,14 +49,18 @@ func newVMRunner(
 }
 
 func (r *vmRunner) Recover() error {
-	vm, h, err := r.vmBuilder.RecoverInstanceVM(context.Background(), &r.i)
+	vm, err := r.vmBuilder.RecoverInstanceVM(context.Background(), &r.i)
 	if err != nil {
 		slog.Error("failed to recover vm", "error", err)
+		cerr := r.vmBuilder.CleanupInstanceVM(context.Background(), &r.i)
+		if cerr != nil {
+			slog.Error("failed to cleanup vm", "error", cerr)
+		}
 		return err
 	}
 
 	r.vm = vm
-	go r.run(h)
+	go r.run()
 	r.hasStarted.Store(true)
 
 	return nil
@@ -100,12 +103,12 @@ func (r *vmRunner) Start() error {
 		return err
 	}
 	defer func() {
-		if err != nil {
-			err := r.networking.CleanupInstanceNetwork(r.i.Id, r.i.Network)
-			if err != nil {
-				slog.Error("failed to cleanup instance network", "error", err)
-			}
-		}
+		// if err != nil {
+		// 	err := r.networking.CleanupInstanceNetwork(r.i.Id, r.i.Network)
+		// 	if err != nil {
+		// 		slog.Error("failed to cleanup instance network", "error", err)
+		// 	}
+		// }
 	}()
 
 	slog.Debug("building vm")
@@ -126,30 +129,34 @@ func (r *vmRunner) Start() error {
 	r.vm = vm
 
 	slog.Debug("starting vm")
-	h, err := vm.Start(ctx)
+	err = vm.Start(ctx)
 	if err != nil {
 		return err
 	}
 
 	r.hasStarted.Store(true)
 
-	go r.run(h)
+	go r.run()
 	return nil
 }
 
-func (r *vmRunner) run(h instance.Handle) {
-	if h.Console != "" {
-		err := r.logger.Start(h.Console)
-		if err != nil {
-			slog.Error("failed to start logger", "error", err)
-		}
+func getLogFile(id string) string {
+	return fmt.Sprintf("/var/lib/ravel/instances/%s/vm.logs", id)
+}
 
-		defer r.logger.Stop()
+func (r *vmRunner) run() {
+	err := r.logger.Start(getLogFile(r.i.Id))
+	if err != nil {
+		slog.Error("failed to start logger", "error", err)
+		err = nil // ignore we must continue
 	}
+
+	defer r.logger.Stop()
+
 	result := r.vm.Run()
 	r.exitResult = result
 
-	err := r.vmBuilder.CleanupInstanceVM(context.Background(), &r.i)
+	err = r.vmBuilder.CleanupInstanceVM(context.Background(), &r.i)
 	if err != nil {
 		slog.Error("failed to cleanup vm", "error", err)
 	}

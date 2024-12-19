@@ -83,16 +83,7 @@ func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptio
 		CreatedAt: time.Now(),
 	}
 
-	if err := r.instanceBuilder.PrepareInstance(ctx, &i, image); err != nil {
-		return nil, fmt.Errorf("failed to prepare instance: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			r.instanceBuilder.CleanupInstance(ctx, &i)
-		}
-	}()
-
-	if err := r.instancesStore.PutInstance(i); err != nil {
+	if err = r.instancesStore.PutInstance(i); err != nil {
 		return nil, fmt.Errorf("failed to save instance: %w", err)
 	}
 

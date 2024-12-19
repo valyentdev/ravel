@@ -6,75 +6,29 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os/exec"
-	"syscall"
 	"time"
 )
 
 var ErrVMMUnavailable = errors.New("vmm is not available")
 
 type VMM struct {
-	options    *vmmOpts
-	client     *ClientWithResponses
-	httpClient *http.Client
+	client *ClientWithResponses
 }
 
-type vmmOpts struct {
-	sysProcAttr               *syscall.SysProcAttr
-	cloudHypervisorBinaryPath string
-	args                      []string
+type VMMConfig struct {
+	CloudHypervisorBinaryPath string
+	Socket                    string
+	AdditionalArgs            []string
 }
 
-type VMMOpt func(*vmmOpts) error
-
-func WithSysProcAttr(sysProcAttr *syscall.SysProcAttr) VMMOpt {
-	return func(o *vmmOpts) error {
-		o.sysProcAttr = sysProcAttr
-		return nil
-	}
-}
-
-func WithCloudHypervisorBinaryPath(path string) VMMOpt {
-	return func(o *vmmOpts) error {
-		o.cloudHypervisorBinaryPath = path
-		return nil
-	}
-}
-
-func (vmm *VMM) StartVMM(ctx context.Context) error {
-	cmd := exec.Command(vmm.options.cloudHypervisorBinaryPath, vmm.options.args...)
-	if vmm.options.sysProcAttr != nil {
-		cmd.SysProcAttr = vmm.options.sysProcAttr
-	}
-
-	err := cmd.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start cloud-hypervisor process: %w", err)
-	}
-
-	return nil
-}
-
-func NewVMM(socket string, opts ...VMMOpt) (*VMM, error) {
-	client, conn, err := newCHClient(socket)
+func NewVMMClient(socket string) (*VMM, error) {
+	client, err := newCHClient(socket)
 	if err != nil {
 		return nil, err
 	}
 
-	options := vmmOpts{
-		cloudHypervisorBinaryPath: "cloud-hypervisor",
-		args:                      []string{"--api-socket", socket},
-	}
-	for _, opt := range opts {
-		if err := opt(&options); err != nil {
-			return nil, fmt.Errorf("failed to apply option: %w", err)
-		}
-	}
-
 	vmm := &VMM{
-		httpClient: conn,
-		client:     client,
-		options:    &options,
+		client: client,
 	}
 
 	return vmm, nil
@@ -118,7 +72,7 @@ func (v *VMM) PingVMM(ctx context.Context) (VmmPingResponse, error) {
 	return *res.JSON200, nil
 }
 
-func newCHClient(socket string) (*ClientWithResponses, *http.Client, error) {
+func newCHClient(socket string) (*ClientWithResponses, error) {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -129,8 +83,8 @@ func newCHClient(socket string) (*ClientWithResponses, *http.Client, error) {
 
 	client, err := NewClientWithResponses("http://localhost/api/v1", WithHTTPClient(httpClient))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return client, httpClient, nil
+	return client, nil
 }

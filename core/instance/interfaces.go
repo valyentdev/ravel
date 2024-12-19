@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/containerd/containerd/v2/client"
 	"github.com/valyentdev/ravel/api"
 )
 
@@ -33,7 +32,7 @@ type Handle struct {
 }
 
 type VM interface {
-	Start(ctx context.Context) (Handle, error)
+	Start(ctx context.Context) error
 	Exec(ctx context.Context, cmd []string, timeout time.Duration) (*api.ExecResult, error)
 	Run() ExitResult
 	WaitExit(ctx context.Context) bool
@@ -43,9 +42,8 @@ type VM interface {
 }
 
 type Builder interface {
-	PrepareInstance(ctx context.Context, instance *Instance, image client.Image) error
 	BuildInstanceVM(ctx context.Context, instance *Instance) (VM, error)
-	RecoverInstanceVM(ctx context.Context, instance *Instance) (VM, Handle, error)
+	RecoverInstanceVM(ctx context.Context, instance *Instance) (VM, error)
 	CleanupInstanceVM(ctx context.Context, instance *Instance) error
 	CleanupInstance(ctx context.Context, instance *Instance) error
 }

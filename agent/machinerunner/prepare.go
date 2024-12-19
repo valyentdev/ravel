@@ -48,5 +48,5 @@ func (m *MachineRunner) onPrepareFailed(msg string) {
 		slog.Error("Failed to push PrepareFailed event", "error", err)
 	}
 
-	m.destroyImpl(context.Background())
+	m.destroyImpl(context.Background(), true, "prepare failed")
 }

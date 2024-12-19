@@ -2,11 +2,11 @@ package logging
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/containerd/console"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/pkg/pubsub"
 )
@@ -46,12 +46,7 @@ func NewInstanceLogger(instanceId string) *InstanceLogger {
 }
 
 func (m *InstanceLogger) Start(path string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-
-	pty, err := console.ConsoleFromFile(file)
+	file, err := os.OpenFile(path, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
 		return err
 	}
@@ -60,22 +55,21 @@ func (m *InstanceLogger) Start(path string) error {
 
 	go func() {
 		m.bc.Start()
-		m.startReadingPty(pty)
+		m.startReading(file)
 		file.Close()
-		pty.Close()
 		m.bc.Stop()
 	}()
 
 	return nil
 }
 
-func (m *InstanceLogger) startReadingPty(pty console.Console) {
+func (m *InstanceLogger) startReading(r io.Reader) {
 	for {
 		select {
 		case <-m.stop:
 			return
 		default:
-			reader := bufio.NewReaderSize(pty, 4096)
+			reader := bufio.NewReaderSize(r, 4096)
 
 			line, _, err := reader.ReadLine()
 			if err != nil {

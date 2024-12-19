@@ -2,6 +2,8 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -33,6 +35,41 @@ type RavelConfig struct {
 	Registries registry.RegistriesConfig `json:"registries" toml:"registries"`
 }
 
+// never display data because it contains secrets
+func fmtDecodeError(err *toml.DecodeError) error {
+	line, column := err.Position()
+
+	return fmt.Errorf("%s %s at %s", err.Error(), strings.Join(err.Key(), "."), fmt.Sprintf("line %d, column %d", line, column))
+
+}
+
+func joinErrors(errs ...error) error {
+	var errStr string
+
+	for _, err := range errs {
+		errStr += err.Error() + "\n"
+	}
+	return errors.New(errStr)
+}
+
+func buildTomlError(err error) error {
+	smeErr, ok := err.(*toml.StrictMissingError)
+	if ok {
+		var errs []error
+		for _, e := range smeErr.Errors {
+			errs = append(errs, fmtDecodeError(&e))
+		}
+		return joinErrors(errs...)
+	}
+
+	decodeErr, ok := err.(*toml.DecodeError)
+	if ok {
+		return joinErrors(fmtDecodeError(decodeErr))
+	}
+
+	return fmt.Errorf("toml error: %w", err)
+}
+
 func ReadFile(path string) (RavelConfig, error) {
 	var config RavelConfig
 
@@ -46,7 +83,8 @@ func ReadFile(path string) (RavelConfig, error) {
 		decoder = decoder.DisallowUnknownFields()
 		err = decoder.Decode(&config)
 		if err != nil {
-			return config, err
+			tomlErr := err.(*toml.StrictMissingError)
+			return config, buildTomlError(tomlErr)
 		}
 	} else {
 		err = json.Unmarshal(bytes, &config)
