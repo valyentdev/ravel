@@ -96,9 +96,6 @@ func (a *Allocator) GetAllocation(id string) (structs.Allocation, error) {
 func (a *Allocator) DeleteAllocation(id string) error {
 	a.lock.Lock()
 	defer a.lock.Unlock()
-	slog.Info("deleting reservation", "id", id)
-	defer slog.Info("deleted reservation", "id", id)
-
 	reservation, ok := a.reservations[id]
 	if !ok {
 		slog.Warn("reservation not found", "id", id)
@@ -106,8 +103,6 @@ func (a *Allocator) DeleteAllocation(id string) error {
 	}
 
 	a.current = a.current.Sub(reservation.Resources)
-
-	slog.Info("deleting reservation from store", "id", id)
 
 	if err := a.store.DeleteAllocation(id); err != nil {
 		return err

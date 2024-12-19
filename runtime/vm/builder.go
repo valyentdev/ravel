@@ -7,10 +7,12 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"syscall"
 	"time"
 
 	"github.com/containerd/cgroups/v3/cgroup2"
 	"github.com/containerd/containerd/v2/client"
+	vminit "github.com/valyentdev/ravel-init/client"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/jailer"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
@@ -42,7 +44,6 @@ type Builder struct {
 	chBinary     string
 	jailerBinary string
 	initBinary   string
-	initBin      []byte
 	linuxKernel  string
 	images       *images.Service
 	ctrd         *client.Client
@@ -64,12 +65,7 @@ func NewBuilder(
 	user User,
 ) (*Builder, error) {
 
-	initBin, err := os.ReadFile(initBinary)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read init binary: %w", err)
-	}
-
-	_, err = cgroup2.NewManager("/sys/fs/cgroup", "/ravel", &cgroup2.Resources{}) // create cgroup2 manager
+	_, err := cgroup2.NewManager("/sys/fs/cgroup", "/ravel", &cgroup2.Resources{}) // create cgroup2 manager
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cgroup2 manager: %w", err)
 	}
@@ -79,7 +75,6 @@ func NewBuilder(
 		initBinary:   initBinary,
 		linuxKernel:  linuxKernel,
 		jailerBinary: jailerBinary,
-		initBin:      initBin,
 		images:       images,
 		ctrd:         ctrd,
 		snapshotter:  snapshotter,
@@ -183,6 +178,10 @@ func (b *Builder) BuildInstanceVM(ctx context.Context, instance *instance.Instan
 
 	cmd := jail.Command("./cloud-hypervisor", "--api-socket", chAPISocketPath, "--log-file", "./cloud-hypervisor.log")
 
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true,
+	}
+
 	vmConfig := b.getContainerMachineCHVmConfig(instance, rootfs)
 	vm, err := newVM(instance.Id, cmd, vmConfig)
 	if err != nil {
@@ -194,23 +193,24 @@ func (b *Builder) BuildInstanceVM(ctx context.Context, instance *instance.Instan
 
 // CleanupInstanceVM implements instance.VMBuilder.
 func (b *Builder) CleanupInstanceVM(ctx context.Context, instance *instance.Instance) error {
+	var errs []error
 	if err := b.removeRootFS(instance.Id); err != nil {
-		return err
+		errs = append(errs, err)
+	}
+
+	if err := os.RemoveAll(getInstanceDir(instance.Id)); err != nil {
+		errs = append(errs, err)
 	}
 
 	cg, err := cgroup2.Load("/ravel/" + instance.Id)
 	if err != nil {
-		return fmt.Errorf("failed to load cgroup: %w", err)
+		errs = append(errs, fmt.Errorf("failed to load cgroup: %w", err))
 	}
 
 	if err := cg.Delete(); err != nil {
-		return fmt.Errorf("failed to delete cgroup: %w", err)
+		errs = append(errs, fmt.Errorf("failed to delete cgroup: %w", err))
 	}
-
-	if err := os.RemoveAll(getInstanceDir(instance.Id)); err != nil {
-		return err
-	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (b *Builder) CleanupInstance(ctx context.Context, instance *instance.Instance) error {
@@ -233,15 +233,23 @@ func (b *Builder) RecoverInstanceVM(ctx context.Context, i *instance.Instance) (
 	if err != nil {
 		return nil, err
 	}
+
+	conn, client, err := vminit.NewClient(getVsockPath(i.Id))
+	if err != nil {
+		return nil, err // should never happen
+	}
+
 	vm := &vm{
-		id:       i.Id,
-		vmm:      vmm,
-		vsock:    getVsockPath(i.Id),
-		waitChan: make(chan struct{}),
+		id:             i.Id,
+		vmm:            vmm,
+		waitChan:       make(chan struct{}),
+		initClient:     client,
+		initClientConn: conn,
 	}
 
 	ok := vm.recover()
 	if !ok {
+		conn.Close()
 		return nil, errors.New("failed to recover VM")
 	}
 

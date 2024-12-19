@@ -1,6 +1,6 @@
 
 run-raveld:
-	sudo go run cmd/ravel/ravel.go daemon -c ravel.toml
+	sudo go run cmd/ravel/ravel.go daemon -c ravel.toml --debug
 run-api:
 	air
 build-ravel:

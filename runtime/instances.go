@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 	instancemanager "github.com/valyentdev/ravel/runtime/instancerunner"
 )
@@ -131,26 +130,4 @@ func (r *Runtime) WatchInstanceState(ctx context.Context, id string) (<-chan ins
 	}
 
 	return ir.WatchState(ctx), nil
-}
-
-func (r *Runtime) WaitInstanceExit(ctx context.Context, id string) (*instance.ExitResult, error) {
-	ir, err := r.getInstance(id)
-	if err != nil {
-		return nil, err
-	}
-
-	status := ir.WaitExit(ctx)
-
-	err = status.Err()
-	if err != nil {
-		return nil, err // Context canceled
-	}
-
-	if !status.IsValid() {
-		return nil, errdefs.NewFailedPrecondition("instance cannot have an exit result")
-	}
-
-	result := status.ExitResult()
-	return &result, nil
-
 }

@@ -25,7 +25,6 @@ type Runtime interface {
 	StopInstance(ctx context.Context, id string, opt *api.StopConfig) error
 	GetInstanceLogs(id string) ([]*api.LogEntry, error)
 	SubscribeToInstanceLogs(ctx context.Context, id string) ([]*api.LogEntry, <-chan *api.LogEntry, error)
-	WaitInstanceExit(ctx context.Context, id string) (*instance.ExitResult, error)
 	WatchInstanceState(ctx context.Context, id string) (<-chan instance.State, error)
 
 	DeleteImage(ctx context.Context, ref string) error

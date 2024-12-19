@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -21,11 +20,11 @@ func (b *Builder) writeInitrd(file *os.File, instance *instance.Instance, image 
 	slog.Debug("writing initrd", "instance", instance.Id)
 
 	t1 := time.Now()
-	// init, err := os.Open(b.initBinary)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to read init binary: %w", err)
-	// }
-	// defer init.Close()
+	init, err := os.Open(b.initBinary)
+	if err != nil {
+		return fmt.Errorf("failed to read init binary: %w", err)
+	}
+	defer init.Close()
 
 	slog.Info("init binary opened after", "time", time.Since(t1))
 
@@ -47,7 +46,6 @@ func (b *Builder) writeInitrd(file *os.File, instance *instance.Instance, image 
 
 	configRecord := cpio.StaticFile("/ravel/run.json", string(configJSON), 0644)
 
-	init := bytes.NewReader(b.initBin)
 	initRecord := cpio.Record{
 		ReaderAt: init,
 		Info: cpio.Info{

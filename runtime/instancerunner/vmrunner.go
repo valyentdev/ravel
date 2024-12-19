@@ -85,6 +85,8 @@ func (r *vmRunner) Stop(signal string, timeout time.Duration) error {
 		return nil
 	}
 
+	slog.Debug("vm did not exit in time, shutting down the vmm")
+
 	err = r.vm.Shutdown(ctx)
 	if err != nil {
 		return err
@@ -103,12 +105,12 @@ func (r *vmRunner) Start() error {
 		return err
 	}
 	defer func() {
-		// if err != nil {
-		// 	err := r.networking.CleanupInstanceNetwork(r.i.Id, r.i.Network)
-		// 	if err != nil {
-		// 		slog.Error("failed to cleanup instance network", "error", err)
-		// 	}
-		// }
+		if err != nil {
+			err := r.networking.CleanupInstanceNetwork(r.i.Id, r.i.Network)
+			if err != nil {
+				slog.Error("failed to cleanup instance network", "error", err)
+			}
+		}
 	}()
 
 	slog.Debug("building vm")
@@ -156,14 +158,16 @@ func (r *vmRunner) run() {
 	result := r.vm.Run()
 	r.exitResult = result
 
-	err = r.vmBuilder.CleanupInstanceVM(context.Background(), &r.i)
-	if err != nil {
-		slog.Error("failed to cleanup vm", "error", err)
-	}
+	slog.Debug("vm exited", "exitCode", result.ExitCode, "instance", r.i.Id)
 
 	err = r.networking.CleanupInstanceNetwork(r.i.Id, r.i.Network)
 	if err != nil {
 		slog.Error("failed to cleanup instance network", "error", err)
+	}
+
+	err = r.vmBuilder.CleanupInstanceVM(context.Background(), &r.i)
+	if err != nil {
+		slog.Error("failed to cleanup vm", "error", err)
 	}
 
 	close(r.waitCh)

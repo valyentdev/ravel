@@ -14,6 +14,7 @@ import (
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
 
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -22,13 +23,14 @@ const (
 )
 
 type vm struct {
-	cmd                    *exec.Cmd
-	successFullyShutdowned atomic.Bool
 	id                     string
-	runResult              *RunResult
-	vmConfig               cloudhypervisor.VmConfig
+	cmd                    *exec.Cmd
 	vmm                    *cloudhypervisor.VMM
-	vsock                  string
+	runResult              *RunResult
+	initClientConn         *grpc.ClientConn
+	initClient             proto.InitServiceClient
+	successFullyShutdowned atomic.Bool
+	vmConfig               cloudhypervisor.VmConfig
 	stopRequested          bool
 	waitChan               chan struct{}
 }
@@ -40,19 +42,24 @@ func (vm *vm) Id() string {
 }
 
 func newVM(id string, cmd *exec.Cmd, vmConfig cloudhypervisor.VmConfig) (*vm, error) {
-	slog.Debug("creating new VM", "id", id, "socket", getAPISocketPath(id))
 	vmm, err := cloudhypervisor.NewVMMClient(getAPISocketPath(id))
 	if err != nil {
-		return nil, err
+		return nil, err // should not happen
+	}
+
+	conn, client, err := vminit.NewClient(getVsockPath(id))
+	if err != nil {
+		return nil, err // should not happen
 	}
 
 	return &vm{
-		id:       id,
-		cmd:      cmd,
-		vmConfig: vmConfig,
-		vmm:      vmm,
-		waitChan: make(chan struct{}),
-		vsock:    getVsockPath(id),
+		id:             id,
+		cmd:            cmd,
+		vmConfig:       vmConfig,
+		vmm:            vmm,
+		waitChan:       make(chan struct{}),
+		initClient:     client,
+		initClientConn: conn,
 	}, nil
 }
 
@@ -63,6 +70,7 @@ func (vm *vm) Start(ctx context.Context) error {
 	}
 	defer func() {
 		if err != nil {
+			vm.initClientConn.Close()
 			vm.vmm.ShutdownVMM(ctx)
 		}
 	}()
@@ -90,13 +98,8 @@ func (vm *vm) Start(ctx context.Context) error {
 
 func (vm *vm) Signal(ctx context.Context, signal string) error {
 	sig := syscallSignal(signal)
-	conn, client, err := vminit.NewClient(vm.vsock)
-	if err != nil {
-		return fmt.Errorf("failed to create init client: %w", err)
-	}
-	defer conn.Close()
 
-	_, err = client.Signal(ctx, &proto.SignalRequest{
+	_, err := vm.initClient.Signal(ctx, &proto.SignalRequest{
 		Signal: int32(sig),
 	})
 	if err != nil {
@@ -116,7 +119,6 @@ type RunResult struct {
 }
 
 func (vm *vm) run() {
-	defer close(vm.waitChan)
 	defer vm.Shutdown(context.Background())
 
 	result := &RunResult{}
@@ -124,14 +126,9 @@ func (vm *vm) run() {
 	defer func() {
 		result.ExitedAt = time.Now()
 		vm.runResult = result
+		close(vm.waitChan)
+		vm.initClientConn.Close()
 	}()
-
-	conn, initClient, err := vminit.NewClient(vm.vsock)
-	if err != nil {
-		slog.Error("failed to create init client", "err", err)
-		return
-	}
-	defer conn.Close()
 
 	initStarted := atomic.Bool{}
 	processStarted := false
@@ -146,7 +143,7 @@ func (vm *vm) run() {
 		}
 	}()
 
-	updates, err := initClient.Follow(ctx, &emptypb.Empty{})
+	updates, err := vm.initClient.Follow(ctx, &emptypb.Empty{})
 	if err != nil {
 		slog.Error("failed to follow init", "err", err)
 		return
@@ -300,13 +297,7 @@ func (vm *vm) Exec(ctx context.Context, cmd []string, timeout time.Duration) (*a
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	conn, client, err := vminit.NewClient(vm.vsock)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	res, err := client.Exec(timeoutCtx, &proto.ExecRequest{
+	res, err := vm.initClient.Exec(timeoutCtx, &proto.ExecRequest{
 		Cmd: cmd,
 	})
 	if err != nil {

@@ -190,7 +190,6 @@ func runJailed(config *JailerConfig) error {
 
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println("Failed to run command: ", err)
 		return err
 	}
 
