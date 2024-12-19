@@ -39,17 +39,17 @@ func (b *Builder) writeInitrd(file *os.File, instance *instance.Instance, image 
 		return fmt.Errorf("failed to marshal init config: %w", err)
 	}
 
-	// initInfos, err := init.Stat()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get init stat: %w", err)
-	// }
+	initInfos, err := init.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get init stat: %w", err)
+	}
 
 	configRecord := cpio.StaticFile("/ravel/run.json", string(configJSON), 0644)
 
 	initRecord := cpio.Record{
 		ReaderAt: init,
 		Info: cpio.Info{
-			FileSize: uint64(len(b.initBin)),
+			FileSize: uint64(initInfos.Size()),
 			Name:     "ravel-init",
 			Mode:     unix.S_IFREG | 0755,
 		},
