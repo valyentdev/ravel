@@ -18,10 +18,36 @@ func (r *Ravel) GetGateway(ctx context.Context, namespace string, gateway string
 	return r.state.GetGateway(ctx, ns.Name, gateway)
 }
 
-func (r *Ravel) ListGateways(ctx context.Context, namespace string) ([]Gateway, error) {
+type listGatewaysOptions struct {
+	fleet string
+}
+
+type ListGatewaysOpt func(*listGatewaysOptions)
+
+func WithFleet(fleet string) ListGatewaysOpt {
+	return func(o *listGatewaysOptions) {
+		o.fleet = fleet
+	}
+}
+
+func (r *Ravel) ListGateways(ctx context.Context, namespace string, opts ...ListGatewaysOpt) ([]Gateway, error) {
 	_, err := r.GetNamespace(ctx, namespace)
 	if err != nil {
 		return nil, err
+	}
+
+	var options listGatewaysOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	if options.fleet != "" {
+		f, err := r.GetFleet(ctx, namespace, options.fleet)
+		if err != nil {
+			return nil, err
+		}
+
+		return r.state.ListGatewaysOnFleet(ctx, namespace, f.Id)
 	}
 
 	return r.state.ListGateways(ctx, namespace)

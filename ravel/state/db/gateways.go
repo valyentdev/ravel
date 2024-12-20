@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/valyentdev/ravel/api"
@@ -54,8 +55,8 @@ func (q Queries) GetGatewayById(ctx context.Context, namespace, id string) (gate
 	return gateway, nil
 }
 
-func (q Queries) ListGateways(ctx context.Context, namespace string) ([]api.Gateway, error) {
-	rows, err := q.db.Query(ctx, baseSelectGateway+" WHERE namespace = $1", namespace)
+func (q Queries) listGateways(ctx context.Context, where string, args ...any) ([]api.Gateway, error) {
+	rows, err := q.db.Query(ctx, fmt.Sprintf("%s %s", baseSelectGateway, where), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +78,16 @@ func (q Queries) ListGateways(ctx context.Context, namespace string) ([]api.Gate
 		}
 		gateways = append(gateways, gateway)
 	}
+
 	return gateways, nil
+}
+
+func (q Queries) ListGatewaysOnFleet(ctx context.Context, ns string, fleetId string) ([]api.Gateway, error) {
+	return q.listGateways(ctx, "WHERE namespace = $1 AND fleet_id = $2", ns, fleetId)
+}
+
+func (q Queries) ListGateways(ctx context.Context, namespace string) ([]api.Gateway, error) {
+	return q.listGateways(ctx, "WHERE namespace = $1", namespace)
 }
 
 func (q Queries) CreateGateway(ctx context.Context, gateway api.Gateway) error {

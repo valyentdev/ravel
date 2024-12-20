@@ -77,3 +77,7 @@ func (s *State) DeleteGateway(ctx context.Context, id string) error {
 func (s *State) ListGateways(ctx context.Context, namespace string) ([]api.Gateway, error) {
 	return s.db.ListGateways(ctx, namespace)
 }
+
+func (s *State) ListGatewaysOnFleet(ctx context.Context, ns, fleetId string) ([]api.Gateway, error) {
+	return s.db.ListGatewaysOnFleet(ctx, ns, fleetId)
+}

@@ -29,6 +29,7 @@ func (e *Endpoints) createGateway(ctx context.Context, req *CreateGatewayRequest
 
 type ListGatewaysRequest struct {
 	NSResolver
+	ByFleet string `query:"fleet"`
 }
 
 type ListGatewaysResponse struct {
@@ -36,7 +37,12 @@ type ListGatewaysResponse struct {
 }
 
 func (e *Endpoints) listGateways(ctx context.Context, req *ListGatewaysRequest) (*ListGatewaysResponse, error) {
-	gateways, err := e.ravel.ListGateways(ctx, req.Namespace)
+	var opts []ravel.ListGatewaysOpt
+	if req.ByFleet != "" {
+		opts = append(opts, ravel.WithFleet(req.ByFleet))
+	}
+
+	gateways, err := e.ravel.ListGateways(ctx, req.Namespace, opts...)
 	if err != nil {
 		e.log("Failed to list gateways", err)
 		return nil, err
