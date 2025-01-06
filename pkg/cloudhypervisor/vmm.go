@@ -21,17 +21,13 @@ type VMMConfig struct {
 	AdditionalArgs            []string
 }
 
-func NewVMMClient(socket string) (*VMM, error) {
-	client, err := newCHClient(socket)
-	if err != nil {
-		return nil, err
-	}
-
+func NewVMMClient(socket string) *VMM {
+	client, _ := newCHClient(socket) // no error is possible here
 	vmm := &VMM{
 		client: client,
 	}
 
-	return vmm, nil
+	return vmm
 }
 
 func (v *VMM) ShutdownVMM(ctx context.Context) error {

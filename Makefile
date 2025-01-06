@@ -5,7 +5,8 @@ run-api:
 	air
 build-ravel:
 	CGO_ENABLED=0 go build -o bin/ravel cmd/ravel/ravel.go
-
+build-initd:
+	CGO_ENABLED=0 go build -o bin/initd cmd/initd/initd.go
 build-jailer:
 	CGO_ENABLED=0 go build -o bin/jailer cmd/jailer/jailer.go
 

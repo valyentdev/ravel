@@ -12,9 +12,9 @@ import (
 
 	"github.com/containerd/cgroups/v3/cgroup2"
 	"github.com/containerd/containerd/v2/client"
-	vminit "github.com/valyentdev/ravel-init/client"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/jailer"
+	initdclient "github.com/valyentdev/ravel/initd/client"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
 	"github.com/valyentdev/ravel/runtime/images"
 )
@@ -183,10 +183,7 @@ func (b *Builder) BuildInstanceVM(ctx context.Context, instance *instance.Instan
 	}
 
 	vmConfig := b.getContainerMachineCHVmConfig(instance, rootfs)
-	vm, err := newVM(instance.Id, cmd, vmConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create VM: %w", err)
-	}
+	vm := newVM(instance.Id, cmd, vmConfig)
 
 	return vm, nil
 }
@@ -229,27 +226,19 @@ func (b *Builder) CleanupInstance(ctx context.Context, instance *instance.Instan
 
 // RecoverInstanceVM implements instance.VMBuilder.
 func (b *Builder) RecoverInstanceVM(ctx context.Context, i *instance.Instance) (instance.VM, error) {
-	vmm, err := cloudhypervisor.NewVMMClient(getAPISocketPath(i.Id))
-	if err != nil {
-		return nil, err
-	}
+	vmm := cloudhypervisor.NewVMMClient(getAPISocketPath(i.Id))
 
-	conn, client, err := vminit.NewClient(getVsockPath(i.Id))
-	if err != nil {
-		return nil, err // should never happen
-	}
+	client := initdclient.NewInternalClient(getVsockPath(i.Id))
 
 	vm := &vm{
-		id:             i.Id,
-		vmm:            vmm,
-		waitChan:       make(chan struct{}),
-		initClient:     client,
-		initClientConn: conn,
+		id:         i.Id,
+		vmm:        vmm,
+		waitChan:   make(chan struct{}),
+		initClient: client,
 	}
 
 	ok := vm.recover()
 	if !ok {
-		conn.Close()
 		return nil, errors.New("failed to recover VM")
 	}
 

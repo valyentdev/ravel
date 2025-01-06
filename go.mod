@@ -12,6 +12,7 @@ require (
 	github.com/containerd/errdefs v0.1.0
 	github.com/coreos/go-iptables v0.7.0
 	github.com/danielgtaylor/huma/v2 v2.26.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gammazero/deque v0.2.1
 	github.com/google/go-containerregistry v0.20.2
 	github.com/jackc/pgx/v5 v5.6.0
@@ -25,10 +26,8 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/u-root/u-root v0.14.0
 	github.com/valyentdev/corroclient v0.1.0
-	github.com/valyentdev/ravel-init v0.1.0
 	go.etcd.io/bbolt v1.3.11
 	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.35.2
 	sigs.k8s.io/yaml v1.4.0
 
 )
@@ -59,7 +58,6 @@ require (
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -111,6 +109,7 @@ require (
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/tools v0.27.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
+	google.golang.org/protobuf v1.35.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	tags.cncf.io/container-device-interface v0.6.2 // indirect
@@ -120,7 +119,6 @@ require (
 require (
 	github.com/mdlayher/vsock v1.2.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/runc v1.1.15 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.9.3
 	github.com/valyentdev/ravel/api v0.0.0-00010101000000-000000000000

@@ -17,3 +17,19 @@ builds:
       - linux
     goarch:
       - amd64
+  - id: jailer
+    env: [CGO_ENABLED=0]
+    main: ./cmd/jailer/jailer.go
+    binary: jailer
+    goos:
+      - linux
+    goarch:
+      - amd64
+  - id: initd
+    env: [CGO_ENABLED=0]
+    main: ./cmd/initd/initd.go
+    binary: initd
+    goos:
+      - linux
+    goarch:
+      - amd64

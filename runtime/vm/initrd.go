@@ -10,8 +10,8 @@ import (
 
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/u-root/u-root/pkg/cpio"
-	"github.com/valyentdev/ravel-init/vminit"
 	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/initd"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
 	"golang.org/x/sys/unix"
 )
@@ -66,11 +66,11 @@ func (b *Builder) writeInitrd(file *os.File, instance *instance.Instance, image 
 	return nil
 }
 
-func getInitConfig(instance *instance.Instance, image v1.ImageConfig) vminit.Config {
+func getInitConfig(instance *instance.Instance, image v1.ImageConfig) initd.Config {
 	config := instance.Config
 
-	return vminit.Config{
-		ImageConfig: &vminit.ImageConfig{
+	return initd.Config{
+		ImageConfig: &initd.ImageConfig{
 			User:       cloudhypervisor.StringPtr(image.User),
 			WorkingDir: cloudhypervisor.StringPtr(image.WorkingDir),
 			Cmd:        image.Cmd,
@@ -81,12 +81,12 @@ func getInitConfig(instance *instance.Instance, image v1.ImageConfig) vminit.Con
 		CmdOverride:        config.Init.Cmd,
 		EntrypointOverride: config.Init.Entrypoint,
 		RootDevice:         "/dev/vda",
-		EtcResolv: vminit.EtcResolv{
+		EtcResolv: initd.EtcResolv{
 			Nameservers: []string{"8.8.8.8"},
 		},
 		ExtraEnv: config.Env,
-		Network: vminit.NetworkConfig{
-			IPConfigs: []vminit.IPConfig{
+		Network: initd.NetworkConfig{
+			IPConfigs: []initd.IPConfig{
 				{
 					IPNet:     instance.Network.Local.InstanceIPNet().String(),
 					Broadcast: instance.Network.Local.Broadcast.String(),

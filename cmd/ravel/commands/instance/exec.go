@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -18,7 +19,7 @@ func newInstanceExec() *cobra.Command {
 	var execOptions execOptions
 
 	cmd := &cobra.Command{
-		Use:   "exec [instance-id] -- [command...]",
+		Use:   "exec instance-id command [...args] | --",
 		Short: "Execute a command on a instance",
 		Long:  `Execute a command on a instance.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -36,7 +37,7 @@ func runInstanceExec(cmd *cobra.Command, args []string, timeout time.Duration) e
 		return fmt.Errorf("please specify a instance id, then the command")
 	}
 
-	var cmdLine []string
+	var toExec string
 
 	if args[1] == "--" {
 		println("reading from stdin")
@@ -54,12 +55,16 @@ func runInstanceExec(cmd *cobra.Command, args []string, timeout time.Duration) e
 			str = str[:len(str)-1]
 		}
 
-		cmdLine = []string{
-			"/bin/sh",
-			"-c",
-			str,
-		}
+		toExec = str
 
+	} else {
+		toExec = strings.Join(args[1:], " ")
+	}
+
+	cmdLine := []string{
+		"/bin/sh",
+		"-c",
+		toExec,
 	}
 
 	instanceId := args[0]

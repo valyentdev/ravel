@@ -8,18 +8,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	vminit "github.com/valyentdev/ravel-init/client"
-	"github.com/valyentdev/ravel-init/proto"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/initd/client"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
-
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
-)
-
-const (
-	unknownExitCode = -1
 )
 
 type vm struct {
@@ -27,8 +19,7 @@ type vm struct {
 	cmd                    *exec.Cmd
 	vmm                    *cloudhypervisor.VMM
 	runResult              *RunResult
-	initClientConn         *grpc.ClientConn
-	initClient             proto.InitServiceClient
+	initClient             *client.InternalClient
 	successFullyShutdowned atomic.Bool
 	vmConfig               cloudhypervisor.VmConfig
 	stopRequested          bool
@@ -41,26 +32,19 @@ func (vm *vm) Id() string {
 	return vm.id
 }
 
-func newVM(id string, cmd *exec.Cmd, vmConfig cloudhypervisor.VmConfig) (*vm, error) {
-	vmm, err := cloudhypervisor.NewVMMClient(getAPISocketPath(id))
-	if err != nil {
-		return nil, err // should not happen
-	}
+func newVM(id string, cmd *exec.Cmd, vmConfig cloudhypervisor.VmConfig) *vm {
+	vmm := cloudhypervisor.NewVMMClient(getAPISocketPath(id))
 
-	conn, client, err := vminit.NewClient(getVsockPath(id))
-	if err != nil {
-		return nil, err // should not happen
-	}
+	client := client.NewInternalClient(getVsockPath(id))
 
 	return &vm{
-		id:             id,
-		cmd:            cmd,
-		vmConfig:       vmConfig,
-		vmm:            vmm,
-		waitChan:       make(chan struct{}),
-		initClient:     client,
-		initClientConn: conn,
-	}, nil
+		id:         id,
+		cmd:        cmd,
+		vmConfig:   vmConfig,
+		vmm:        vmm,
+		waitChan:   make(chan struct{}),
+		initClient: client,
+	}
 }
 
 func (vm *vm) Start(ctx context.Context) error {
@@ -70,7 +54,6 @@ func (vm *vm) Start(ctx context.Context) error {
 	}
 	defer func() {
 		if err != nil {
-			vm.initClientConn.Close()
 			vm.vmm.ShutdownVMM(ctx)
 		}
 	}()
@@ -99,9 +82,7 @@ func (vm *vm) Start(ctx context.Context) error {
 func (vm *vm) Signal(ctx context.Context, signal string) error {
 	sig := syscallSignal(signal)
 
-	_, err := vm.initClient.Signal(ctx, &proto.SignalRequest{
-		Signal: int32(sig),
-	})
+	err := vm.initClient.Signal(ctx, int(sig))
 	if err != nil {
 		return fmt.Errorf("failed to send signal to init: %w", err)
 	}
@@ -114,78 +95,75 @@ type RunResult struct {
 	VMExited       bool
 	InitFailed     bool
 	ProcessExited  bool
-	ExitCode       *int64
+	ExitCode       int
 	ExitedAt       time.Time
 }
 
 func (vm *vm) run() {
+	slog.Debug("vm run")
+	defer close(vm.waitChan)
 	defer vm.Shutdown(context.Background())
-
-	result := &RunResult{}
-
+	result := &RunResult{
+		ExitCode: -1,
+	}
 	defer func() {
+		vm.runResult = result
+	}()
+
+	started := false
+
+	for i := 0; i < 5; i++ {
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		err := vm.initClient.HealthCheck(timeoutCtx)
+		cancel()
+		if err == nil {
+			started = true
+			break
+		}
+		slog.Debug("waiting for init to start", "err", err)
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if !started {
+		result.InitFailed = true
 		result.ExitedAt = time.Now()
 		vm.runResult = result
-		close(vm.waitChan)
-		vm.initClientConn.Close()
-	}()
-
-	initStarted := atomic.Bool{}
-	processStarted := false
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		time.Sleep(3 * time.Second)
-		if !initStarted.Load() {
-			cancel()
-		}
-	}()
-
-	updates, err := vm.initClient.Follow(ctx, &emptypb.Empty{})
-	if err != nil {
-		slog.Error("failed to follow init", "err", err)
 		return
 	}
 
-	initStarted.Store(true)
-
-	startedAt := time.Now()
-
-	for {
-		update, err := updates.Recv()
-		if err != nil {
-			result.VMExited = true
-			break
-		}
-
-		if update.InitFailed {
-			result.InitFailed = true
-			break
-		}
-
-		if update.ProcessExited {
-			result.ProcessExited = true
-			result.ExitCode = update.ExitCode
-			break
-		}
-
-		if !processStarted {
-			if update.ProcessStarted {
-				processStarted = true
-			} else if time.Since(startedAt) > 10*time.Second {
-				result.InitFailed = true
-				break
-			}
-		}
-
-	}
+	slog.Debug("vm has started")
 
 	if vm.stopRequested {
 		result.HasBeenStopped = true
 	}
 
+	retryCount := 0
+
+RETRY:
+	exitResult, err := vm.initClient.Wait(context.Background())
+	if err != nil {
+		err := vm.initClient.HealthCheck(context.Background())
+		if err != nil {
+			result.VMExited = true
+			result.ExitedAt = time.Now()
+			return
+		}
+		if retryCount < 10 {
+			slog.Debug("retrying to wait for init to exit")
+			retryCount++
+		} else {
+			slog.Error("failed to wait for init to exit", "err", err)
+			result.InitFailed = true
+			result.ExitedAt = time.Now()
+
+			return
+		}
+		goto RETRY
+	}
+
+	result.ProcessExited = true
+	result.ExitCode = exitResult.ExitCode
+	slog.Debug("init process exited", "exitCode", exitResult.ExitCode)
 }
 
 func (vm *vm) Shutdown(ctx context.Context) error {
@@ -213,17 +191,11 @@ func (vm *vm) Stop(ctx context.Context, signal string) error {
 func (vm *vm) Run() instance.ExitResult {
 	<-vm.waitChan
 	er := instance.ExitResult{
-		Requested: vm.runResult.HasBeenStopped,
+		Success:   vm.runResult.ExitCode == 0,
+		ExitCode:  vm.runResult.ExitCode,
 		ExitedAt:  vm.runResult.ExitedAt,
+		Requested: vm.runResult.HasBeenStopped,
 	}
-
-	if vm.runResult.ExitCode != nil {
-		er.ExitCode = int(*vm.runResult.ExitCode)
-		er.Success = er.ExitCode == 0
-	} else {
-		er.ExitCode = unknownExitCode
-	}
-
 	return er
 }
 
@@ -297,15 +269,17 @@ func (vm *vm) Exec(ctx context.Context, cmd []string, timeout time.Duration) (*a
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	res, err := vm.initClient.Exec(timeoutCtx, &proto.ExecRequest{
-		Cmd: cmd,
+	res, err := vm.initClient.Exec(timeoutCtx, api.ExecOptions{
+		Cmd:       cmd,
+		TimeoutMs: int(timeout.Milliseconds()),
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.ExecResult{
-		Stdout:   string(res.Output),
+		Stderr:   res.Stderr,
+		Stdout:   res.Stdout,
 		ExitCode: int(res.ExitCode),
 	}, nil
 }
