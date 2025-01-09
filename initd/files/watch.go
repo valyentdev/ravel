@@ -40,18 +40,21 @@ func (s *Service) WatchDir(ctx context.Context, path string) (<-chan initd.Watch
 		for {
 			select {
 			case <-ctx.Done():
-				close(events)
 				return
 			case event := <-w.Events:
 				if event.String() == "CHMOD" {
 					continue // ignore CHMOD only events
 				}
-				events <- initd.WatchFSEvent{
+				select { // non-blocking send in case the context is done
+				case events <- initd.WatchFSEvent{
 					Path:   event.Name,
 					Create: fsnotify.Create.Has(event.Op),
 					Write:  fsnotify.Write.Has(event.Op),
 					Remove: fsnotify.Remove.Has(event.Op),
 					Rename: fsnotify.Rename.Has(event.Op),
+				}:
+				case <-ctx.Done():
+					return
 				}
 			}
 		}

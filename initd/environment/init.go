@@ -111,14 +111,6 @@ func (e *Env) Init() error {
 		return fmt.Errorf("error resolving user: %v", err)
 	}
 
-	if err := unix.Setgid(uid); err != nil {
-		return fmt.Errorf("unable to set group id: %w", err)
-	}
-
-	if err := unix.Setuid(gid); err != nil {
-		return fmt.Errorf("unable to set group id: %w", err)
-	}
-
 	if err := populateProcessEnv(config.ImageConfig.Env); err != nil {
 		return err
 	}
@@ -167,11 +159,33 @@ func (e *Env) Init() error {
 	return nil
 }
 
-func (e *Env) Run() {
+func (e *Env) Start() error {
+	var err error
+	defer func() {
+		if err != nil {
+			e.result = initd.WaitResult{
+				ExitCode: -1,
+			}
+			close(e.waitCh)
+		}
+	}()
+	if err := unix.Setgid(e.uid); err != nil {
+		return fmt.Errorf("unable to set group id: %w", err)
+	}
+
+	if err := unix.Setuid(e.gid); err != nil {
+		return fmt.Errorf("unable to set group id: %w", err)
+	}
+
+	go e.run()
+
+	return nil
+}
+
+func (e *Env) run() {
 	result := initd.WaitResult{
 		ExitCode: -1,
 	}
-
 	defer func() {
 		e.result = result
 		close(e.waitCh)

@@ -107,6 +107,9 @@ func (vm *vm) run() {
 		ExitCode: -1,
 	}
 	defer func() {
+		if vm.stopRequested {
+			result.HasBeenStopped = true
+		}
 		vm.runResult = result
 	}()
 
@@ -120,7 +123,7 @@ func (vm *vm) run() {
 			started = true
 			break
 		}
-		slog.Debug("waiting for init to start", "err", err)
+		slog.Debug("waiting for init to start", "err", err, "id", vm.id)
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -132,10 +135,6 @@ func (vm *vm) run() {
 	}
 
 	slog.Debug("vm has started")
-
-	if vm.stopRequested {
-		result.HasBeenStopped = true
-	}
 
 	retryCount := 0
 
@@ -152,10 +151,9 @@ RETRY:
 			slog.Debug("retrying to wait for init to exit")
 			retryCount++
 		} else {
-			slog.Error("failed to wait for init to exit", "err", err)
+			slog.Debug("failed to wait for init to exit", "err", err)
 			result.InitFailed = true
 			result.ExitedAt = time.Now()
-
 			return
 		}
 		goto RETRY

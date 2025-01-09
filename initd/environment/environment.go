@@ -11,6 +11,8 @@ type Env struct {
 	cmd    *exec.Cmd
 	waitCh chan struct{}
 	result initd.WaitResult
+	uid    int
+	gid    int
 }
 
 func (e *Env) Wait() initd.WaitResult {

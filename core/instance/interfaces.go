@@ -7,20 +7,6 @@ import (
 	"github.com/valyentdev/ravel/api"
 )
 
-type EventReporter interface {
-	ReportInstanceEvent(event Event)
-}
-
-type noopEventReporter struct {
-}
-
-func (n *noopEventReporter) ReportInstanceEvent(event Event) {
-}
-
-func NewNoopEventReporter() EventReporter {
-	return &noopEventReporter{}
-}
-
 type InstanceStore interface {
 	LoadInstances() ([]Instance, error)
 	PutInstance(instance Instance) error

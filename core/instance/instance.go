@@ -6,6 +6,13 @@ import (
 	"github.com/valyentdev/ravel/api"
 )
 
+type ExitResult struct {
+	Success   bool      `json:"success"`
+	ExitCode  int       `json:"exit_code,omitempty"`
+	Requested bool      `json:"requested"`
+	ExitedAt  time.Time `json:"exited_at"`
+}
+
 const (
 	InstanceStatusCreated    InstanceStatus = "created"
 	InstanceStatusStopped    InstanceStatus = "stopped"

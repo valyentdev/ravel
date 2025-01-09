@@ -13,7 +13,6 @@ import (
 
 func (b *Builder) removeRootFS(id string) error {
 	ss := b.ctrd.SnapshotService(b.snapshotter)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -60,13 +59,15 @@ func (b *Builder) prepareContainerRootFS(ctx context.Context, id string, image c
 	if err != nil {
 		if !errdefs.IsAlreadyExists(err) {
 			return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)
-
 		}
 
+		slog.Debug("snapshot already exists, removing", "id", id)
 		err = b.removeRootFS(id)
 		if err != nil {
 			return "", fmt.Errorf("failed to remove existing snapshot %q: %w", id, err)
 		}
+
+		slog.Debug("retrying snapshot preparation", "id", id, "parent", parent)
 		mounts, err = ss.Prepare(context.Background(), rootFSName(id), parent)
 		if err != nil {
 			return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)

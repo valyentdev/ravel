@@ -54,9 +54,9 @@ func (e *ExecOptions) GetTimeout() time.Duration {
 }
 
 type ExecResult struct {
-	Stderr   string
-	Stdout   string
-	ExitCode int
+	Stderr   string `json:"stderr"`
+	Stdout   string `json:"stdout"`
+	ExitCode int    `json:"exit_code"`
 }
 
 const (

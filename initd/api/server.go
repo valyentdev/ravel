@@ -8,6 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/initd"
 	"github.com/valyentdev/ravel/initd/environment"
 	"github.com/valyentdev/ravel/initd/files"
@@ -15,12 +16,13 @@ import (
 )
 
 func ServeInitdAPI(env *environment.Env) error {
+	errdefs.OverrideHumaErrorBuilder()
 	publicEndpoints := &publicEndpoints{
 		files: &files.Service{},
 	}
 
 	publicMux := http.NewServeMux()
-	publicAPI := humago.New(publicMux, huma.DefaultConfig("Initd API", "1.0.0"))
+	publicAPI := humago.New(publicMux, getHumaConfig())
 	publicEndpoints.registerRoutes(publicAPI)
 
 	internalEndpoints := &InternalEndpoint{
@@ -46,4 +48,23 @@ func ServeInitdAPI(env *environment.Env) error {
 	http.Serve(vsockLn, internalMux)
 
 	return nil
+}
+
+func getHumaConfig() huma.Config {
+	return huma.Config{
+		OpenAPI: &huma.OpenAPI{
+			OpenAPI: "3.1.0",
+			Info: &huma.Info{
+				Title:   "Initd API",
+				Version: "1.0.0",
+			},
+		},
+		OpenAPIPath: "/openapi",
+		DocsPath:    "/docs",
+		Formats: map[string]huma.Format{
+			"application/json": huma.DefaultJSONFormat,
+			"json":             huma.DefaultJSONFormat,
+		},
+		DefaultFormat: "application/json",
+	}
 }
