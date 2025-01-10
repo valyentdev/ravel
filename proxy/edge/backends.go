@@ -3,26 +3,47 @@ package edge
 import (
 	"context"
 	"log/slog"
+	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/valyentdev/corroclient"
 )
 
-type Backends struct {
+type instance struct {
+	Id        string `json:"id"`
+	Namespace string `json:"namespace"`
+	MachineId string `json:"machine_id"`
+	Address   string `json:"address"`
+	Port      int    `json:"port"`
+}
+
+func (i *instance) Url() *url.URL {
+	url := &url.URL{
+		Scheme: "http",
+		Host:   strings.Join([]string{i.Address, strconv.Itoa(i.Port)}, ":"),
+	}
+
+	slog.Debug("instance url", "url", url)
+	return url
+}
+
+type instanceBackends struct {
 	corro    *corroclient.CorroClient
-	backends map[string]*Backend
+	backends map[string]*instance
 	mutex    sync.RWMutex
 }
 
-func newBackends(corro *corroclient.CorroClient) *Backends {
-	return &Backends{
+func newInstanceBackends(corro *corroclient.CorroClient) *instanceBackends {
+	return &instanceBackends{
 		corro:    corro,
-		backends: make(map[string]*Backend),
+		backends: make(map[string]*instance),
 	}
 }
 
-func (b *Backends) Start() {
+func (b *instanceBackends) Start() {
 	go func() {
 		for {
 			err := b.sync()
@@ -35,26 +56,25 @@ func (b *Backends) Start() {
 	}()
 }
 
-func scanInstance(row *corroclient.Row) (Instance, error) {
-	var i Instance
-	err := row.Scan(&i.Id, &i.Gatewayid, &i.TargetPort, &i.Address, &i.Port)
+func scanInstance(row *corroclient.Row) (instance, error) {
+	var i instance
+	err := row.Scan(&i.Id, &i.MachineId, &i.Namespace, &i.Address, &i.Port)
 	if err != nil {
-		return Instance{}, err
+		return instance{}, err
 	}
 
 	return i, nil
 }
 
 const getBackendsQuery = `
-						  select i.id as id, g.id, g.target_port, n.address, n.http_proxy_port  
+						  select i.id, m.id, m.namespace, n.address, n.http_proxy_port  
 						  from instances i
 						  join machines m on m.instance_id = i.id
-						  join gateways g on g.fleet_id = m.fleet_id 
 						  join nodes n on n.id = i.node
 						  where i.status = 'running'
 						`
 
-func (b *Backends) sync() error {
+func (b *instanceBackends) sync() error {
 	sub, err := b.corro.PostSubscription(context.Background(), corroclient.Statement{
 		Query: getBackendsQuery,
 	})
@@ -73,7 +93,7 @@ func (b *Backends) sync() error {
 				continue
 			}
 
-			b.addBackend(i)
+			b.setBackend(i)
 		case corroclient.EventTypeChange:
 			change := e.(*corroclient.Change)
 			i, err := scanInstance(change.Row)
@@ -84,9 +104,9 @@ func (b *Backends) sync() error {
 
 			switch change.ChangeType {
 			case corroclient.ChangeTypeInsert:
-				b.addBackend(i)
+				b.setBackend(i)
 			case corroclient.ChangeTypeDelete:
-				b.removeBackend(i.Id)
+				b.deleteBackend(i.MachineId)
 			}
 		}
 	}
@@ -94,26 +114,26 @@ func (b *Backends) sync() error {
 	return nil
 }
 
-func (b *Backends) addBackend(i Instance) {
+func (b *instanceBackends) setBackend(i instance) {
+	slog.Debug("setting backend", "instance", i)
 	b.mutex.Lock()
-	b.backends[i.Id] = newBackend(i)
+	b.backends[i.MachineId] = &i
 	b.mutex.Unlock()
 }
 
-func (b *Backends) removeBackend(id string) {
+func (b *instanceBackends) deleteBackend(id string) {
+	slog.Debug("deleting backend", "id", id)
 	b.mutex.Lock()
 	delete(b.backends, id)
 	b.mutex.Unlock()
 }
 
-func (b *Backends) getBackend(id string) (*Backend, bool) {
+func (b *instanceBackends) getBackend(mid string) (*instance, bool) {
 	b.mutex.RLock()
-	backend, ok := b.backends[id]
+	backend, ok := b.backends[mid]
 	b.mutex.RUnlock()
-
 	if !ok {
 		return nil, false
 	}
-
 	return backend, true
 }

@@ -3,6 +3,8 @@ package local
 import (
 	"context"
 	"log/slog"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,7 +13,7 @@ import (
 
 type instances struct {
 	nodeId    string
-	instances map[string]*Backend
+	instances map[string]*Instance
 	mutex     sync.RWMutex
 	corro     *corroclient.CorroClient
 }
@@ -19,7 +21,7 @@ type instances struct {
 func newInstances(corro *corroclient.CorroClient, nodeId string) *instances {
 	return &instances{
 		nodeId:    nodeId,
-		instances: make(map[string]*Backend),
+		instances: make(map[string]*Instance),
 		corro:     corro,
 	}
 }
@@ -38,15 +40,20 @@ func (i *instances) Start() {
 }
 
 type Instance struct {
-	GatewayId  string
 	InstanceId string
 	Ip         string
-	Port       int
+}
+
+func (i *Instance) Url(port string) *url.URL {
+	return &url.URL{
+		Scheme: "http",
+		Host:   strings.Join([]string{i.Ip, port}, ":"),
+	}
 }
 
 func scanInstance(row *corroclient.Row) (Instance, error) {
 	var i Instance
-	err := row.Scan(&i.InstanceId, &i.GatewayId, &i.Ip, &i.Port)
+	err := row.Scan(&i.InstanceId, &i.Ip)
 	if err != nil {
 		return i, err
 	}
@@ -55,10 +62,8 @@ func scanInstance(row *corroclient.Row) (Instance, error) {
 }
 
 const getInstancesQuery = `
-						  select i.id, gw.id, i.local_ipv4, gw.target_port
+						  select i.id, i.local_ipv4
 						  from instances i
-						  join machines m on m.id = i.machine_id
-						  join gateways gw on gw.fleet_id = m.fleet_id
 						  where i.status = 'running' AND i.node = ?
 						`
 
@@ -94,7 +99,7 @@ func (i *instances) sync() error {
 			case corroclient.ChangeTypeInsert, corroclient.ChangeTypeUpdate:
 				i.addInstance(ie)
 			case corroclient.ChangeTypeDelete:
-				i.removeInstance(ie.GatewayId, ie.InstanceId)
+				i.removeInstance(ie.InstanceId)
 			}
 
 		}
@@ -104,19 +109,19 @@ func (i *instances) sync() error {
 
 func (i *instances) addInstance(ie Instance) {
 	i.mutex.Lock()
-	i.instances[ie.GatewayId+ie.InstanceId] = newBackend(ie)
+	i.instances[ie.InstanceId] = &ie
 	i.mutex.Unlock()
 }
 
-func (i *instances) removeInstance(gw string, instanceId string) {
+func (i *instances) removeInstance(instanceId string) {
 	i.mutex.Lock()
-	delete(i.instances, gw+instanceId)
+	delete(i.instances, instanceId)
 	i.mutex.Unlock()
 }
 
-func (i *instances) getInstance(gw string, instanceId string) (*Backend, bool) {
+func (i *instances) getInstance(instanceId string) (*Instance, bool) {
 	i.mutex.RLock()
-	b, ok := i.instances[gw+instanceId]
+	b, ok := i.instances[instanceId]
 	i.mutex.RUnlock()
 	if !ok {
 		return nil, false

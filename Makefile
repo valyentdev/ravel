@@ -12,5 +12,7 @@ build-jailer:
 
 install-ravel: build-ravel
 	sudo cp ./bin/ravel /usr/bin/ravel
-protoc:
-	buf generate
+run-edge:
+	sudo go run cmd/ravel-proxy/ravel-proxy.go start -m edge -c proxy.toml --debug
+run-local:
+	sudo go run cmd/ravel-proxy/ravel-proxy.go start -m local -c proxy.toml --debug

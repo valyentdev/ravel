@@ -1,47 +1,26 @@
 package local
 
 import (
-	"log/slog"
 	"net/http"
 
-	"github.com/valyentdev/corroclient"
 	"github.com/valyentdev/ravel/proxy"
+	"github.com/valyentdev/ravel/proxy/httpproxy"
+	"github.com/valyentdev/ravel/proxy/server"
 )
 
-func NewProxy(config *proxy.Config) *Proxy {
-	corro := corroclient.NewCorroClient(config.Corrosion.Config())
-	return &Proxy{
-		instances: newInstances(corro, config.Local.NodeId),
-		corro:     corro,
-	}
-}
+func NewLocalProxyServer(config *proxy.Config) *server.Server {
+	proxyService := newProxyService(config)
 
-type Proxy struct {
-	instances *instances
-	corro     *corroclient.CorroClient
-}
+	proxyService.Start()
 
-func (p *Proxy) Start() {
-	p.instances.Start()
-}
+	proxy := httpproxy.NewProxy(proxyService, nil)
 
-func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	instanceId := r.Header.Get("Ravel-Instance-Id")
-	gatewayId := r.Header.Get("Ravel-Gateway-Id")
-	if instanceId == "" || gatewayId == "" {
-		slog.Debug("bad gateway id or instance id")
-		w.WriteHeader(http.StatusBadGateway)
-		return
-	}
+	server := server.NewServer()
 
-	slog.Debug("proxy request", "instance_id", instanceId, "gateway_id", gatewayId)
+	server.Register(&http.Server{
+		Addr:    config.Local.Address,
+		Handler: proxy,
+	})
 
-	instance, ok := p.instances.getInstance(gatewayId, instanceId)
-	if !ok {
-		slog.Debug("instance not found", "instance_id", instanceId, "gateway_id", gatewayId)
-		w.WriteHeader(http.StatusBadGateway)
-		return
-	}
-
-	instance.ServeHTTP(w, r)
+	return server
 }

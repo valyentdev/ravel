@@ -1,4 +1,4 @@
-package reverse
+package httpproxy
 
 import (
 	"context"
@@ -10,50 +10,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
-	"time"
 
 	"golang.org/x/net/http/httpguts"
 )
-
-type RewriteFunc = func(*httputil.ProxyRequest)
-
-func NewReverseProxy(target *url.URL, finalRewrite RewriteFunc) *httputil.ReverseProxy {
-	return &httputil.ReverseProxy{
-		Rewrite: func(pr *httputil.ProxyRequest) {
-			rewrite(target, pr)
-			finalRewrite(pr)
-		},
-		FlushInterval: 100 * time.Millisecond,
-		ErrorHandler:  errorHandler,
-	}
-}
-
-func rewrite(target *url.URL, pr *httputil.ProxyRequest) {
-	out := pr.Out
-	out.URL.Scheme = target.Scheme
-	out.URL.Host = target.Host
-
-	u := out.URL
-	if out.RequestURI != "" {
-		parsedURL, err := url.ParseRequestURI(out.RequestURI)
-		if err == nil {
-			u = parsedURL
-		}
-	}
-
-	out.URL.Path = u.Path
-	out.URL.RawPath = u.RawPath
-	// If a plugin/middleware adds semicolons in query params, they should be urlEncoded.
-	out.URL.RawQuery = strings.ReplaceAll(u.RawQuery, ";", "&")
-	out.RequestURI = "" // Outgoing request should not have RequestURI
-
-	out.Proto = "HTTP/1.1"
-	out.ProtoMajor = 1
-	out.ProtoMinor = 1
-
-	cleanWebSocketHeaders(out)
-
-}
 
 // cleanWebSocketHeaders Even if the websocket RFC says that headers should be case-insensitive,
 // some servers need Sec-WebSocket-Key, Sec-WebSocket-Extensions, Sec-WebSocket-Accept,
@@ -85,15 +44,7 @@ func isWebSocketUpgrade(req *http.Request) bool {
 		strings.EqualFold(req.Header.Get("Upgrade"), "websocket")
 }
 
-func errorHandler(w http.ResponseWriter, req *http.Request, err error) {
-	statusCode := getStatusCode(err)
-	w.WriteHeader(statusCode)
-	if _, werr := w.Write([]byte(statusText(statusCode))); werr != nil {
-		slog.Error("Failed to write response", "error", werr)
-	}
-}
-
-func getStatusCode(err error) int {
+func GetStatusCode(err error) int {
 	switch {
 	case errors.Is(err, io.EOF):
 		return http.StatusBadGateway
@@ -117,9 +68,54 @@ func getStatusCode(err error) int {
 const StatusClientClosedRequest = 499
 const StatusClientClosedRequestText = "Client Closed Request"
 
-func statusText(statusCode int) string {
+func StatusText(statusCode int) string {
 	if statusCode == StatusClientClosedRequest {
 		return StatusClientClosedRequestText
 	}
 	return http.StatusText(statusCode)
+}
+
+func AnswerErrorStatus(w http.ResponseWriter, r *http.Request, statusCode int) {
+	w.WriteHeader(statusCode)
+	if _, err := w.Write([]byte(StatusText(statusCode))); err != nil {
+		slog.Error("Failed to write response", "error", err)
+	}
+}
+
+type ProxyHandler http.Handler
+
+func rewriteTarget(target *url.URL, pr *httputil.ProxyRequest) {
+	out := pr.Out
+	out.URL.Scheme = target.Scheme
+	out.URL.Host = target.Host
+
+	u := out.URL
+	if out.RequestURI != "" {
+		parsedURL, err := url.ParseRequestURI(out.RequestURI)
+		if err == nil {
+			u = parsedURL
+		}
+	}
+
+	out.URL.Path = u.Path
+	out.URL.RawPath = u.RawPath
+	out.URL.RawQuery = strings.ReplaceAll(u.RawQuery, ";", "&")
+	out.RequestURI = "" // Outgoing request should not have RequestURI
+}
+
+func defaultErrorHandler(w http.ResponseWriter, req *http.Request, err error) {
+	statusCode := GetStatusCode(err)
+	AnswerErrorStatus(w, req, statusCode)
+}
+
+func StripHostPort(h string) string {
+	// If no port on host, return unchanged
+	if !strings.Contains(h, ":") {
+		return h
+	}
+	host, _, err := net.SplitHostPort(h)
+	if err != nil {
+		return h // on error, return unchanged
+	}
+	return host
 }

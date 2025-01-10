@@ -10,22 +10,22 @@ import (
 	"github.com/valyentdev/corroclient"
 )
 
-type Gateways struct {
+type gateways struct {
 	gateways        map[string]Gateway
 	gatewaysDomains map[string]string
 	mutex           sync.RWMutex
 	corro           *corroclient.CorroClient
 }
 
-func newGateways(corro *corroclient.CorroClient) *Gateways {
-	return &Gateways{
+func newGateways(corro *corroclient.CorroClient) *gateways {
+	return &gateways{
 		gateways:        make(map[string]Gateway),
 		gatewaysDomains: make(map[string]string),
 		corro:           corro,
 	}
 }
 
-func (g *Gateways) Start() {
+func (g *gateways) Start() {
 	go func() {
 		for {
 			err := g.sync()
@@ -40,7 +40,7 @@ func (g *Gateways) Start() {
 }
 
 const getConfigQuery = `select g.id, g.namespace, g.name, g.target_port, 
-						json_group_array(i.id) as targets  
+						json_group_array(m.id) as targets  
 						from machines m  
 						join gateways g on g.fleet_id = m.fleet_id 
 					   	join instances i on i.machine_id = m.id
@@ -56,7 +56,7 @@ func scanGateway(row *corroclient.Row) (Gateway, error) {
 		return gw, err
 	}
 
-	err = json.Unmarshal(instanceBytes, &gw.Instances)
+	err = json.Unmarshal(instanceBytes, &gw.Machines)
 	if err != nil {
 		return gw, err
 	}
@@ -64,7 +64,7 @@ func scanGateway(row *corroclient.Row) (Gateway, error) {
 	return gw, err
 }
 
-func (g *Gateways) sync() error {
+func (g *gateways) sync() error {
 	sub, err := g.corro.PostSubscription(context.Background(), corroclient.Statement{
 		Query: getConfigQuery,
 	})
@@ -110,21 +110,22 @@ func getDomain(name, namespace string) string {
 	return name + "-" + namespace
 }
 
-func (g *Gateways) addGateway(gw Gateway) {
+func (g *gateways) addGateway(gw Gateway) {
+	slog.Debug("adding gateway", "gateway", gw)
 	g.mutex.Lock()
 	g.gateways[gw.Id] = gw
 	g.gatewaysDomains[getDomain(gw.Name, gw.Namespace)] = gw.Id
 	g.mutex.Unlock()
 }
 
-func (g *Gateways) removeGateway(gw Gateway) {
+func (g *gateways) removeGateway(gw Gateway) {
 	g.mutex.Lock()
 	delete(g.gateways, gw.Id)
 	delete(g.gatewaysDomains, getDomain(gw.Name, gw.Namespace))
 	g.mutex.Unlock()
 }
 
-func (g *Gateways) updateGateway(gw Gateway) {
+func (g *gateways) updateGateway(gw Gateway) {
 	g.mutex.Lock()
 	old := g.gateways[gw.Id]
 	delete(g.gatewaysDomains, getDomain(old.Name, old.Namespace))
@@ -133,7 +134,7 @@ func (g *Gateways) updateGateway(gw Gateway) {
 	g.mutex.Unlock()
 }
 
-func (g *Gateways) GetGateway(domain string) (*Gateway, bool) {
+func (g *gateways) GetGateway(domain string) (*Gateway, bool) {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
 	id, ok := g.gatewaysDomains[domain]

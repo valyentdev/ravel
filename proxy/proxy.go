@@ -27,10 +27,20 @@ type Config struct {
 	Local     LocalConfig            `toml:"local"`
 }
 
+type InitdAPIConfig struct {
+	Domain string `toml:"domain"`
+	Authz  *struct {
+		Endpoint string `toml:"endpoint_url"`
+	}
+	TLS TLS `toml:"tls"`
+}
+
 type EdgeConfig struct {
-	Address       string `toml:"address"`
-	DefaultDomain string `toml:"default_domain"`
-	TLS           TLS    `toml:"tls"`
+	DefaultDomain string          `toml:"default_domain"`
+	HttpAddr      string          `toml:"http_addr"`
+	HttpsAddr     string          `toml:"https_addr"`
+	Initd         *InitdAPIConfig `toml:"initd"`
+	TLS           TLS             `toml:"tls"`
 }
 
 type LocalConfig struct {

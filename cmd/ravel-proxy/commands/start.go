@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/valyentdev/ravel/proxy"
@@ -23,7 +26,7 @@ func newStartCmd() *cobra.Command {
 				return fmt.Errorf("invalid mode: %s", mode)
 			}
 
-			return runStart(proxy.Mode(mode), configPath)
+			return runStart(cmd.Context(), proxy.Mode(mode), configPath)
 		},
 	}
 
@@ -34,15 +37,16 @@ func newStartCmd() *cobra.Command {
 	return &edge
 }
 
-func runStart(mode proxy.Mode, configPath string) error {
+func runStart(ctx context.Context, mode proxy.Mode, configPath string) error {
 	config, err := proxy.ReadConfigFile(configPath)
 	if err != nil {
 		return err
 	}
 
+	slog.Info("Starting proxy in", "mode", mode)
 	switch mode {
 	case proxy.Edge:
-		return runEdge(config)
+		return runEdge(ctx, config)
 	case proxy.Local:
 		return runLocal(config)
 	}
@@ -50,30 +54,30 @@ func runStart(mode proxy.Mode, configPath string) error {
 	return nil
 }
 
-func runEdge(config *proxy.Config) error {
-	edgeProxy := edge.NewRavelProxy(config)
-	edgeProxy.Start()
-
-	s := server.NewServer(edgeProxy.Handle, config.Local.Address)
-
-	err := s.ListenAndServeTLS(config.Edge.TLS.CertFile, config.Edge.TLS.KeyFile)
+func runEdge(ctx context.Context, config *proxy.Config) error {
+	edgeProxy, err := edge.NewEdgeProxyServer(config)
 	if err != nil {
 		return err
 	}
-
-	return nil
+	return runServer(ctx, edgeProxy, 60*time.Second)
 }
 
 func runLocal(config *proxy.Config) error {
-	proxy := local.NewProxy(config)
-	proxy.Start()
+	localProxy := local.NewLocalProxyServer(config)
+	return runServer(context.Background(), localProxy, 60*time.Second)
+}
 
-	s := server.NewServer(proxy.ServeHTTP, config.Local.Address)
-
-	err := s.ListenAndServe()
-	if err != nil {
+func runServer(ctx context.Context, server *server.Server, shutdownTimeout time.Duration) error {
+	if err := server.Start(); err != nil {
 		return err
 	}
+
+	<-ctx.Done()
+
+	shutdownCTX, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	server.Shutdown(shutdownCTX)
 
 	return nil
 }
