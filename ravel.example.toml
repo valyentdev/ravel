@@ -1,3 +1,25 @@
+[daemon]
+database_path = "./agent.db"
+
+[daemon.runtime]
+cloud_hypervisor_binary = "./cloud-hypervisor"
+jailer_binary = "./bin/jailer"
+init_binary = "./bin/initd"
+linux_kernel = "./vmlinux.bin"
+
+[daemon.agent]
+resources = { cpus_mhz = 20000, memory_mb = 16_384 }
+node_id = "ravel-1"
+region = "fr"
+address = "127.0.0.1"
+port = 8080
+http_proxy_port = 8082
+[daemon.agent.tls]
+cert_file = "ravel-1-agent-cert.pem"
+key_file = "ravel-1-agent-key.pem"
+ca_file = "ravel-ca-cert.pem"
+
+
 [nats]
 url = "nats://127.0.0.1:4222"
 cred_file = "./nats.creds"
@@ -5,26 +27,20 @@ cred_file = "./nats.creds"
 [corrosion]
 url = "http://127.0.0.1:8081"
 
-
-# Ravel Agent configuration
-[agent]
-node_id = "ravel-1"
-region = "fr"
-address = "127.0.0.1"
-agent_port = 8080
-http_proxy_port = 8082
-init_binary = "./bin/ravel-init"
-linux_kernel = "./vmlinux.bin"
-database_path = "./agent.db"
-resources = { cpus_mhz = 20000, memory_mb = 16_384 }
+[registries."your-registry"]
+username = ""
+password = ""
 
 
-# Ravel Server configuration
 [server]
 postgres_url = "postgres://user:password@host:port/db"
 [server.api]
 address = ":3000"
-bearer_token = "ravel"
+[server.tls]
+cert_file = "server-1-server-cert.pem"
+key_file = "server-1-server-key.pem"
+ca_file = "ravel-ca-cert.pem"
+
 [server.machine_templates.eco]
 vcpu_frequency = 250
 combinations = [
@@ -55,7 +71,7 @@ combinations = [
 ]
 
 [server.machine_templates.std]
-frequency_by_vcpu = 2200
+vcpu_frequency = 2200
 combinations = [
     { vcpus = 1, memory_configs = [
         1_024,

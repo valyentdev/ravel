@@ -1,9 +1,20 @@
 
 [edge]
-address = ":443"
-default_domain = "example.app"
-[corrosion]
-url = "http://localhost:8081"
+http_addr = ":80"
+https_addr = ":443"
+default_domain = "domain.tld"
+[edge.tls]
+cert_file = "./tmp/cert.pem"
+key_file = "./tmp/cert_key.pem"
+[edge.initd]
+domain = "domain2.tld"
+[edge.initd.tls]
+cert_file = "./tmp/cert.pem"
+key_file = "./tmp/cert_key.pem"
+
+
 [local]
 address = ":8082"
 node_id = "ravel-1"
+[corrosion]
+url = "http://localhost:8081"
