@@ -2,11 +2,14 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/ravel/state/db/schema"
 )
 
 const baseSelectGateway = `SELECT id, name, namespace, fleet_id, protocol, target_port FROM gateways`
@@ -100,7 +103,12 @@ func (q Queries) CreateGateway(ctx context.Context, gateway api.Gateway) error {
 		gateway.TargetPort,
 	)
 	if err != nil {
-		return err
+		var pg *pgconn.PgError
+		if errors.As(err, &pg) {
+			if pg.ConstraintName == schema.UniqueGatewayNameConstraint {
+				return errdefs.NewAlreadyExists("gateway name already exists")
+			}
+		}
 	}
 
 	return nil

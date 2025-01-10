@@ -12,5 +12,10 @@ func getMigrations() []Migration {
 			Up:   gatewaysUp,
 			Down: gatewaysDown,
 		},
+		{
+			Name: "gateway_name",
+			Up:   gwNameUp,
+			Down: gwNameDown,
+		},
 	}
 }

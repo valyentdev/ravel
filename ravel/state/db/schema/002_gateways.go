@@ -1,7 +1,5 @@
 package schema
 
-const UniqueGatewayNameInNamespaceConstraint = "unique_gateway_name_in_namespace"
-
 const gatewaysUp = `
 CREATE TABLE gateways (
     "id" text primary key,

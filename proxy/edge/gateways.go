@@ -106,31 +106,26 @@ func (g *gateways) sync() error {
 	return nil
 }
 
-func getDomain(name, namespace string) string {
-	return name + "-" + namespace
-}
-
 func (g *gateways) addGateway(gw Gateway) {
-	slog.Debug("adding gateway", "gateway", gw)
 	g.mutex.Lock()
 	g.gateways[gw.Id] = gw
-	g.gatewaysDomains[getDomain(gw.Name, gw.Namespace)] = gw.Id
+	g.gatewaysDomains[gw.Name] = gw.Id
 	g.mutex.Unlock()
 }
 
 func (g *gateways) removeGateway(gw Gateway) {
 	g.mutex.Lock()
 	delete(g.gateways, gw.Id)
-	delete(g.gatewaysDomains, getDomain(gw.Name, gw.Namespace))
+	delete(g.gatewaysDomains, gw.Name)
 	g.mutex.Unlock()
 }
 
 func (g *gateways) updateGateway(gw Gateway) {
 	g.mutex.Lock()
 	old := g.gateways[gw.Id]
-	delete(g.gatewaysDomains, getDomain(old.Name, old.Namespace))
+	delete(g.gatewaysDomains, old.Name)
 	g.gateways[gw.Id] = gw
-	g.gatewaysDomains[getDomain(gw.Name, gw.Namespace)] = gw.Id
+	g.gatewaysDomains[gw.Name] = gw.Id
 	g.mutex.Unlock()
 }
 
