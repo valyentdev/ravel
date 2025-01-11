@@ -48,7 +48,7 @@ func runStart(ctx context.Context, mode proxy.Mode, configPath string) error {
 	case proxy.Edge:
 		return runEdge(ctx, config)
 	case proxy.Local:
-		return runLocal(config)
+		return runLocal(ctx, config)
 	}
 
 	return nil
@@ -62,9 +62,9 @@ func runEdge(ctx context.Context, config *proxy.Config) error {
 	return runServer(ctx, edgeProxy, 60*time.Second)
 }
 
-func runLocal(config *proxy.Config) error {
+func runLocal(ctx context.Context, config *proxy.Config) error {
 	localProxy := local.NewLocalProxyServer(config)
-	return runServer(context.Background(), localProxy, 60*time.Second)
+	return runServer(ctx, localProxy, 60*time.Second)
 }
 
 func runServer(ctx context.Context, server *server.Server, shutdownTimeout time.Duration) error {
@@ -73,6 +73,7 @@ func runServer(ctx context.Context, server *server.Server, shutdownTimeout time.
 	}
 
 	<-ctx.Done()
+	slog.Info("Shutting down server")
 
 	shutdownCTX, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()

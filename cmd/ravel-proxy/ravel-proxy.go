@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGQUIT)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGQUIT, syscall.SIGTERM)
 	defer cancel()
 	if err := commands.NewRootCmd().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
