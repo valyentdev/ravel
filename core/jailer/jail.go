@@ -62,7 +62,7 @@ func WithCopyFile(src string, dst string, mode uint32) Opt {
 
 func WithBinary(src string, dst string) Opt {
 	return func(o *options) error {
-		o.copyFiles = append(o.copyFiles, file{Src: src, Dst: src, Mode: 0700})
+		o.copyFiles = append(o.copyFiles, file{Src: src, Dst: dst, Mode: 0700})
 		return nil
 	}
 }
