@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/valyentdev/corroclient"
-	"github.com/valyentdev/ravel/initd"
 	"github.com/valyentdev/ravel/proxy"
 	"github.com/valyentdev/ravel/proxy/httpproxy"
 	"github.com/valyentdev/ravel/proxy/server"
@@ -16,7 +15,7 @@ import (
 
 type edgeProxy struct {
 	gws           httpproxy.ProxyHandler
-	initd         httpproxy.ProxyHandler
+	machines      httpproxy.ProxyHandler
 	gatewayDomain string
 	initdDomain   string
 }
@@ -27,31 +26,34 @@ func loadCertificates(config *proxy.Config) (*certStore, error) {
 		return nil, err
 	}
 
-	initdCert, err := tls.LoadX509KeyPair(config.Edge.Initd.TLS.CertFile, config.Edge.Initd.TLS.KeyFile)
+	machinesCert, err := tls.LoadX509KeyPair(config.Edge.MachineGateways.TLS.CertFile, config.Edge.MachineGateways.TLS.KeyFile)
 	if err != nil {
 		return nil, err
 	}
 
-	return newCertStore(config.Edge.DefaultDomain, config.Edge.Initd.Domain, &gwCert, &initdCert), nil
+	return newCertStore(config.Edge.DefaultDomain, config.Edge.MachineGateways.Domain, &gwCert, &machinesCert), nil
 }
 
 func (p *edgeProxy) serveHTTPS(w http.ResponseWriter, r *http.Request) {
 	host := httpproxy.StripHostPort(r.Host)
-	sni := r.TLS.ServerName
-	if sni != host {
-		httpproxy.AnswerErrorStatus(w, r, http.StatusBadGateway)
-		return
-	}
+
+	// We'll need to check the SNI later when we'll support custom domains
+	// for now, we'll just check the host as all domains are subdomains of the
+	// defaults domains
+	// sni := r.TLS.ServerNacme
+	// if sni != host {
+	// 	slog.Warn("SNI does not match host", "sni", sni, "host", host)
+	// 	httpproxy.AnswerErrorStatus(w, r, http.StatusBadGateway)
+	// 	return
+	// }
 
 	if isSubDomain(p.gatewayDomain, host) {
-		slog.Debug("proxying to a gateway")
 		p.gws.ServeHTTP(w, r)
 		return
 	}
 
 	if isSubDomain(p.initdDomain, host) {
-		slog.Debug("proxying to initd")
-		p.initd.ServeHTTP(w, r)
+		p.machines.ServeHTTP(w, r)
 		return
 	}
 
@@ -76,28 +78,28 @@ func NewEdgeProxyServer(config *proxy.Config) (*server.Server, error) {
 	backends.Start()
 
 	gatewayDomainSuffix := "." + config.Edge.DefaultDomain
-	initdDomainSuffix := "." + config.Edge.Initd.Domain
+	machinesGwDomainSuffix := "." + config.Edge.MachineGateways.Domain
 
 	gwService := newGatewayProxyService(gatewayDomainSuffix, backends, corro)
 	gwProxy := httpproxy.NewProxy(gwService, nil)
 
 	var authorizer Authorizer
 
-	if config.Edge.Initd.Authz != nil {
-		authorizer = newValyentAuthorizer(config.Edge.Initd.Authz.Endpoint)
+	if config.Edge.MachineGateways.InitdAuthz != nil {
+		authorizer = newValyentAuthorizer(config.Edge.MachineGateways.InitdAuthz.Endpoint)
 	} else {
 		slog.Warn("[DANGER] No authorization is configured for initd proxy")
 		authorizer = &noAuthAuthorizer{}
 	}
 
-	initdProxyService := newInitdProxyService(backends, initdDomainSuffix, initd.InitdPort, authorizer)
+	initdProxyService := newInitdProxyService(backends, machinesGwDomainSuffix, authorizer)
 	initdProxy := httpproxy.NewProxy(initdProxyService, nil)
 
 	proxy := &edgeProxy{
 		gws:           gwProxy,
-		initd:         initdProxy,
+		machines:      initdProxy,
 		gatewayDomain: config.Edge.DefaultDomain,
-		initdDomain:   config.Edge.Initd.Domain,
+		initdDomain:   config.Edge.MachineGateways.Domain,
 	}
 
 	certStore, err := loadCertificates(config)

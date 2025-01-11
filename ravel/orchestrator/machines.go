@@ -115,3 +115,21 @@ func (o *Orchestrator) GetMachineLogsRaw(ctx context.Context, machine cluster.Ma
 
 	return agentClient.GetMachineLogsRaw(ctx, machine.Id, follow)
 }
+
+func (o *Orchestrator) EnableMachineGateway(ctx context.Context, machine cluster.Machine) error {
+	agentClient, err := o.getAgentClient(machine.Node)
+	if err != nil {
+		return err
+	}
+
+	return agentClient.EnableMachineGateway(ctx, machine.Id)
+}
+
+func (o *Orchestrator) DisableMachineGateway(ctx context.Context, machine cluster.Machine) error {
+	agentClient, err := o.getAgentClient(machine.Node)
+	if err != nil {
+		return err
+	}
+
+	return agentClient.DisableMachineGateway(ctx, machine.Id)
+}

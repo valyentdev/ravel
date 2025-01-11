@@ -130,3 +130,35 @@ func (s *AgentServer) getMachineLogs(ctx context.Context, req *GetMachineLogsReq
 	}
 	return &GetMachineLogsResponse{Body: logs}, nil
 }
+
+type EnableMachineGatewayRequest struct {
+	Id string `path:"id"`
+}
+
+type EnableMachineGatewayResponse struct {
+}
+
+func (s *AgentServer) enableMachineGateway(ctx context.Context, req *EnableMachineGatewayRequest) (*EnableMachineGatewayResponse, error) {
+	err := s.agent.EnableMachineGateway(ctx, req.Id)
+	if err != nil {
+		s.log("Failed to enable machine gateway", err)
+		return nil, err
+	}
+	return &EnableMachineGatewayResponse{}, nil
+}
+
+type DisableMachineGatewayRequest struct {
+	Id string `path:"id"`
+}
+
+type DisableMachineGatewayResponse struct {
+}
+
+func (s *AgentServer) disableMachineGateway(ctx context.Context, req *DisableMachineGatewayRequest) (*DisableMachineGatewayResponse, error) {
+	err := s.agent.DisableMachineGateway(ctx, req.Id)
+	if err != nil {
+		s.log("Failed to disable machine gateway", err)
+		return nil, err
+	}
+	return &DisableMachineGatewayResponse{}, nil
+}

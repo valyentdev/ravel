@@ -323,3 +323,27 @@ func (s *MachineInstanceState) PushDestroyedEvent(ctx context.Context) (err erro
 
 	return nil
 }
+
+func (s *MachineInstanceState) PushGatewayEvent(enabled bool) (err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	event := s.newEvent(
+		api.MachineGateway,
+		api.OriginUser,
+		s.mi.State.Status,
+		api.MachineEventPayload{
+			Gateway: &api.MachineGatewayEventPayload{
+				Enabled: enabled,
+			},
+		},
+	)
+
+	s.mi.State.MachineGatewayEnabled = enabled
+
+	if err = s.persistStateAndEvent(event); err != nil {
+		return
+	}
+
+	return nil
+}

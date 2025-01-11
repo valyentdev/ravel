@@ -13,11 +13,12 @@ import (
 )
 
 type instance struct {
-	Id        string `json:"id"`
-	Namespace string `json:"namespace"`
-	MachineId string `json:"machine_id"`
-	Address   string `json:"address"`
-	Port      int    `json:"port"`
+	Id                   string `json:"id"`
+	Namespace            string `json:"namespace"`
+	MachineId            string `json:"machine_id"`
+	Address              string `json:"address"`
+	Port                 int    `json:"port"`
+	EnableMachineGateway bool   `json:"enable_machine_gateway"`
 }
 
 func (i *instance) Url() *url.URL {
@@ -58,16 +59,20 @@ func (b *instanceBackends) Start() {
 
 func scanInstance(row *corroclient.Row) (instance, error) {
 	var i instance
-	err := row.Scan(&i.Id, &i.MachineId, &i.Namespace, &i.Address, &i.Port)
+	var machineGatewayEnabled uint8
+
+	err := row.Scan(&i.Id, &i.MachineId, &i.Namespace, &i.Address, &i.Port, &machineGatewayEnabled)
 	if err != nil {
 		return instance{}, err
 	}
+
+	i.EnableMachineGateway = machineGatewayEnabled == 1
 
 	return i, nil
 }
 
 const getBackendsQuery = `
-						  select i.id, m.id, m.namespace, n.address, n.http_proxy_port  
+						  select i.id, m.id, m.namespace, n.address, n.http_proxy_port, i.enable_machine_gateway
 						  from instances i
 						  join machines m on m.instance_id = i.id
 						  join nodes n on n.id = i.node
@@ -103,6 +108,8 @@ func (b *instanceBackends) sync() error {
 			}
 
 			switch change.ChangeType {
+			case corroclient.ChangeTypeUpdate:
+				b.setBackend(i)
 			case corroclient.ChangeTypeInsert:
 				b.setBackend(i)
 			case corroclient.ChangeTypeDelete:

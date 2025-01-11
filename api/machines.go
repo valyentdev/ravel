@@ -29,6 +29,7 @@ type Machine struct {
 	UpdatedAt      time.Time      `json:"updated_at"`
 	Events         []MachineEvent `json:"events"`
 	Status         MachineStatus  `json:"state"`
+	GatewayEnabled bool           `json:"gateway_enabled"`
 }
 
 type MachineStatus string
@@ -69,7 +70,7 @@ type (
 	MachineConfig struct {
 		Image       string      `json:"image"`
 		Guest       GuestConfig `json:"guest"`
-		Workload    Workload    `json:"workload"`
+		Workload    Workload    `json:"workload,omitempty"`
 		StopConfig  *StopConfig `json:"stop_config,omitempty"`
 		AutoDestroy bool        `json:"auto_destroy,omitempty"`
 	}
@@ -120,12 +121,14 @@ const (
 	MachineExited        MachineEventType = "machine.exited"
 	MachineDestroy       MachineEventType = "machine.destroy"
 	MachineDestroyed     MachineEventType = "machine.destroyed"
+	MachineGateway       MachineEventType = "machine.gateway"
 )
 
 type CreateMachinePayload struct {
-	Region    string        `json:"region"`
-	Config    MachineConfig `json:"config"`
-	SkipStart bool          `json:"skip_start"`
+	Region               string        `json:"region"`
+	Config               MachineConfig `json:"config"`
+	SkipStart            bool          `json:"skip_start,omitempty"`
+	EnableMachineGateway bool          `json:"enable_machine_gateway,omitempty"`
 }
 
 type MachineStartEventPayload struct {
@@ -159,6 +162,10 @@ type MachineDestroyEventPayload struct {
 	Force       bool   `json:"force"`
 }
 
+type MachineGatewayEventPayload struct {
+	Enabled bool `json:"enabled"`
+}
+
 type MachineEventPayload struct {
 	PrepareFailed *MachinePrepareFailedEventPayload `json:"prepare_failed,omitempty"`
 	Stop          *MachineStopEventPayload          `json:"stop,omitempty"`
@@ -167,6 +174,7 @@ type MachineEventPayload struct {
 	Started       *MachineStartedEventPayload       `json:"started,omitempty"`
 	Exited        *MachineExitedEventPayload        `json:"stopped,omitempty"`
 	Destroy       *MachineDestroyEventPayload       `json:"destroy,omitempty"`
+	Gateway       *MachineGatewayEventPayload       `json:"gateway,omitempty"`
 }
 
 type Origin string

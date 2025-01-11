@@ -1,14 +1,13 @@
 package edge
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/valyentdev/ravel/internal/httpclient"
 )
 
 type Authorizer interface {
-	Authorize(ctx context.Context, r *http.Request, namespace string) bool
+	Authorize(r *http.Request, namespace string) bool
 }
 
 type valyentAuthorizer struct {
@@ -29,10 +28,10 @@ func newValyentAuthorizer(endpoint string) *valyentAuthorizer {
 	}
 }
 
-func (v *valyentAuthorizer) Authorize(ctx context.Context, r *http.Request, namespace string) bool {
+func (v *valyentAuthorizer) Authorize(r *http.Request, namespace string) bool {
 	var result authResult
 	err := v.client.Get(
-		context.Background(),
+		r.Context(),
 		v.endpoint,
 		&result,
 		httpclient.WithHeader("Authorization", r.Header.Get("Authorization")),
@@ -50,6 +49,6 @@ func (v *valyentAuthorizer) Authorize(ctx context.Context, r *http.Request, name
 
 type noAuthAuthorizer struct{}
 
-func (n *noAuthAuthorizer) Authorize(ctx context.Context, r *http.Request, namespace string) bool {
+func (n *noAuthAuthorizer) Authorize(r *http.Request, namespace string) bool {
 	return true
 }

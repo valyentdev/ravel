@@ -105,3 +105,21 @@ func (a *AgentClient) GetMachineLogsRaw(ctx context.Context, id string, follow b
 	}
 	return a.client.RawGet(ctx, path)
 }
+
+func (a *AgentClient) DisableMachineGateway(ctx context.Context, id string) error {
+	path := "/machines/" + id + "/gateway/disable"
+	err := a.client.Post(ctx, path, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *AgentClient) EnableMachineGateway(ctx context.Context, id string) error {
+	path := "/machines/" + id + "/gateway/enable"
+	err := a.client.Post(ctx, path, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}

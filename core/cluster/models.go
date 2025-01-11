@@ -20,14 +20,15 @@ type Machine struct {
 }
 
 type MachineInstance struct {
-	Id             string             `json:"id"`
-	Node           string             `json:"node"`
-	Namespace      string             `json:"namespace"`
-	MachineId      string             `json:"machine_id"`
-	MachineVersion string             `json:"machine_version"`
-	Status         api.MachineStatus  `json:"status"`
-	Events         []api.MachineEvent `json:"events"`
-	LocalIPV4      string             `json:"local_ipv4"`
-	CreatedAt      time.Time          `json:"created_at"`
-	UpdatedAt      time.Time          `json:"updated_at"`
+	Id                   string             `json:"id"`
+	Node                 string             `json:"node"`
+	Namespace            string             `json:"namespace"`
+	MachineId            string             `json:"machine_id"`
+	MachineVersion       string             `json:"machine_version"`
+	Status               api.MachineStatus  `json:"status"`
+	Events               []api.MachineEvent `json:"events"`
+	LocalIPV4            string             `json:"local_ipv4"`
+	CreatedAt            time.Time          `json:"created_at"`
+	UpdatedAt            time.Time          `json:"updated_at"`
+	EnableMachineGateway bool               `json:"enable_machine_gateway"`
 }

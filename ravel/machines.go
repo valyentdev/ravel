@@ -114,7 +114,7 @@ func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet strin
 		return nil, err
 	}
 
-	err = r.o.PutMachine(ctx, nodeId, &machine, mv, !createOptions.SkipStart)
+	err = r.o.PutMachine(ctx, nodeId, &machine, mv, !createOptions.SkipStart, createOptions.EnableMachineGateway)
 	if err != nil {
 		return nil, err
 	}
@@ -281,4 +281,22 @@ func (r *Ravel) WaitMachineStatus(ctx context.Context, ns, fleet, machineId stri
 		InstanceId: m.InstanceId,
 		Timeout:    opt.timeout,
 	})
+}
+
+func (r *Ravel) EnableMachineGateway(ctx context.Context, ns, fleet, machineId string) error {
+	m, err := r.getMachine(ctx, ns, fleet, machineId, false)
+	if err != nil {
+		return err
+	}
+
+	return r.o.EnableMachineGateway(ctx, m)
+}
+
+func (r *Ravel) DisableMachineGateway(ctx context.Context, ns, fleet, machineId string) error {
+	m, err := r.getMachine(ctx, ns, fleet, machineId, false)
+	if err != nil {
+		return err
+	}
+
+	return r.o.DisableMachineGateway(ctx, m)
 }

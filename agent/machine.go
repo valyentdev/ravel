@@ -65,10 +65,11 @@ func (a *Agent) PutMachine(ctx context.Context, opt cluster.PutMachineOptions) (
 		Machine: opt.Machine,
 		Version: opt.Version,
 		State: structs.MachineInstanceState{
-			DesiredStatus: desiredStatus,
-			Status:        api.MachineStatusCreated,
-			CreatedAt:     time.Now(),
-			UpdatedAt:     time.Now(),
+			DesiredStatus:         desiredStatus,
+			Status:                api.MachineStatusCreated,
+			CreatedAt:             time.Now(),
+			UpdatedAt:             time.Now(),
+			MachineGatewayEnabled: opt.EnableGateway,
 		},
 	}
 
@@ -138,4 +139,22 @@ func (d *Agent) MachineExec(ctx context.Context, id string, cmd []string, timeou
 	}
 
 	return machine.Exec(ctx, cmd, timeout)
+}
+
+func (d *Agent) EnableMachineGateway(ctx context.Context, id string) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.EnableGateway(ctx)
+}
+
+func (d *Agent) DisableMachineGateway(ctx context.Context, id string) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.DisableGateway(ctx)
 }

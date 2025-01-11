@@ -191,6 +191,22 @@ func (e *Endpoints) Register(api huma.API) {
 	}, e.waitMachineStatus)
 
 	huma.Register(api, huma.Operation{
+		OperationID: "enableMachineGateway",
+		Summary:     "Enable the Machine Gateway",
+		Method:      http.MethodPost,
+		Path:        "/fleets/{fleet}/machines/{machine_id}/gateway/enable",
+		Tags:        []string{"machines"},
+	}, e.enableMachineGateway)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "disableMachineGateway",
+		Summary:     "Disable the Machine Gateway",
+		Method:      http.MethodPost,
+		Path:        "/fleets/{fleet}/machines/{machine_id}/gateway/disable",
+		Tags:        []string{"machines"},
+	}, e.disableMachineGateway)
+
+	huma.Register(api, huma.Operation{
 		OperationID: "createGateway",
 		Summary:     "Create a gateway",
 		Method:      http.MethodPost,

@@ -73,4 +73,16 @@ func (s AgentServer) registerEndpoints(mux humago.Mux) {
 		Method:      http.MethodDelete,
 	}, s.destroyMachine)
 
+	huma.Register(api, huma.Operation{
+		OperationID: "enableMachineGateway",
+		Path:        "/machines/{id}/gateway/enable",
+		Method:      http.MethodPost,
+	}, s.enableMachineGateway)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "disableMachineGateway",
+		Path:        "/machines/{id}/gateway/disable",
+		Method:      http.MethodPost,
+	}, s.disableMachineGateway)
+
 }

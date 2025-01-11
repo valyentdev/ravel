@@ -30,7 +30,7 @@ func (o *Orchestrator) PrepareAllocation(ctx context.Context, region string, all
 	return
 }
 
-func (o *Orchestrator) PutMachine(ctx context.Context, nodeId string, machine *cluster.Machine, mv api.MachineVersion, start bool) error {
+func (o *Orchestrator) PutMachine(ctx context.Context, nodeId string, machine *cluster.Machine, mv api.MachineVersion, start bool, enableGateway bool) error {
 	member, err := o.clusterState.GetNode(ctx, nodeId)
 	if err != nil {
 		return fmt.Errorf("failed to get node: %w", err)
@@ -42,10 +42,11 @@ func (o *Orchestrator) PutMachine(ctx context.Context, nodeId string, machine *c
 	}
 
 	_, err = ac.PutMachine(ctx, cluster.PutMachineOptions{
-		AllocationId: machine.Id,
-		Machine:      *machine,
-		Version:      mv,
-		Start:        start,
+		AllocationId:  machine.Id,
+		Machine:       *machine,
+		Version:       mv,
+		Start:         start,
+		EnableGateway: enableGateway,
 	})
 	if err != nil {
 		return err

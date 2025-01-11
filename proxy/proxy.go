@@ -27,20 +27,20 @@ type Config struct {
 	Local     LocalConfig            `toml:"local"`
 }
 
-type InitdAPIConfig struct {
-	Domain string `toml:"domain"`
-	Authz  *struct {
+type MachineGatewaysConfig struct {
+	Domain     string `toml:"domain"`
+	InitdAuthz *struct {
 		Endpoint string `toml:"endpoint_url"`
-	}
+	} `toml:"initd_authz"`
 	TLS TLS `toml:"tls"`
 }
 
 type EdgeConfig struct {
-	DefaultDomain string          `toml:"default_domain"`
-	HttpAddr      string          `toml:"http_addr"`
-	HttpsAddr     string          `toml:"https_addr"`
-	Initd         *InitdAPIConfig `toml:"initd"`
-	TLS           TLS             `toml:"tls"`
+	DefaultDomain   string                 `toml:"default_domain"`
+	HttpAddr        string                 `toml:"http_addr"`
+	HttpsAddr       string                 `toml:"https_addr"`
+	MachineGateways *MachineGatewaysConfig `toml:"machine_gateways"`
+	TLS             TLS                    `toml:"tls"`
 }
 
 type LocalConfig struct {

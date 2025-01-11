@@ -9,7 +9,7 @@ CREATE table gateways (
     target_port int not null default 80
 );
 
--- Instances
+-- Machine Instances
 
 CREATE TABLE instances (
     id text not null default '',
@@ -22,6 +22,7 @@ CREATE TABLE instances (
     updated_at integer not null default 0,
     local_ipv4 text not null default '',
     events text not null default '[]',
+    enable_machine_gateway integer not null default 0,
     primary key (id, machine_id)
 );
 

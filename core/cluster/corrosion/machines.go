@@ -100,7 +100,7 @@ func (c *Queries) DestroyMachine(ctx context.Context, id string) error {
 	return nil
 }
 
-const baseSelectAPIMachine = `SELECT m.id, m.namespace, m.fleet_id, m.instance_id, m.machine_version, m.region, m.created_at, m.updated_at, i.status, mv.config, i.events
+const baseSelectAPIMachine = `SELECT m.id, m.namespace, m.fleet_id, m.instance_id, m.machine_version, m.region, m.created_at, m.updated_at, i.status, mv.config, i.events, i.enable_machine_gateway
 							  FROM machines m
 							  JOIN instances i ON m.instance_id = i.id
 							  JOIN machine_versions mv ON m.machine_version = mv.id`
@@ -112,14 +112,16 @@ func scanAPIMachine(row dbutil.Scannable) (*api.Machine, error) {
 	var createdAt int64
 	var updatedAt int64
 	var state string
-
-	err := row.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.InstanceId, &m.MachineVersion, &m.Region, &createdAt, &updatedAt, &state, &config, &events)
+	var gatewayEnabled corroBool
+	err := row.Scan(&m.Id, &m.Namespace, &m.FleetId, &m.InstanceId, &m.MachineVersion, &m.Region, &createdAt, &updatedAt, &state, &config, &events, &gatewayEnabled)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, errdefs.NewNotFound("machine not found")
 		}
 		return nil, err
 	}
+
+	m.GatewayEnabled = gatewayEnabled.Bool()
 
 	m.Status = api.MachineStatus(state)
 

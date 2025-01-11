@@ -252,3 +252,37 @@ func (e *Endpoints) waitMachineStatus(ctx context.Context, req *WaitMachineStatu
 
 	return nil, nil
 }
+
+type EnableMachineGatewayRequest struct {
+	MachineResolver
+}
+
+type EnableMachineGatewayResponse struct {
+}
+
+func (e *Endpoints) enableMachineGateway(ctx context.Context, req *EnableMachineGatewayRequest) (*EnableMachineGatewayResponse, error) {
+	err := e.ravel.EnableMachineGateway(ctx, req.Namespace, req.Fleet, req.MachineId)
+	if err != nil {
+		e.log("Failed to enable machine gateway", err)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+type DisableMachineGatewayRequest struct {
+	MachineResolver
+}
+
+type DisableMachineGatewayResponse struct {
+}
+
+func (e *Endpoints) disableMachineGateway(ctx context.Context, req *DisableMachineGatewayRequest) (*DisableMachineGatewayResponse, error) {
+	err := e.ravel.DisableMachineGateway(ctx, req.Namespace, req.Fleet, req.MachineId)
+	if err != nil {
+		e.log("Failed to disable machine gateway", err)
+		return nil, err
+	}
+
+	return nil, nil
+}

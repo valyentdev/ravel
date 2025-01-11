@@ -9,13 +9,14 @@ import (
 )
 
 type MachineInstanceState struct {
-	DesiredStatus api.MachineStatus  `json:"desired_status"`
-	Status        api.MachineStatus  `json:"status"`
-	Restarts      int                `json:"restarts"`
-	CreatedAt     time.Time          `json:"created_at"`
-	UpdatedAt     time.Time          `json:"updated_at"`
-	LocalIPV4     string             `json:"local_ipv4"`
-	LastEvents    []api.MachineEvent `json:"last_events"`
+	DesiredStatus         api.MachineStatus  `json:"desired_status"`
+	Status                api.MachineStatus  `json:"status"`
+	Restarts              int                `json:"restarts"`
+	CreatedAt             time.Time          `json:"created_at"`
+	UpdatedAt             time.Time          `json:"updated_at"`
+	LocalIPV4             string             `json:"local_ipv4"`
+	LastEvents            []api.MachineEvent `json:"last_events"`
+	MachineGatewayEnabled bool               `json:"machine_gateway_enabled"`
 }
 
 type MachineInstance struct {
@@ -47,15 +48,16 @@ func (mi *MachineInstance) InstanceOptions() instance.InstanceOptions {
 
 func (mi *MachineInstance) ClusterInstance() cluster.MachineInstance {
 	return cluster.MachineInstance{
-		Id:             mi.Machine.InstanceId,
-		Node:           mi.Machine.Node,
-		Namespace:      mi.Machine.Namespace,
-		MachineId:      mi.Machine.Id,
-		MachineVersion: mi.Version.Id,
-		Events:         mi.State.LastEvents,
-		Status:         mi.State.Status,
-		LocalIPV4:      mi.State.LocalIPV4,
-		CreatedAt:      mi.State.CreatedAt,
-		UpdatedAt:      mi.State.UpdatedAt,
+		Id:                   mi.Machine.InstanceId,
+		Node:                 mi.Machine.Node,
+		Namespace:            mi.Machine.Namespace,
+		MachineId:            mi.Machine.Id,
+		MachineVersion:       mi.Version.Id,
+		Events:               mi.State.LastEvents,
+		Status:               mi.State.Status,
+		LocalIPV4:            mi.State.LocalIPV4,
+		CreatedAt:            mi.State.CreatedAt,
+		UpdatedAt:            mi.State.UpdatedAt,
+		EnableMachineGateway: mi.State.MachineGatewayEnabled,
 	}
 }
