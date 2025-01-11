@@ -27,7 +27,7 @@ func loadCertificates(config *proxy.Config) (*certStore, error) {
 		return nil, err
 	}
 
-	initdCert, err := tls.LoadX509KeyPair(config.Edge.Initd.TLS.CertFile, config.Edge.TLS.KeyFile)
+	initdCert, err := tls.LoadX509KeyPair(config.Edge.Initd.TLS.CertFile, config.Edge.Initd.TLS.KeyFile)
 	if err != nil {
 		return nil, err
 	}
