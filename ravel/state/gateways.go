@@ -39,12 +39,21 @@ func (s *State) CreateGateway(gateway api.Gateway) error {
 		return fmt.Errorf("failed to create gateway on pg: %w", err)
 	}
 
-	err = s.clusterState.CreateGateway(ctx, gateway)
+	cstx, err := s.clusterState.BeginTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+
+	err = cstx.CreateGateway(ctx, gateway)
 	if err != nil {
 		return fmt.Errorf("failed to create gateway on corro: %w", err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
+
+	if err = cstx.Commit(ctx); err != nil { // commit in corrosion after commit in pg to prevent inconsistency
 		return fmt.Errorf("failed to commit tx: %w", err)
 	}
 
@@ -62,9 +71,18 @@ func (s *State) DeleteGateway(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to delete gateway on pg: %w", err)
 	}
 
-	err = s.clusterState.DeleteGateway(ctx, id)
+	cstx, err := s.clusterState.BeginTx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+
+	err = cstx.DeleteGateway(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete gateway on corro: %w", err)
+	}
+
+	if err = cstx.Commit(ctx); err != nil { // commit in corrosion first to prevent untracked gateways in corrosion in case of failure
+		return fmt.Errorf("failed to commit tx: %w", err)
 	}
 
 	if err = tx.Commit(ctx); err != nil {

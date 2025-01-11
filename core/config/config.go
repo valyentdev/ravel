@@ -16,8 +16,9 @@ const LOGS_DIRECTORY = "/var/log/ravel"
 const DAEMON_DB_PATH = "/var/lib/ravel/daemon.db"
 
 type CorrosionConfig struct {
-	URL    string `json:"url" toml:"url"`
-	Bearer string `json:"bearer" toml:"bearer"`
+	URL        string `json:"url" toml:"url"`
+	Bearer     string `json:"bearer" toml:"bearer"`
+	PgWireAddr string `json:"pg_wire" toml:"pg_wire_addr"`
 }
 
 func (cc CorrosionConfig) Config() corroclient.Config {

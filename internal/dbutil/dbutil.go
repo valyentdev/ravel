@@ -15,4 +15,5 @@ type PGXDBTX interface {
 	Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error)
 	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
 	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
+	SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults
 }

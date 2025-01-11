@@ -11,24 +11,31 @@ import (
 	"github.com/valyentdev/ravel/core/errdefs"
 )
 
-func (q *Queries) CreateMachineVersion(ctx context.Context, mv api.MachineVersion) error {
+func buildInsertMVQuery(mv *api.MachineVersion) (string, []interface{}, error) {
 	configBytes, err := json.Marshal(mv.Config)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 
 	resourcesBytes, err := json.Marshal(mv.Resources)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 
-	_, err = q.db.Exec(ctx, `INSERT INTO machine_versions (id, machine_id, config, resources, namespace) VALUES ($1, $2, $3, $4, $5)`, mv.Id, mv.MachineId, configBytes, resourcesBytes, mv.Namespace)
+	query := `INSERT INTO machine_versions (id, machine_id, config, resources, namespace) VALUES ($1, $2, $3, $4, $5)`
+	args := []any{mv.Id, mv.MachineId, configBytes, resourcesBytes, mv.Namespace}
+	return query, args, nil
+}
+
+func (q *Queries) CreateMachineVersion(ctx context.Context, mv api.MachineVersion) error {
+	query, args, err := buildInsertMVQuery(&mv)
+	if err != nil {
+		return err
+	}
+	_, err = q.db.Exec(ctx, query, args...)
 	if err != nil {
 		var pgerr *pgconn.PgError
 		if errors.As(err, &pgerr) {
-			if pgerr.ConstraintName == "machine_versions_pkey" {
-				return errdefs.NewAlreadyExists("machine version already exists")
-			}
 			if pgerr.ConstraintName == "machine_versions_machine_id_fkey" {
 				return errdefs.NewNotFound("machine not found")
 			}

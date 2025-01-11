@@ -5,7 +5,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/valyentdev/ravel/internal/dbutil"
 )
+
+type Queries struct {
+	db dbutil.PGXDBTX
+}
 
 type DB struct {
 	pool *pgxpool.Pool

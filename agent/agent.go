@@ -58,7 +58,10 @@ func New(config Config, store Store, runtime *runtime.Runtime) (*Agent, error) {
 		return nil, err
 	}
 
-	cs := corrosion.New(config.Corrosion.Config())
+	cs, err := corrosion.New(config.Corrosion.Config(), config.Corrosion.PgWireAddr)
+	if err != nil {
+		return nil, err
+	}
 
 	slog.Info("Initializing allocator")
 	allocator, err := allocator.New(store, config.Agent.Resources)

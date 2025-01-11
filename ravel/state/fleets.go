@@ -89,12 +89,22 @@ func (s *State) DestroyFleet(ctx context.Context, id string) error {
 		return err
 	}
 
-	err = s.clusterState.DeleteFleetGateways(ctx, fleet.Id)
+	cstx, err := s.clusterState.BeginTx(context.Background())
+	if err != nil {
+		return err
+	}
+
+	err = cstx.DeleteFleetGateways(ctx, fleet.Id)
 	if err != nil {
 		return err
 	}
 
 	err = tx.DestroyFleet(ctx, fleet.Id)
+	if err != nil {
+		return err
+	}
+
+	err = cstx.Commit(ctx)
 	if err != nil {
 		return err
 	}

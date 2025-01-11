@@ -3,21 +3,19 @@ package corrosion
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/valyentdev/corroclient"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/instance"
 )
 
-func (c *CorrosionClusterState) UpsertInstance(ctx context.Context, i cluster.MachineInstance) error {
+func (c *Queries) UpsertInstance(ctx context.Context, i cluster.MachineInstance) error {
 	eventsBytes, err := json.Marshal(i.Events)
 	if err != nil {
 		return err
 	}
-	result, err := c.corroclient.Exec(ctx, []corroclient.Statement{
-		{
-			Query: `INSERT INTO instances (id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4, events, namespace)
+	_, err = c.dbtx.Exec(ctx,
+		`INSERT INTO instances (id, node, machine_id, machine_version, status, created_at, updated_at, local_ipv4, events, namespace)
 					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 					ON CONFLICT (id, machine_id) DO UPDATE SET
 						status = $5,
@@ -26,22 +24,13 @@ func (c *CorrosionClusterState) UpsertInstance(ctx context.Context, i cluster.Ma
 						events = $9
 						`,
 
-			Params: []any{i.Id, i.Node, i.MachineId, i.MachineVersion, i.Status, i.CreatedAt.Unix(), i.UpdatedAt.Unix(), i.LocalIPV4, string(eventsBytes), i.Namespace},
-		},
-	})
+		i.Id, i.Node, i.MachineId, i.MachineVersion, i.Status, i.CreatedAt.Unix(), i.UpdatedAt.Unix(), i.LocalIPV4, string(eventsBytes), i.Namespace,
+	)
 	if err != nil {
 		return err
 	}
 
-	var errs []error
-
-	for _, r := range result.Results {
-		if err := r.Err(); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	return errors.Join(errs...)
+	return nil
 }
 
 func (c *CorrosionClusterState) WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (<-chan instance.InstanceStatus, error) {

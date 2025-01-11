@@ -43,21 +43,17 @@ func (s *State) CreateMachine(machine cluster.Machine, mv api.MachineVersion) er
 		return errdefs.NewNotFound("fleet not found")
 	}
 
-	if err = tx.CreateMachine(ctx, machine); err != nil {
+	if err = tx.CreateMachine(ctx, machine, mv); err != nil {
 		return fmt.Errorf("failed to create machine on pg: %w", err)
 	}
 
-	if err = tx.CreateMachineVersion(ctx, mv); err != nil {
-		return fmt.Errorf("failed to create machine version on pg: %w", err)
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
 	}
 
 	err = s.clusterState.CreateMachine(ctx, machine, mv)
 	if err != nil {
 		return fmt.Errorf("failed to create machine on corro: %w", err)
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit tx: %w", err)
 	}
 
 	return nil

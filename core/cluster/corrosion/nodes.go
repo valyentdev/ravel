@@ -5,22 +5,18 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/valyentdev/corroclient"
+	"github.com/jackc/pgx/v5"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/errdefs"
 )
 
-func (m *CorrosionClusterState) listNodes(ctx context.Context, where string, params ...any) ([]api.Node, error) {
-	rows, err := m.corroclient.Query(ctx, corroclient.Statement{Query: "SELECT id, address, agent_port, http_proxy_port, region, heartbeated_at FROM nodes " + where, Params: params})
+func (m *Queries) listNodes(ctx context.Context, where string, params ...any) ([]api.Node, error) {
+	rows, err := m.dbtx.Query(ctx, "SELECT id, address, agent_port, http_proxy_port, region, heartbeated_at FROM nodes "+where, params...)
 	if err != nil {
-		if err == corroclient.ErrNoRows {
-			return []api.Node{}, nil
-		}
 		return nil, err
 	}
 
 	nodes := []api.Node{}
-
 	for rows.Next() {
 		var node api.Node
 		heartbeatedAt := int64(0)
@@ -37,34 +33,31 @@ func (m *CorrosionClusterState) listNodes(ctx context.Context, where string, par
 	return nodes, nil
 }
 
-func (m *CorrosionClusterState) ListNodes(ctx context.Context) ([]api.Node, error) {
+func (m *Queries) ListNodes(ctx context.Context) ([]api.Node, error) {
 	return m.listNodes(ctx, "")
 }
 
-func (m *CorrosionClusterState) ListNodesInRegion(ctx context.Context, region string) ([]api.Node, error) {
+func (m *Queries) ListNodesInRegion(ctx context.Context, region string) ([]api.Node, error) {
 	return m.listNodes(ctx, "WHERE region = $1", region)
 }
 
-func (m *CorrosionClusterState) GetNode(ctx context.Context, id string) (api.Node, error) {
+func (m *Queries) GetNode(ctx context.Context, id string) (api.Node, error) {
 	node := api.Node{}
 	slog.Info("Getting node", "id", id)
-	row, err := m.corroclient.QueryRow(ctx, corroclient.Statement{
-		Query: `SELECT id, address, agent_port, http_proxy_port, region, heartbeated_at
+	row := m.dbtx.QueryRow(ctx,
+		`SELECT id, address, agent_port, http_proxy_port, region, heartbeated_at
 				FROM nodes
 				WHERE id = $1`,
-		Params: []interface{}{id},
-	})
-	if err != nil {
-		if err == corroclient.ErrNoRows {
-			return node, errdefs.NewNotFound("node not found")
-		}
-		return node, err
-	}
+		id,
+	)
 
 	var heartbeatedAt int64
 
-	err = row.Scan(&node.Id, &node.Address, &node.AgentPort, &node.HttpProxyPort, &node.Region, &heartbeatedAt)
+	err := row.Scan(&node.Id, &node.Address, &node.AgentPort, &node.HttpProxyPort, &node.Region, &heartbeatedAt)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return node, errdefs.NewNotFound("node not found")
+		}
 		return node, err
 	}
 
@@ -73,21 +66,17 @@ func (m *CorrosionClusterState) GetNode(ctx context.Context, id string) (api.Nod
 	return node, nil
 }
 
-func (m *CorrosionClusterState) UpsertNode(ctx context.Context, node api.Node) error {
-	results, err := m.corroclient.Exec(ctx, []corroclient.Statement{{
-		Query: `INSERT INTO nodes (id, address, agent_port, http_proxy_port, region, heartbeated_at)
+func (m *Queries) UpsertNode(ctx context.Context, node api.Node) error {
+	_, err := m.dbtx.Exec(ctx,
+		`INSERT INTO nodes (id, address, agent_port, http_proxy_port, region, heartbeated_at)
 				VALUES ($1, $2, $3, $4, $5, $6)
 				ON CONFLICT (id) DO UPDATE
 				SET address = $2, agent_port = $3, http_proxy_port = $4, region = $5, heartbeated_at = $6`,
-		Params: []interface{}{node.Id, node.Address, node.AgentPort, node.HttpProxyPort, node.Region, node.HeartbeatedAt.Unix()},
-	}})
+		node.Id, node.Address, node.AgentPort, node.HttpProxyPort, node.Region, node.HeartbeatedAt.Unix(),
+	)
 	if err != nil {
 		return err
 	}
 
-	if results.Results[0].Err() != nil {
-		return results.Results[0].Err()
-	}
-
-	return err
+	return nil
 }

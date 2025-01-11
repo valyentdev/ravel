@@ -97,8 +97,10 @@ func (i *instances) sync() error {
 			}
 			switch change.ChangeType {
 			case corroclient.ChangeTypeInsert, corroclient.ChangeTypeUpdate:
+				slog.Debug("adding instance", "instanceId", ie.InstanceId)
 				i.addInstance(ie)
 			case corroclient.ChangeTypeDelete:
+				slog.Debug("removing instance", "instanceId", ie.InstanceId)
 				i.removeInstance(ie.InstanceId)
 			}
 

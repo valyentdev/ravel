@@ -7,17 +7,17 @@ import (
 	"github.com/valyentdev/ravel/core/instance"
 )
 
-type ClusterState interface {
+type Queries interface {
 	CreateGateway(ctx context.Context, gateway api.Gateway) error
 	DeleteGateway(ctx context.Context, id string) error
 	DeleteFleetGateways(ctx context.Context, fleetId string) error
 
+	CreateMachineVersion(ctx context.Context, mv api.MachineVersion) error
 	CreateMachine(ctx context.Context, m Machine, mv api.MachineVersion) error
 	UpdateMachine(ctx context.Context, m Machine) error
 	DestroyMachine(ctx context.Context, id string) error
 
 	UpsertInstance(ctx context.Context, i MachineInstance) error
-	WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (<-chan instance.InstanceStatus, error)
 
 	GetNode(ctx context.Context, id string) (api.Node, error)
 	UpsertNode(ctx context.Context, node api.Node) error
@@ -28,4 +28,16 @@ type ClusterState interface {
 	GetAPIMachine(ctx context.Context, namespace string, fleetId string, machineId string) (*api.Machine, error)
 
 	DestroyNamespaceData(ctx context.Context, namespace string) error
+}
+
+type ClusterState interface {
+	Queries
+	WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (<-chan instance.InstanceStatus, error)
+	BeginTx(ctx context.Context) (TX, error)
+}
+
+type TX interface {
+	Queries
+	Commit(context.Context) error
+	Rollback(context.Context) error
 }

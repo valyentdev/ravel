@@ -3,12 +3,10 @@ package db
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/errdefs"
@@ -27,20 +25,30 @@ func scanMachine(s dbutil.Scannable) (m cluster.Machine, err error) {
 	return
 }
 
-func (q *Queries) CreateMachine(ctx context.Context, machine cluster.Machine) error {
-	_, err := q.db.Exec(ctx, `INSERT INTO machines (id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, machine.Id, machine.Namespace, machine.FleetId, machine.Node, machine.InstanceId, machine.MachineVersion, machine.Region, machine.CreatedAt, machine.UpdatedAt)
+func (q *Queries) CreateMachine(ctx context.Context, machine cluster.Machine, mv api.MachineVersion) error {
+	mvQueries, mvArgs, err := buildInsertMVQuery(&mv)
 	if err != nil {
-		var pgerr *pgconn.PgError
-		if errors.As(err, &pgerr) {
-			if pgerr.ConstraintName == "machines_pkey" {
-				return errdefs.NewAlreadyExists("machine already exists")
-			}
-			if pgerr.ConstraintName == "machines_fleet_id_fkey" {
-				return errdefs.NewNotFound("fleet not found")
-			}
-		}
 		return err
 	}
+
+	queuedQueries := []*pgx.QueuedQuery{
+		{
+			SQL:       `INSERT INTO machines (id, namespace, fleet_id, node, instance_id, machine_version, region, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			Arguments: []interface{}{machine.Id, machine.Namespace, machine.FleetId, machine.Node, machine.InstanceId, machine.MachineVersion, machine.Region, machine.CreatedAt, machine.UpdatedAt},
+		},
+		{
+			SQL:       mvQueries,
+			Arguments: mvArgs,
+		},
+	}
+
+	result := q.db.SendBatch(ctx, &pgx.Batch{
+		QueuedQueries: queuedQueries,
+	})
+	if err := result.Close(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
