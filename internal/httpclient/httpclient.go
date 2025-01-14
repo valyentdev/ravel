@@ -83,16 +83,6 @@ func buildHttpRequest(ctx context.Context, method, path string, opts ...ReqOpt) 
 	return req, nil
 }
 
-func handleError(body io.ReadCloser) error {
-	var rerr errdefs.RavelError
-	err := json.NewDecoder(body).Decode(&rerr)
-	if err != nil {
-		return err
-	}
-
-	return &rerr
-}
-
 func isOk(status int) bool {
 	return status >= 200 && status <= 204
 }
@@ -106,7 +96,7 @@ func (c *Client) do(req *http.Request, dest any) error {
 	defer resp.Body.Close()
 
 	if !isOk(resp.StatusCode) {
-		return handleError(resp.Body)
+		return errdefs.FromHTTPResponse(resp)
 	}
 
 	if dest != nil {
@@ -159,7 +149,7 @@ func (c *Client) RawGet(ctx context.Context, path string, opts ...ReqOpt) (io.Re
 
 	if !isOk(resp.StatusCode) {
 		defer resp.Body.Close()
-		return nil, handleError(resp.Body)
+		return nil, errdefs.FromHTTPResponse(resp)
 	}
 
 	return resp.Body, nil
