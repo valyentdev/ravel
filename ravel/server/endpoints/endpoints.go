@@ -210,7 +210,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "createGateway",
 		Summary:     "Create a gateway",
 		Method:      http.MethodPost,
-		Path:        "/gateways",
+		Path:        "/fleets/{fleet}/gateways",
 		Tags:        []string{"gateways"},
 	}, e.createGateway)
 
