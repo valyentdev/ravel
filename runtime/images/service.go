@@ -10,7 +10,7 @@ import (
 
 	"github.com/containerd/containerd/v2/client"
 	ctrderrdefs "github.com/containerd/errdefs"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/registry"
 
 	containerdimages "github.com/containerd/containerd/v2/core/images"

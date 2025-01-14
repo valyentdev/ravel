@@ -12,7 +12,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 
 	"github.com/valyentdev/ravel/core/config"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/internal/humautil"
 	"github.com/valyentdev/ravel/internal/mtls"
 	"github.com/valyentdev/ravel/ravel"
 	"github.com/valyentdev/ravel/ravel/server/endpoints"
@@ -69,7 +69,7 @@ func NewServer(c config.RavelConfig) (*Server, error) {
 		address = ":3000"
 	}
 
-	errdefs.OverrideHumaErrorBuilder()
+	humautil.OverrideHumaErrorBuilder()
 
 	mux := http.NewServeMux()
 

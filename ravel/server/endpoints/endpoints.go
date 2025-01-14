@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/ravel"
 )
 

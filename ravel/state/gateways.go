@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 func (s *State) GetGateway(ctx context.Context, namespace, idOrName string) (api.Gateway, error) {

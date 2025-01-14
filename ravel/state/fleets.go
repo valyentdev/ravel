@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 func (s *State) CreateFleet(ctx context.Context, fleet api.Fleet) error {

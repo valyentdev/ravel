@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 func errMachineIs(status api.MachineStatus) error {

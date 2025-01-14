@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 func Exec(ctx context.Context, opts api.ExecOptions) (*api.ExecResult, error) {

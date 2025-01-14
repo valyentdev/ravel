@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 func (m *MachineRunner) Destroy(ctx context.Context, force bool) error {

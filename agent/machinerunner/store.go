@@ -3,7 +3,7 @@ package machinerunner
 import (
 	"sync"
 
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 type machineStore struct {

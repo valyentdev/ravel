@@ -11,9 +11,9 @@ import (
 	"github.com/oklog/ulid"
 
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/config"
-	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/core/registry"
 	"github.com/valyentdev/ravel/internal/id"
 	"github.com/valyentdev/ravel/ravel/orchestrator"

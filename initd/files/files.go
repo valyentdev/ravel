@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/api/initd"
-	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 type Service struct{}

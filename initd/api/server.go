@@ -8,15 +8,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
-	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/initd"
 	"github.com/valyentdev/ravel/initd/environment"
 	"github.com/valyentdev/ravel/initd/files"
+	"github.com/valyentdev/ravel/internal/humautil"
 	"github.com/valyentdev/ravel/pkg/vsock"
 )
 
 func ServeInitdAPI(env *environment.Env) error {
-	errdefs.OverrideHumaErrorBuilder()
+	humautil.OverrideHumaErrorBuilder()
 	publicEndpoints := &publicEndpoints{
 		files: &files.Service{},
 	}

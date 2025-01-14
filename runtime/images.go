@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/containerd/containerd/v2/core/images"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/daemon"
-	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 func (r *Runtime) ListImages(ctx context.Context) ([]daemon.Image, error) {

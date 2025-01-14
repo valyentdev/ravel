@@ -7,8 +7,9 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/daemon"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/internal/humautil"
 )
 
 type DaemonServer struct {
@@ -37,7 +38,7 @@ func (s *DaemonServer) Shutdown(ctx context.Context) error {
 
 func NewDaemonServer(daemon daemon.Daemon) *DaemonServer {
 	as := &DaemonServer{daemon: daemon}
-
+	humautil.OverrideHumaErrorBuilder()
 	mux := http.NewServeMux()
 	as.registerEndpoints(mux)
 

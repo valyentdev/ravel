@@ -6,7 +6,7 @@ import (
 
 	"github.com/containerd/containerd/v2/core/images"
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/validation"
 )

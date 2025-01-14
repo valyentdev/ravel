@@ -12,8 +12,8 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/api/initd"
-	"github.com/valyentdev/ravel/core/errdefs"
 	"github.com/valyentdev/ravel/initd/exec"
 	"github.com/valyentdev/ravel/initd/files"
 )

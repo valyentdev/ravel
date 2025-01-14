@@ -7,8 +7,8 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
-	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 type AgentServer struct {

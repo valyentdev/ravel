@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
-	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 func (s *State) GetAPIMachine(ctx context.Context, namespace, fleetId, id string) (*api.Machine, error) {

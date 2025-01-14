@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/api/initd"
-	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 func (s *Service) WatchDir(ctx context.Context, path string) (<-chan initd.WatchFSEvent, error) {

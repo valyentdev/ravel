@@ -6,9 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/cluster/placement"
-	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 func (o *Orchestrator) PrepareAllocation(ctx context.Context, region string, allocationId string, resources api.Resources) (nodeId string, err error) {

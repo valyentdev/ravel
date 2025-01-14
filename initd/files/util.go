@@ -4,7 +4,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 func validateWriteFilePath(p string) error {

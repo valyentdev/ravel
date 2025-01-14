@@ -8,7 +8,7 @@ import (
 
 	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 type AllocationsStore interface {

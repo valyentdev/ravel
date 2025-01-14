@@ -3,7 +3,7 @@ package runtime
 import (
 	"sync"
 
-	"github.com/valyentdev/ravel/core/errdefs"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/runtime/instancerunner"
 )

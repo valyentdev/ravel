@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
-	"github.com/valyentdev/ravel/core/errdefs"
 )
 
 func (o *Orchestrator) DestroyMachine(ctx context.Context, machine cluster.Machine, force bool) error {
