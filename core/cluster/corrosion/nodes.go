@@ -2,7 +2,6 @@ package corrosion
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,7 +42,6 @@ func (m *Queries) ListNodesInRegion(ctx context.Context, region string) ([]api.N
 
 func (m *Queries) GetNode(ctx context.Context, id string) (api.Node, error) {
 	node := api.Node{}
-	slog.Info("Getting node", "id", id)
 	row := m.dbtx.QueryRow(ctx,
 		`SELECT id, address, agent_port, http_proxy_port, region, heartbeated_at
 				FROM nodes
