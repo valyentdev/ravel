@@ -1,10 +1,12 @@
 package machinerunner
 
 import (
+	"context"
 	"sync"
 
 	"github.com/valyentdev/ravel/agent/machinerunner/state"
 	"github.com/valyentdev/ravel/agent/structs"
+	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/core/daemon"
 )
@@ -36,4 +38,8 @@ func New(
 	}
 
 	return m
+}
+
+func (m *MachineRunner) WaitForStatus(ctx context.Context, status api.MachineStatus) error {
+	return m.state.WaitForStatus(ctx, status)
 }

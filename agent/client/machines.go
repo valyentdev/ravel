@@ -3,6 +3,7 @@ package agentclient
 import (
 	"context"
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/valyentdev/ravel/api"
@@ -118,6 +119,15 @@ func (a *AgentClient) DisableMachineGateway(ctx context.Context, id string) erro
 func (a *AgentClient) EnableMachineGateway(ctx context.Context, id string) error {
 	path := "/machines/" + id + "/gateway/enable"
 	err := a.client.Post(ctx, path, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *AgentClient) WaitForMachineStatus(ctx context.Context, id string, status api.MachineStatus, timeout uint) error {
+	path := "/machines/" + id + "/wait"
+	err := a.client.Get(ctx, path, nil, httpclient.WithQuery("status", string(status)), httpclient.WithQuery("timeout", strconv.FormatUint(uint64(timeout), 10)))
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/internal/streamutil"
 )
@@ -161,4 +162,32 @@ func (s *AgentServer) disableMachineGateway(ctx context.Context, req *DisableMac
 		return nil, err
 	}
 	return &DisableMachineGatewayResponse{}, nil
+}
+
+type WaitMachineStatusRequest struct {
+	MachineId string            `path:"id"`
+	Timeout   uint              `query:"timeout" minimum:"1" maximum:"60"`
+	Status    api.MachineStatus `query:"status" required:"true"`
+}
+
+type WaitMachineStatusResponse struct {
+}
+
+func (s *AgentServer) waitForMachineStatus(ctx context.Context, req *WaitMachineStatusRequest) (*WaitMachineStatusResponse, error) {
+	timeout := uint(req.Timeout)
+	if timeout == 0 {
+		timeout = 30
+	}
+
+	if req.Status != api.MachineStatusRunning && req.Status != api.MachineStatusStopped && req.Status != api.MachineStatusDestroyed {
+		return nil, errdefs.NewInvalidArgument("invalid status")
+	}
+
+	err := s.agent.WaitForMachineStatus(ctx, req.MachineId, req.Status, timeout)
+	if err != nil {
+		s.log("Failed to wait for machine status", err)
+		return nil, err
+	}
+
+	return &WaitMachineStatusResponse{}, nil
 }

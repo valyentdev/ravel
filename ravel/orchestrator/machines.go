@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"time"
 
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/api/errdefs"
@@ -62,40 +61,25 @@ func (o *Orchestrator) StopMachineInstance(ctx context.Context, machine cluster.
 	return nil
 }
 
-type WaitOpt struct {
-	InstanceId string
-	Timeout    time.Duration
-}
-
 func (o *Orchestrator) WaitMachine(
 	ctx context.Context,
-	machineId string,
+	machine cluster.Machine,
 	state api.MachineStatus,
-	opt WaitOpt,
+	timeout uint,
 ) error {
-	timeoutCtx, cancelTimeoutCtx := context.WithTimeout(ctx, opt.Timeout)
-	defer cancelTimeoutCtx()
-
-	slog.Info("Watching machine status", "machineId", machineId, "status", state)
-	updates, err := o.clusterState.WatchInstanceStatus(timeoutCtx, machineId, opt.InstanceId)
+	agentClient, err := o.getAgentClient(machine.Node)
 	if err != nil {
 		return err
 	}
-	t1 := time.Now()
-	for {
-		slog.Debug("waiting")
-		select {
-		case <-timeoutCtx.Done():
-			slog.Debug("Timeout reached", "elapsed", time.Since(t1))
-			return errdefs.NewDeadlineExceeded("timeout reached while waiting for machine status")
-		case update := <-updates:
-			slog.Debug("Machine status update", "machineId", machineId, "status", update)
-			if api.MachineStatus(update) == state {
-				return nil
-			}
+
+	err = agentClient.WaitForMachineStatus(ctx, machine.Id, state, timeout)
+	if errdefs.IsNotFound(err) {
+		if state == api.MachineStatusDestroyed {
+			return nil
 		}
 	}
 
+	return err
 }
 
 func (o *Orchestrator) MachineExec(ctx context.Context, machine cluster.Machine, execOpts *api.ExecOptions) (*api.ExecResult, error) {

@@ -33,6 +33,8 @@ func (is *MachineInstanceState) persistStateAndEvent(e api.MachineEvent) error {
 		return err
 	}
 
+	is.statusObserver.Set(e.Status)
+
 	err := is.persistState()
 	is.eventer.ReportEvent(e)
 

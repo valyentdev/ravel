@@ -85,4 +85,10 @@ func (s AgentServer) registerEndpoints(mux humago.Mux) {
 		Method:      http.MethodPost,
 	}, s.disableMachineGateway)
 
+	huma.Register(api, huma.Operation{
+		OperationID: "waitForMachineStatus",
+		Path:        "/machines/{id}/wait",
+		Method:      http.MethodGet,
+	}, s.waitForMachineStatus)
+
 }

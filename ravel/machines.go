@@ -16,7 +16,6 @@ import (
 	"github.com/valyentdev/ravel/core/config"
 	"github.com/valyentdev/ravel/core/registry"
 	"github.com/valyentdev/ravel/internal/id"
-	"github.com/valyentdev/ravel/ravel/orchestrator"
 )
 
 func getResources(m config.MachineResourcesTemplates, vcpus int, memory int) (api.Resources, error) {
@@ -250,37 +249,17 @@ func validateWaitStatus(status api.MachineStatus) error {
 	}
 }
 
-func (r *Ravel) WaitMachineStatus(ctx context.Context, ns, fleet, machineId string, status api.MachineStatus, opts ...WaitOpt) error {
+func (r *Ravel) WaitMachineStatus(ctx context.Context, ns, fleet, machineId string, status api.MachineStatus, timeout uint) error {
 	m, err := r.getMachine(ctx, ns, fleet, machineId, false)
 	if err != nil {
 		return err
-	}
-
-	opt := waitOpt{
-		instanceId: m.InstanceId,
-		timeout:    30 * time.Second,
-	}
-
-	for _, o := range opts {
-		o(&opt)
 	}
 
 	if err := validateWaitStatus(status); err != nil {
 		return err
 	}
 
-	if opt.timeout > 300*time.Second {
-		return errdefs.NewInvalidArgument("Timeout must be less than 300 seconds")
-	}
-
-	if opt.timeout < 1*time.Second {
-		return errdefs.NewInvalidArgument("Timeout must be greater than 1 second")
-	}
-
-	return r.o.WaitMachine(ctx, m.Id, status, orchestrator.WaitOpt{
-		InstanceId: m.InstanceId,
-		Timeout:    opt.timeout,
-	})
+	return r.o.WaitMachine(ctx, m, status, timeout)
 }
 
 func (r *Ravel) EnableMachineGateway(ctx context.Context, ns, fleet, machineId string) error {

@@ -9,6 +9,7 @@ import (
 	"github.com/valyentdev/ravel/agent/machinerunner"
 	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
 )
 
@@ -157,4 +158,24 @@ func (d *Agent) DisableMachineGateway(ctx context.Context, id string) error {
 	}
 
 	return machine.DisableGateway(ctx)
+}
+
+func (a *Agent) WaitForMachineStatus(ctx context.Context, id string, status api.MachineStatus, timeout uint) error {
+	machine, err := a.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	if timeout > 60 || timeout < 1 {
+		return errdefs.NewInvalidArgument("timeout must be between 1 and 60 seconds")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
+	err = machine.WaitForStatus(ctx, status)
+	if err != nil {
+		return errdefs.NewDeadlineExceeded("timeout waiting for machine status")
+	}
+
+	return nil
 }

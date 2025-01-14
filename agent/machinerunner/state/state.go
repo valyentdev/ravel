@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"crypto/rand"
 	"log/slog"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/cluster"
+	"github.com/valyentdev/ravel/pkg/pubsub"
 )
 
 type Eventer interface {
@@ -30,14 +32,15 @@ type Store interface {
 	PutMachineInstanceEvent(event api.MachineEvent) error
 }
 type MachineInstanceState struct {
-	id          string
-	mutex       sync.RWMutex
-	store       Store
-	mi          structs.MachineInstance
-	eventer     Eventer
-	reportState func(mi cluster.MachineInstance) error
-	stopCh      chan struct{}
-	updateCh    chan struct{}
+	id             string
+	mutex          sync.RWMutex
+	store          Store
+	mi             structs.MachineInstance
+	eventer        Eventer
+	reportState    func(mi cluster.MachineInstance) error
+	stopCh         chan struct{}
+	updateCh       chan struct{}
+	statusObserver *pubsub.Observable[api.MachineStatus]
 }
 
 func (s *MachineInstanceState) triggerUpdate() {
@@ -67,13 +70,14 @@ func newMachineInstanceState(
 	reportState func(mi cluster.MachineInstance) error,
 ) *MachineInstanceState {
 	is := &MachineInstanceState{
-		id:          machine.Machine.Id,
-		store:       store,
-		mi:          machine,
-		eventer:     eventer,
-		updateCh:    make(chan struct{}, 1),
-		stopCh:      make(chan struct{}),
-		reportState: reportState,
+		id:             machine.Machine.Id,
+		store:          store,
+		mi:             machine,
+		eventer:        eventer,
+		updateCh:       make(chan struct{}, 1),
+		stopCh:         make(chan struct{}),
+		reportState:    reportState,
+		statusObserver: pubsub.NewObservable(machine.State.Status),
 	}
 
 	is.triggerUpdate()
@@ -122,15 +126,6 @@ func (is *MachineInstanceState) persistState() error {
 	return nil
 }
 
-func (i *MachineInstanceState) UpdateStatus(status api.MachineStatus) error {
-	i.mutex.Lock()
-	defer i.mutex.Unlock()
-
-	i.mi.State.Status = status
-
-	return i.persistState()
-}
-
 func (i *MachineInstanceState) UpdateDesiredStatus(status api.MachineStatus) error {
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
@@ -138,4 +133,20 @@ func (i *MachineInstanceState) UpdateDesiredStatus(status api.MachineStatus) err
 	i.mi.State.DesiredStatus = status
 
 	return i.persistState()
+}
+
+func (i *MachineInstanceState) WaitForStatus(ctx context.Context, status api.MachineStatus) error {
+	sub := i.statusObserver.Subscribe()
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case newStatus := <-sub.Ch():
+			if newStatus == status {
+				return nil
+			}
+		}
+	}
 }

@@ -27,6 +27,7 @@ type Agent interface {
 	DestroyMachine(ctx context.Context, machineId string, force bool) error
 	SubscribeToMachineLogs(ctx context.Context, id string) ([]*api.LogEntry, <-chan *api.LogEntry, error)
 	GetMachineLogs(ctx context.Context, id string) ([]*api.LogEntry, error)
+	WaitForMachineStatus(ctx context.Context, id string, status api.MachineStatus, timeout uint) error
 
 	EnableMachineGateway(ctx context.Context, id string) error
 	DisableMachineGateway(ctx context.Context, id string) error

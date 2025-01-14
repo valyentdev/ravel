@@ -8,7 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/ravel"
+	"github.com/valyentdev/ravel/api/errdefs"
 )
 
 type CreateMachineBody = api.CreateMachinePayload
@@ -226,25 +226,19 @@ func (e *Endpoints) listMachineEvents(ctx context.Context, req *ListMachineEvent
 
 type WaitMachineStatusRequest struct {
 	MachineResolver
-	Timeout    int               `query:"timeout" minimum:"1" maximum:"300"`
-	Status     api.MachineStatus `query:"status" required:"true"`
-	InstanceId string            `query:"instance_id"`
+	Timeout uint              `query:"timeout" minimum:"1" maximum:"60"`
+	Status  api.MachineStatus `query:"status" required:"true"`
 }
 
 type WaitMachineStatusResponse struct {
 }
 
 func (e *Endpoints) waitMachineStatus(ctx context.Context, req *WaitMachineStatusRequest) (*WaitMachineStatusResponse, error) {
-	opts := []ravel.WaitOpt{}
-	if req.InstanceId != "" {
-		opts = append(opts, ravel.WithInstanceId(req.InstanceId))
+	if req.Timeout > 60 || req.Timeout < 1 {
+		return nil, errdefs.NewInvalidArgument("timeout must be between 1 and 60 seconds")
 	}
 
-	if req.Timeout > 0 {
-		opts = append(opts, ravel.WithTimeout(req.Timeout))
-	}
-
-	err := e.ravel.WaitMachineStatus(ctx, req.Namespace, req.Fleet, req.MachineId, req.Status, opts...)
+	err := e.ravel.WaitMachineStatus(ctx, req.Namespace, req.Fleet, req.MachineId, req.Status, req.Timeout)
 	if err != nil {
 		e.log("Failed to wait for machine status", err)
 		return nil, err
