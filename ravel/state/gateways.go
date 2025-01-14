@@ -9,12 +9,12 @@ import (
 	"github.com/valyentdev/ravel/api/errdefs"
 )
 
-func (s *State) GetGateway(ctx context.Context, namespace, idOrName string) (api.Gateway, error) {
+func (s *State) GetGateway(ctx context.Context, namespace, fleetId, idOrName string) (api.Gateway, error) {
 	if strings.HasPrefix(idOrName, "gw_") {
-		return s.db.GetGatewayById(ctx, namespace, idOrName)
+		return s.db.GetGatewayById(ctx, namespace, fleetId, idOrName)
 	}
 
-	return s.db.GetGatewayByName(ctx, namespace, idOrName)
+	return s.db.GetGatewayByName(ctx, namespace, fleetId, idOrName)
 
 }
 

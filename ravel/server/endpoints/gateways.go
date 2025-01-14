@@ -3,12 +3,13 @@ package endpoints
 import (
 	"context"
 
+	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/ravel"
 )
 
 type CreateGatewayRequest struct {
-	NSResolver
-	Body ravel.CreateGatewayOptions
+	FleetResolver
+	Body api.CreateGatewayPayload
 }
 
 type CreateGatewayResponse struct {
@@ -16,7 +17,7 @@ type CreateGatewayResponse struct {
 }
 
 func (e *Endpoints) createGateway(ctx context.Context, req *CreateGatewayRequest) (*CreateGatewayResponse, error) {
-	gateway, err := e.ravel.CreateGateway(ctx, req.Namespace, req.Body)
+	gateway, err := e.ravel.CreateGateway(ctx, req.Namespace, req.Fleet, req.Body)
 	if err != nil {
 		e.log("Failed to create gateway", err)
 		return nil, err
@@ -28,8 +29,7 @@ func (e *Endpoints) createGateway(ctx context.Context, req *CreateGatewayRequest
 }
 
 type ListGatewaysRequest struct {
-	NSResolver
-	ByFleet string `query:"fleet"`
+	FleetResolver
 }
 
 type ListGatewaysResponse struct {
@@ -37,12 +37,7 @@ type ListGatewaysResponse struct {
 }
 
 func (e *Endpoints) listGateways(ctx context.Context, req *ListGatewaysRequest) (*ListGatewaysResponse, error) {
-	var opts []ravel.ListGatewaysOpt
-	if req.ByFleet != "" {
-		opts = append(opts, ravel.WithFleet(req.ByFleet))
-	}
-
-	gateways, err := e.ravel.ListGateways(ctx, req.Namespace, opts...)
+	gateways, err := e.ravel.ListGateways(ctx, req.Namespace, req.Fleet)
 	if err != nil {
 		e.log("Failed to list gateways", err)
 		return nil, err
@@ -51,7 +46,7 @@ func (e *Endpoints) listGateways(ctx context.Context, req *ListGatewaysRequest) 
 }
 
 type GetGatewayRequest struct {
-	NSResolver
+	FleetResolver
 	Gateway string `path:"gateway"`
 }
 
@@ -60,7 +55,7 @@ type GetGatewayResponse struct {
 }
 
 func (e *Endpoints) getGateway(ctx context.Context, req *GetGatewayRequest) (*GetGatewayResponse, error) {
-	gateway, err := e.ravel.GetGateway(ctx, req.Namespace, req.Gateway)
+	gateway, err := e.ravel.GetGateway(ctx, req.Namespace, req.Fleet, req.Gateway)
 	if err != nil {
 		e.log("Failed to get gateway", err)
 		return nil, err
@@ -70,7 +65,7 @@ func (e *Endpoints) getGateway(ctx context.Context, req *GetGatewayRequest) (*Ge
 }
 
 type DestroyGatewayRequest struct {
-	NSResolver
+	FleetResolver
 	Gateway string `path:"gateway"`
 }
 
@@ -78,7 +73,7 @@ type DestroyGatewayResponse struct {
 }
 
 func (e *Endpoints) destroyGateway(ctx context.Context, req *DestroyGatewayRequest) (*DestroyGatewayResponse, error) {
-	err := e.ravel.DeleteGateway(ctx, req.Namespace, req.Gateway)
+	err := e.ravel.DeleteGateway(ctx, req.Namespace, req.Fleet, req.Gateway)
 	if err != nil {
 		e.log("Failed to destroy gateway", err)
 		return nil, err

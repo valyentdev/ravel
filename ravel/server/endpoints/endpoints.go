@@ -218,7 +218,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "listGateways",
 		Summary:     "List gateways",
 		Method:      http.MethodGet,
-		Path:        "/gateways",
+		Path:        "/fleets/{fleet}/gateways",
 		Tags:        []string{"gateways"},
 	}, e.listGateways)
 
@@ -226,7 +226,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "getGateway",
 		Summary:     "Get a gateway",
 		Method:      http.MethodGet,
-		Path:        "/gateways/{gateway}",
+		Path:        "/fleets/{fleet}/gateways/{gateway}",
 		Tags:        []string{"gateways"},
 	}, e.getGateway)
 
@@ -234,7 +234,7 @@ func (e *Endpoints) Register(api huma.API) {
 		OperationID: "destroyGateway",
 		Summary:     "Destroy a gateway",
 		Method:      http.MethodDelete,
-		Path:        "/gateways/{gateway}",
+		Path:        "/fleets/{fleet}/gateways/{gateway}",
 		Tags:        []string{"gateways"},
 	}, e.destroyGateway)
 

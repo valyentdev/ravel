@@ -22,8 +22,8 @@ func (q Queries) DeleteFleetGateways(ctx context.Context, fleetId string) error 
 	return nil
 }
 
-func (q Queries) GetGatewayByName(ctx context.Context, namespace, name string) (gateway api.Gateway, err error) {
-	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND name = $2", namespace, name).Scan(
+func (q Queries) GetGatewayByName(ctx context.Context, namespace, fleet, name string) (gateway api.Gateway, err error) {
+	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND fleet = $2 name = $3", namespace, fleet, name).Scan(
 		&gateway.Id,
 		&gateway.Name,
 		&gateway.Namespace,
@@ -40,8 +40,8 @@ func (q Queries) GetGatewayByName(ctx context.Context, namespace, name string) (
 	return gateway, nil
 }
 
-func (q Queries) GetGatewayById(ctx context.Context, namespace, id string) (gateway api.Gateway, err error) {
-	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND id = $2", namespace, id).Scan(
+func (q Queries) GetGatewayById(ctx context.Context, namespace, fleetId, id string) (gateway api.Gateway, err error) {
+	err = q.db.QueryRow(ctx, baseSelectGateway+" WHERE namespace = $1 AND fleet_id = $2 AND id = $3", namespace, fleetId, id).Scan(
 		&gateway.Id,
 		&gateway.Name,
 		&gateway.Namespace,
