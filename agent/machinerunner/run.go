@@ -23,7 +23,11 @@ func (m *MachineRunner) Run() {
 	updates, err := m.runtime.WatchInstanceState(ctx, m.state.InstanceId())
 	if err != nil {
 		if errdefs.IsNotFound(err) {
-			m.destroyImpl(ctx, true, "instance not found")
+			m.destroyImpl(ctx, destroyPayload{
+				origin: api.OriginRavel,
+				reason: "instance not found",
+				force:  true,
+			})
 		}
 
 		slog.Error("failed to watch instance state", "machine_id", m.state.Id(), "error", err)
@@ -57,7 +61,11 @@ func (m *MachineRunner) recover(ctx context.Context) bool {
 		return false
 
 	case api.MachineStatusDestroying:
-		err := m.destroyImpl(ctx, true, "recovering from destroy")
+		err := m.destroyImpl(ctx, destroyPayload{
+			origin: api.OriginRavel,
+			reason: "recover from destroying",
+			force:  true,
+		})
 		if err != nil {
 			slog.Error("failed to destroy machine", "machine_id", m.state.Id(), "error", err)
 		}

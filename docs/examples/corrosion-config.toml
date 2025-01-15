@@ -1,5 +1,5 @@
 [db]
-path = "./tmp/corrosion2.db"
+path = "./tmp/corrosion.db"
 [gossip]
 addr = "[::]:8787"
 bootstrap = []

@@ -279,7 +279,7 @@ func (s *MachineInstanceState) PushExitedEvent(payload api.MachineExitedEventPay
 	return nil
 }
 
-func (s *MachineInstanceState) PushDestroyEvent(origin api.Origin, force bool, reason string) (err error) {
+func (s *MachineInstanceState) PushDestroyEvent(origin api.Origin, force bool, autoDestroy bool, reason string) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -289,8 +289,9 @@ func (s *MachineInstanceState) PushDestroyEvent(origin api.Origin, force bool, r
 		api.MachineStatusDestroying,
 		api.MachineEventPayload{
 			Destroy: &api.MachineDestroyEventPayload{
-				Reason: reason,
-				Force:  force,
+				Reason:      reason,
+				Force:       force,
+				AutoDestroy: autoDestroy,
 			},
 		},
 	)

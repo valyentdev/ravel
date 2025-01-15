@@ -14,11 +14,17 @@ func (m *MachineRunner) Destroy(ctx context.Context, force bool) error {
 	if m.state.Status() == api.MachineStatusDestroying || m.state.Status() == api.MachineStatusDestroyed {
 		return nil
 	}
+	payload := destroyPayload{
+		origin:      api.OriginUser,
+		reason:      "requested by user",
+		autoDestroy: false,
+		force:       force,
+	}
 
 	status := m.state.Status()
 
 	if status == api.MachineStatusStopped {
-		go m.destroyImpl(ctx, force, "requested by user")
+		go m.destroyImpl(ctx, payload)
 		return nil
 	}
 
@@ -34,13 +40,25 @@ func (m *MachineRunner) Destroy(ctx context.Context, force bool) error {
 		return err
 	}
 
-	go m.destroyImpl(ctx, force, "requested by user")
+	go m.destroyImpl(ctx, payload)
 	return nil
 
 }
 
-func (m *MachineRunner) destroyImpl(ctx context.Context, force bool, reason string) error {
-	if err := m.state.PushDestroyEvent(api.OriginUser, force, reason); err != nil {
+type destroyPayload struct {
+	origin      api.Origin
+	reason      string
+	autoDestroy bool
+	force       bool
+}
+
+func (m *MachineRunner) destroyImpl(ctx context.Context, p destroyPayload) error {
+	origin := api.OriginUser
+	if p.origin != "" {
+		origin = p.origin
+	}
+
+	if err := m.state.PushDestroyEvent(origin, p.force, p.autoDestroy, p.reason); err != nil {
 		return err
 	}
 	err := m.runtime.DestroyInstance(ctx, m.state.InstanceId())

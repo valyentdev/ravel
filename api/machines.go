@@ -68,11 +68,10 @@ const (
 
 type (
 	MachineConfig struct {
-		Image       string      `json:"image"`
-		Guest       GuestConfig `json:"guest"`
-		Workload    Workload    `json:"workload,omitempty"`
-		StopConfig  *StopConfig `json:"stop_config,omitempty"`
-		AutoDestroy bool        `json:"auto_destroy,omitempty"`
+		Image      string      `json:"image"`
+		Guest      GuestConfig `json:"guest"`
+		Workload   Workload    `json:"workload,omitempty"`
+		StopConfig *StopConfig `json:"stop_config,omitempty"`
 	}
 
 	GuestConfig struct {
@@ -82,9 +81,10 @@ type (
 	}
 
 	Workload struct {
-		Restart RestartPolicyConfig `json:"restart,omitempty"`
-		Env     []string            `json:"env,omitempty"`
-		Init    InitConfig          `json:"init,omitempty"`
+		Restart     RestartPolicyConfig `json:"restart,omitempty"`
+		Env         []string            `json:"env,omitempty"`
+		Init        InitConfig          `json:"init,omitempty"`
+		AutoDestroy bool                `json:"auto_destroy,omitempty"`
 	}
 
 	InitConfig struct {

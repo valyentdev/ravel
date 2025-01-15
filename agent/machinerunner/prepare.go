@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/daemon"
 )
 
@@ -48,5 +49,9 @@ func (m *MachineRunner) onPrepareFailed(msg string) {
 		slog.Error("Failed to push PrepareFailed event", "error", err)
 	}
 
-	m.destroyImpl(context.Background(), true, "prepare failed")
+	m.destroyImpl(context.Background(), destroyPayload{
+		origin: api.OriginRavel,
+		reason: "prepare failed",
+		force:  true,
+	})
 }
