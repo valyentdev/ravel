@@ -7,16 +7,16 @@ import (
 	"time"
 
 	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/snapshots"
 	"github.com/containerd/errdefs"
 	"github.com/opencontainers/image-spec/identity"
 )
 
 func (b *Builder) removeRootFS(id string) error {
-	ss := b.ctrd.SnapshotService(b.snapshotter)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := ss.Remove(ctx, rootFSName(id))
+	err := b.snapshotter.Remove(ctx, rootFSName(id))
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			return nil
@@ -52,10 +52,11 @@ func (b *Builder) prepareContainerRootFS(ctx context.Context, id string, image c
 
 	slog.Debug("preparing snapshot", "id", id, "parent", parent)
 
-	ss := b.ctrd.SnapshotService(b.snapshotter)
+	labels := map[string]string{
+		"containerd.io/gc.root": time.Now().UTC().Format(time.RFC3339),
+	}
 
-	slog.Debug("preparing snapshot", "id", id, "parent", parent)
-	mounts, err := ss.Prepare(context.Background(), rootFSName(id), parent)
+	mounts, err := b.snapshotter.Prepare(ctx, rootFSName(id), parent, snapshots.WithLabels(labels))
 	if err != nil {
 		if !errdefs.IsAlreadyExists(err) {
 			return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)
@@ -68,7 +69,7 @@ func (b *Builder) prepareContainerRootFS(ctx context.Context, id string, image c
 		}
 
 		slog.Debug("retrying snapshot preparation", "id", id, "parent", parent)
-		mounts, err = ss.Prepare(context.Background(), rootFSName(id), parent)
+		mounts, err = b.snapshotter.Prepare(context.Background(), rootFSName(id), parent, snapshots.WithLabels(labels))
 		if err != nil {
 			return "", fmt.Errorf("failed to prepare snapshot %q: %w", id, err)
 		}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/containerd/cgroups/v3/cgroup2"
 	"github.com/containerd/containerd/v2/client"
+	"github.com/containerd/containerd/v2/core/snapshots"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/jailer"
 	initdclient "github.com/valyentdev/ravel/initd/client"
@@ -47,8 +48,8 @@ type Builder struct {
 	linuxKernel  string
 	images       *images.Service
 	ctrd         *client.Client
-	snapshotter  string
 	jailerUser   User
+	snapshotter  snapshots.Snapshotter
 }
 
 type User struct {
@@ -70,6 +71,8 @@ func NewBuilder(
 		return nil, fmt.Errorf("failed to create cgroup2 manager: %w", err)
 	}
 
+	snapshotService := ctrd.SnapshotService(snapshotter)
+
 	return &Builder{
 		chBinary:     chBinary,
 		initBinary:   initBinary,
@@ -77,7 +80,7 @@ func NewBuilder(
 		jailerBinary: jailerBinary,
 		images:       images,
 		ctrd:         ctrd,
-		snapshotter:  snapshotter,
+		snapshotter:  snapshotService,
 		cpuMhz:       cpuMhz,
 		jailerUser:   user,
 	}, nil
