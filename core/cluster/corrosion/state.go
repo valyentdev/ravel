@@ -5,7 +5,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/valyentdev/corroclient"
 	"github.com/valyentdev/ravel/core/cluster"
 	"github.com/valyentdev/ravel/internal/dbutil"
 )
@@ -17,8 +16,7 @@ type Queries struct {
 var _ cluster.Queries = (*Queries)(nil)
 
 type CorrosionClusterState struct {
-	db          *pgxpool.Pool
-	corroclient *corroclient.CorroClient // use the corrosion http api for subscriptions
+	db *pgxpool.Pool
 	cluster.Queries
 }
 
@@ -49,18 +47,16 @@ func (c *CorrosionClusterState) BeginTx(ctx context.Context) (cluster.TX, error)
 	}, nil
 }
 
-func New(config corroclient.Config, pgurl string) (*CorrosionClusterState, error) {
-	client := corroclient.NewCorroClient(config)
+func New(corroPgAddr string) (*CorrosionClusterState, error) {
 
-	pool, err := pgxpool.New(context.Background(), pgurl)
+	pool, err := pgxpool.New(context.Background(), corroPgAddr)
 	if err != nil {
 		return nil, err
 	}
 
 	return &CorrosionClusterState{
-		corroclient: client,
-		db:          pool,
-		Queries:     &Queries{dbtx: pool},
+		db:      pool,
+		Queries: &Queries{dbtx: pool},
 	}, nil
 }
 

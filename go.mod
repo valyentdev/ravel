@@ -25,7 +25,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	github.com/u-root/u-root v0.14.0
-	github.com/valyentdev/corroclient v0.1.0
+	github.com/valyentdev/corroclient v0.2.1
 	go.etcd.io/bbolt v1.3.11
 	sigs.k8s.io/yaml v1.4.0
 

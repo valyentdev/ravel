@@ -284,8 +284,8 @@ github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a h1:BH1SOPEvehD2kVrndDnG
 github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a/go.mod h1:P3a5rG4X7tI17Nn3aOIAYr5HbIMukwXG0urG0WuL8OA=
 github.com/urfave/cli v1.19.1/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/urfave/cli v1.22.12/go.mod h1:sSBEIC79qR6OvcmsD4U3KABeOTxDqQtdDnaFuUN30b8=
-github.com/valyentdev/corroclient v0.1.0 h1:Q9o1wkDkZjmisi0F8kNsXl2ixL6+IxZF7C4szzld7tY=
-github.com/valyentdev/corroclient v0.1.0/go.mod h1:q7jt7jJvWdk/qlRqBdNB/eA88m47vv/y/fDzbHttsvM=
+github.com/valyentdev/corroclient v0.2.1 h1:Pcw8kWYvt/6N6PiwM2cCOCJpvGYFtp7Iu925mR65qkE=
+github.com/valyentdev/corroclient v0.2.1/go.mod h1:q7jt7jJvWdk/qlRqBdNB/eA88m47vv/y/fDzbHttsvM=
 github.com/vbatts/tar-split v0.11.3 h1:hLFqsOLQ1SsppQNTMpkpPXClLDfC2A3Zgy9OUU+RVck=
 github.com/vbatts/tar-split v0.11.3/go.mod h1:9QlHN18E+fEH7RdG+QAJJcuya3rqT7eXSTY7wGrAokY=
 github.com/vishvananda/netlink v1.3.0 h1:X7l42GfcV4S6E4vHTsw48qbrV+9PVojNfIhZcwQdrZk=

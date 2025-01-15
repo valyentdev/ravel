@@ -80,15 +80,18 @@ const getBackendsQuery = `
 						`
 
 func (b *instanceBackends) sync() error {
-	sub, err := b.corro.PostSubscription(context.Background(), corroclient.Statement{
+	sub, err := b.corro.Subscribe(context.Background(), corroclient.Statement{
 		Query: getBackendsQuery,
 	})
 	if err != nil {
 		return err
 	}
 
-	events := sub.Events()
-	for e := range events {
+	for {
+		e, err := sub.Next()
+		if err != nil {
+			return err
+		}
 		switch e.Type() {
 		case corroclient.EventTypeRow:
 			row := e.(*corroclient.Row)
@@ -117,8 +120,6 @@ func (b *instanceBackends) sync() error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func (b *instanceBackends) setBackend(i instance) {

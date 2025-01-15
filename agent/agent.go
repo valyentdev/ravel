@@ -58,7 +58,7 @@ func New(config Config, store Store, runtime *runtime.Runtime) (*Agent, error) {
 		return nil, err
 	}
 
-	cs, err := corrosion.New(config.Corrosion.Config(), config.Corrosion.PgWireAddr)
+	cs, err := corrosion.New(config.Corrosion.PgWireAddr)
 	if err != nil {
 		return nil, err
 	}

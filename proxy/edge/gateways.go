@@ -65,15 +65,18 @@ func scanGateway(row *corroclient.Row) (Gateway, error) {
 }
 
 func (g *gateways) sync() error {
-	sub, err := g.corro.PostSubscription(context.Background(), corroclient.Statement{
+	sub, err := g.corro.Subscribe(context.Background(), corroclient.Statement{
 		Query: getConfigQuery,
 	})
 	if err != nil {
 		return err
 	}
 
-	events := sub.Events()
-	for e := range events {
+	for {
+		e, err := sub.Next()
+		if err != nil {
+			return err
+		}
 		switch e.Type() {
 		case corroclient.EventTypeRow:
 			row := e.(*corroclient.Row)
@@ -102,8 +105,6 @@ func (g *gateways) sync() error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func (g *gateways) addGateway(gw Gateway) {

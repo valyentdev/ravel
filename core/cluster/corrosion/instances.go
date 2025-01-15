@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/valyentdev/corroclient"
 	"github.com/valyentdev/ravel/core/cluster"
-	"github.com/valyentdev/ravel/core/instance"
 )
 
 type corroBool uint8
@@ -45,55 +43,4 @@ func (c *Queries) UpsertInstance(ctx context.Context, i cluster.MachineInstance)
 	}
 
 	return nil
-}
-
-func (c *CorrosionClusterState) WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (<-chan instance.InstanceStatus, error) {
-	sub, err := c.corroclient.PostSubscription(ctx, corroclient.Statement{
-		Query:  `SELECT status FROM instances WHERE machine_id = $1 AND id = $2`,
-		Params: []any{machineId, instanceId},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	updates := make(chan instance.InstanceStatus)
-
-	go func() {
-		events := sub.Events()
-		for {
-			select {
-			case <-ctx.Done():
-				sub.Close()
-				return
-			case e := <-events:
-				if e.Type() == corroclient.EventTypeError {
-					sub.Close()
-					return
-				}
-
-				if e.Type() == corroclient.EventTypeRow || e.Type() == corroclient.EventTypeChange {
-					var row *corroclient.Row
-					if e.Type() == corroclient.EventTypeRow {
-						row = e.(*corroclient.Row)
-					} else {
-						change := e.(*corroclient.Change)
-						row = change.Row
-					}
-
-					var status string
-
-					err := row.Scan(&status)
-					if err != nil {
-						continue
-					}
-
-					updates <- instance.InstanceStatus(status)
-
-				}
-			}
-
-		}
-	}()
-
-	return updates, nil
 }

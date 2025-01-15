@@ -68,7 +68,7 @@ const getInstancesQuery = `
 						`
 
 func (i *instances) sync() error {
-	sub, err := i.corro.PostSubscription(context.Background(), corroclient.Statement{
+	sub, err := i.corro.Subscribe(context.Background(), corroclient.Statement{
 		Query:  getInstancesQuery,
 		Params: []interface{}{i.nodeId},
 	})
@@ -76,8 +76,11 @@ func (i *instances) sync() error {
 		return err
 	}
 
-	events := sub.Events()
-	for e := range events {
+	for {
+		e, err := sub.Next()
+		if err != nil {
+			return err
+		}
 		switch e.Type() {
 		case corroclient.EventTypeRow:
 			row := e.(*corroclient.Row)
@@ -106,7 +109,6 @@ func (i *instances) sync() error {
 
 		}
 	}
-	return nil
 }
 
 func (i *instances) addInstance(ie Instance) {

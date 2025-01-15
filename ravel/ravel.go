@@ -74,7 +74,7 @@ func New(config config.RavelConfig) (*Ravel, error) {
 		}
 	}()
 
-	clusterstate, err := corrosion.New(config.Corrosion.Config(), config.Corrosion.PgWireAddr)
+	clusterstate, err := corrosion.New(config.Corrosion.PgWireAddr)
 	if err != nil {
 		return nil, err
 	}

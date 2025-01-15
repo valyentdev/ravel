@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/core/instance"
 )
 
 type Queries interface {
@@ -34,7 +33,6 @@ type Queries interface {
 
 type ClusterState interface {
 	Queries
-	WatchInstanceStatus(ctx context.Context, machineId string, instanceId string) (<-chan instance.InstanceStatus, error)
 	BeginTx(ctx context.Context) (TX, error)
 }
 
