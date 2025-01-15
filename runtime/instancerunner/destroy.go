@@ -21,7 +21,7 @@ func (ir *InstanceRunner) destroyImpl(ctx context.Context) error {
 
 	status := ir.Status()
 
-	if status != instance.InstanceStatusStopped {
+	if status != instance.InstanceStatusStopped && status != instance.InstanceStatusCreated {
 		return errdefs.NewFailedPrecondition(fmt.Sprintf("instance is in %s state", status))
 	}
 
