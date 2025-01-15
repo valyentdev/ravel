@@ -1,7 +1,5 @@
 [db]
-path = "./tmp/corrosion.db"
-schema_paths = ["./core/cluster/corrosion/schema.sql"]
-
+path = "./tmp/corrosion2.db"
 [gossip]
 addr = "[::]:8787"
 bootstrap = []

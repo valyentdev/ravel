@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/spf13/cobra"
+	"github.com/valyentdev/ravel/cmd/ravel/commands/corrosion"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/daemon"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/db"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/images"
@@ -37,6 +38,7 @@ func NewRootCmd() *cobra.Command {
 		db.NewDBCmd(),
 		images.NewImagesCmd(),
 		tls.NewTLSCommand(),
+		corrosion.NewCorroCmd(),
 	)
 
 	return rootCmd
