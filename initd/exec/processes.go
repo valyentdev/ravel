@@ -14,16 +14,19 @@ func Exec(ctx context.Context, opts api.ExecOptions) (*api.ExecResult, error) {
 		return nil, errdefs.NewInvalidArgument("cmd cannot be empty")
 	}
 
+	name := opts.Cmd[0]
+	args := opts.Cmd[1:]
+
 	stdout := bytes.Buffer{}
 	stderr := bytes.Buffer{}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, opts.GetTimeout())
 	defer cancel()
 
-	cmd := exec.CommandContext(timeoutCtx, opts.Cmd[0])
-
-	cmd.Path = opts.Cmd[0]
-	cmd.Args = opts.Cmd
+	cmd := exec.CommandContext(timeoutCtx, name, args...)
+	if cmd.Err != nil {
+		return nil, errdefs.NewInvalidArgument(cmd.Err.Error())
+	}
 
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -31,7 +34,7 @@ func Exec(ctx context.Context, opts api.ExecOptions) (*api.ExecResult, error) {
 
 	if err := cmd.Run(); err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
-			return nil, err
+			return nil, errdefs.NewInvalidArgument(err.Error())
 		}
 	}
 
