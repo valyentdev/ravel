@@ -45,7 +45,7 @@ func (e *eventer) nextEvent() (api.MachineEvent, bool) {
 func newEventer(store state.Store, nc *nats.Conn) *eventer {
 	return &eventer{
 		store:  store,
-		queue:  deque.New[api.MachineEvent](0),
+		queue:  &deque.Deque[api.MachineEvent]{},
 		notify: make(chan struct{}, 1),
 		nc:     nc,
 	}
