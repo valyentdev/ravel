@@ -12,12 +12,6 @@
   </a>
 </div>
 
-<div align="center">
-  <picture>
-    <img src="./docs/images/illustration.webp" alt="Illustration" />
-  </picture>
-</div>
-
 ## Table of Contents
 
 - [Technologies](#technologies)
