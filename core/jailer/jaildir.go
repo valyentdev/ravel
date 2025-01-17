@@ -56,11 +56,11 @@ func (j *jailDir) pathInRoot(p string) string {
 }
 
 func (j *jailDir) MkdirAll(dir string) error {
-	return mkdirAllAndChown(j.pathInRoot(dir), j.uid, j.gid, 0700)
+	return mkdirAllAndChown(j.pathInRoot(dir), 0700, j.uid, j.gid)
 }
 
 func (j *jailDir) Mkdir(dir string) error {
-	return mkdirAllAndChown(j.pathInRoot(dir), j.uid, j.gid, 0700)
+	return mkdirAllAndChown(j.pathInRoot(dir), 0700, j.uid, j.gid)
 }
 
 func (j *jailDir) MknodAndOwn(device string, mode uint32, dev uint64) error {
