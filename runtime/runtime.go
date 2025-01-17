@@ -51,7 +51,7 @@ func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, is 
 
 	instanceBuilder, err := vm.NewDriver(vm.Config{
 		CloudHypervisorBinary: config.CloudHypervisorBinary,
-		JailerBinary:          config.InitBinary,
+		JailerBinary:          config.JailerBinary,
 		InitBinary:            config.InitBinary,
 		LinuxKernel:           config.LinuxKernel,
 	}, ctrd)
