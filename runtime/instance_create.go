@@ -8,7 +8,7 @@ import (
 	"github.com/containerd/containerd/v2/client"
 	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
-	instancemanager "github.com/valyentdev/ravel/runtime/instancerunner"
+	"github.com/valyentdev/ravel/runtime/instancerunner"
 )
 
 func (r *Runtime) PruneImages(ctx context.Context) error {
@@ -33,8 +33,8 @@ func (r *Runtime) releaseImage(ref string) {
 	r.imagesUsage.Unlock()
 }
 
-func (r *Runtime) newInstanceManager(i instance.Instance) *instancemanager.InstanceRunner {
-	return instancemanager.New(r.instancesStore, i, r.networking, r.instanceBuilder)
+func (r *Runtime) newInstanceManager(i instance.Instance) *instancerunner.InstanceRunner {
+	return instancerunner.New(r.instancesStore, i, r.driver)
 }
 
 func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptions) (*instance.Instance, error) {

@@ -12,7 +12,7 @@ import (
 	"github.com/opencontainers/image-spec/identity"
 )
 
-func (b *Builder) removeRootFS(id string) error {
+func (b *Driver) removeRootFS(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -28,7 +28,7 @@ func (b *Builder) removeRootFS(id string) error {
 	return nil
 }
 
-func (b *Builder) prepareRootFS(ctx context.Context, id string, image client.Image) (rootfs string, err error) {
+func (b *Driver) prepareRootFS(ctx context.Context, id string, image client.Image) (rootfs string, err error) {
 	rootfs, err = b.prepareContainerRootFS(ctx, id, image)
 	if err != nil {
 		return "", fmt.Errorf("failed to prepare rootfs for instance %q: %w", id, err)
@@ -41,7 +41,7 @@ func rootFSName(id string) string {
 	return fmt.Sprintf("%s-%s", id, "rootfs")
 }
 
-func (b *Builder) prepareContainerRootFS(ctx context.Context, id string, image client.Image) (string, error) {
+func (b *Driver) prepareContainerRootFS(ctx context.Context, id string, image client.Image) (string, error) {
 	slog.Debug("preparing rootfs for container", "id", id)
 	diffIDs, err := image.RootFS(ctx)
 	if err != nil {

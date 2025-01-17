@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (b *Builder) writeInitrd(file *os.File, instance *instance.Instance, image v1.Image) error {
+func (b *Driver) writeInitrd(file *os.File, instance *instance.Instance, image v1.Image) error {
 	slog.Debug("writing initrd", "instance", instance.Id)
 
 	t1 := time.Now()

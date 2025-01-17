@@ -10,16 +10,16 @@ import (
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/runtime/drivers"
 	"github.com/valyentdev/ravel/runtime/logging"
 )
 
 type vmRunner struct {
-	networking instance.NetworkingService
-	vmBuilder  instance.Builder
+	driver     drivers.Driver
 	logger     *logging.InstanceLogger
 	i          instance.Instance
 	hasStarted atomic.Bool
-	vm         instance.VM
+	vm         drivers.InstanceTask
 	waitCh     chan struct{}
 	exitResult instance.ExitResult
 }
@@ -36,23 +36,21 @@ func (r *vmRunner) terminated() bool {
 func newVMRunner(
 	i instance.Instance,
 	logger *logging.InstanceLogger,
-	vmBuilder instance.Builder,
-	ns instance.NetworkingService,
+	driver drivers.Driver,
 ) *vmRunner {
 	return &vmRunner{
-		i:          i,
-		networking: ns,
-		vmBuilder:  vmBuilder,
-		logger:     logger,
-		waitCh:     make(chan struct{}),
+		i:      i,
+		driver: driver,
+		logger: logger,
+		waitCh: make(chan struct{}),
 	}
 }
 
 func (r *vmRunner) Recover() error {
-	vm, err := r.vmBuilder.RecoverInstanceVM(context.Background(), &r.i)
+	vm, err := r.driver.RecoverInstanceTask(context.Background(), &r.i)
 	if err != nil {
 		slog.Error("failed to recover vm", "error", err)
-		cerr := r.vmBuilder.CleanupInstanceVM(context.Background(), &r.i)
+		cerr := r.driver.CleanupInstanceTask(context.Background(), &r.i)
 		if cerr != nil {
 			slog.Error("failed to cleanup vm", "error", cerr)
 		}
@@ -100,28 +98,14 @@ func (r *vmRunner) Stop(signal string, timeout time.Duration) error {
 func (r *vmRunner) Start() error {
 	ctx := context.Background()
 	slog.Debug("ensuring instance network")
-	err := r.networking.EnsureInstanceNetwork(r.i.Id, r.i.Network)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			err := r.networking.CleanupInstanceNetwork(r.i.Id, r.i.Network)
-			if err != nil {
-				slog.Error("failed to cleanup instance network", "error", err)
-			}
-		}
-	}()
-
-	slog.Debug("building vm")
-	vm, err := r.vmBuilder.BuildInstanceVM(ctx, &r.i)
+	vm, err := r.driver.BuildInstanceTask(ctx, &r.i)
 	if err != nil {
 		slog.Error("failed to build vm", "error", err)
 		return err
 	}
 	defer func() {
 		if err != nil {
-			err := r.vmBuilder.CleanupInstanceVM(ctx, &r.i)
+			err := r.driver.CleanupInstanceTask(ctx, &r.i)
 			if err != nil {
 				slog.Error("failed to cleanup vm", "error", err)
 			}
@@ -160,12 +144,7 @@ func (r *vmRunner) run() {
 
 	slog.Debug("vm exited", "exitCode", result.ExitCode, "instance", r.i.Id)
 
-	err = r.networking.CleanupInstanceNetwork(r.i.Id, r.i.Network)
-	if err != nil {
-		slog.Error("failed to cleanup instance network", "error", err)
-	}
-
-	err = r.vmBuilder.CleanupInstanceVM(context.Background(), &r.i)
+	err = r.driver.CleanupInstanceTask(context.Background(), &r.i)
 	if err != nil {
 		slog.Error("failed to cleanup vm", "error", err)
 	}

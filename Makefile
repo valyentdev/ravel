@@ -3,6 +3,8 @@ run-raveld:
 	sudo go run cmd/ravel/ravel.go daemon -c ravel.toml --debug
 run-api:
 	air
+run-corro:
+	sudo corrosion agent -c docs/examples/corrosion-config.toml
 build-ravel:
 	CGO_ENABLED=0 go build -o bin/ravel cmd/ravel/ravel.go
 build-initd:

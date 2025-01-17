@@ -33,7 +33,7 @@ func (r *Runtime) PullImage(ctx context.Context, opt daemon.ImagePullOptions) (*
 		auth = r.registries
 	}
 
-	image, err := r.images.Pull(ctx, ref, auth)
+	image, err := r.images.Pull(ctx, ref, r.driver.Snapshotter(), auth)
 	if err != nil {
 		return nil, err
 	}

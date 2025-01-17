@@ -12,6 +12,7 @@ import (
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/initd/client"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
+	"github.com/valyentdev/ravel/runtime/drivers"
 )
 
 type vm struct {
@@ -26,7 +27,7 @@ type vm struct {
 	waitChan               chan struct{}
 }
 
-var _ instance.VM = (*vm)(nil)
+var _ drivers.InstanceTask = (*vm)(nil)
 
 func (vm *vm) Id() string {
 	return vm.id
@@ -188,13 +189,12 @@ func (vm *vm) Stop(ctx context.Context, signal string) error {
 
 func (vm *vm) Run() instance.ExitResult {
 	<-vm.waitChan
-	er := instance.ExitResult{
+	return instance.ExitResult{
 		Success:   vm.runResult.ExitCode == 0,
 		ExitCode:  vm.runResult.ExitCode,
 		ExitedAt:  vm.runResult.ExitedAt,
 		Requested: vm.runResult.HasBeenStopped,
 	}
-	return er
 }
 
 func (vm *vm) WaitExit(ctx context.Context) (exited bool) {

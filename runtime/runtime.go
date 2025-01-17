@@ -12,9 +12,9 @@ import (
 	"github.com/valyentdev/ravel/core/daemon"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/registry"
-	"github.com/valyentdev/ravel/internal/resources"
+	"github.com/valyentdev/ravel/runtime/drivers"
+	"github.com/valyentdev/ravel/runtime/drivers/vm"
 	"github.com/valyentdev/ravel/runtime/images"
-	"github.com/valyentdev/ravel/runtime/vm"
 )
 
 func createRavelCgroup() error {
@@ -22,13 +22,13 @@ func createRavelCgroup() error {
 }
 
 type Runtime struct {
-	instancesStore  instance.InstanceStore
-	imagesUsage     *images.ImagesUsage
-	images          *images.Service
-	networking      *networkService
-	instanceBuilder instance.Builder
-	instances       *State
-	registries      registry.RegistriesConfig
+	instancesStore instance.InstanceStore
+	imagesUsage    *images.ImagesUsage
+	images         *images.Service
+	networking     *networkService
+	driver         drivers.Driver
+	instances      *State
+	registries     registry.RegistriesConfig
 }
 
 var _ daemon.Runtime = (*Runtime)(nil)
@@ -39,45 +39,33 @@ func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, is 
 		return nil, fmt.Errorf("failed to create instances directory: %w", err)
 	}
 
-	uid, gid, err := setupRavelJailerUser()
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup ravel jailer user: %w", err)
-	}
-
-	frequency, err := resources.GetHostCPUFrequency()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get host CPU frequency: %w", err)
-	}
-
-	slog.Info("Host CPU frequency", "mhz", frequency)
-
 	ctrd, err := initContainerd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create containerd client: %w", err)
 	}
 
-	const snapshotter = "devmapper"
-	imagesService := images.NewService(ctrd, snapshotter)
+	imagesService := images.NewService(ctrd)
 	imageUsage := images.NewImagesUsage()
 
 	state := NewState()
 
-	initBinary := config.InitBinary
-	linuxKernel := config.LinuxKernel
-	jailer := config.JailerBinary
-
-	instanceBuilder, err := vm.NewBuilder(config.CloudHypervisorBinary, jailer, initBinary, linuxKernel, imagesService, ctrd, snapshotter, frequency, vm.User{Uid: uid, Gid: gid})
+	instanceBuilder, err := vm.NewDriver(vm.Config{
+		CloudHypervisorBinary: config.CloudHypervisorBinary,
+		JailerBinary:          config.InitBinary,
+		InitBinary:            config.InitBinary,
+		LinuxKernel:           config.LinuxKernel,
+	}, ctrd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create instance builder: %w", err)
 	}
 
 	runtime := &Runtime{
-		instancesStore:  is,
-		imagesUsage:     imageUsage,
-		images:          imagesService,
-		networking:      newNetworkService(vm.User{Uid: uid, Gid: gid}),
-		instanceBuilder: instanceBuilder,
-		instances:       state,
+		instancesStore: is,
+		imagesUsage:    imageUsage,
+		images:         imagesService,
+		networking:     newNetworkService(),
+		driver:         instanceBuilder,
+		instances:      state,
 	}
 	return runtime, nil
 }

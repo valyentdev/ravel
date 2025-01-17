@@ -10,6 +10,7 @@ import (
 	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/pkg/pubsub"
+	"github.com/valyentdev/ravel/runtime/drivers"
 	"github.com/valyentdev/ravel/runtime/logging"
 )
 
@@ -23,8 +24,7 @@ type InstanceRunner struct {
 	stateObserver *pubsub.Observable[instance.State]
 	instanceLock  sync.RWMutex
 
-	networking  instance.NetworkingService
-	vmBuilder   instance.Builder
+	driver      drivers.Driver
 	runnerMutex sync.Mutex
 	runner      *vmRunner
 	waitForExit []chan instance.ExitResult
@@ -33,7 +33,7 @@ type InstanceRunner struct {
 var errNotRunning = errdefs.NewFailedPrecondition("instance is not running")
 
 func (ir *InstanceRunner) newVMRunner() *vmRunner {
-	return newVMRunner(ir.Instance(), ir.logger, ir.vmBuilder, ir.networking)
+	return newVMRunner(ir.Instance(), ir.logger, ir.driver)
 }
 
 func (ir *InstanceRunner) getVMRunner() *vmRunner {
@@ -51,16 +51,14 @@ func (ir *InstanceRunner) setVMRunner(runner *vmRunner) {
 func New(
 	store instance.InstanceStore,
 	instance instance.Instance,
-	ns instance.NetworkingService,
-	vmBuilder instance.Builder,
+	driver drivers.Driver,
 ) *InstanceRunner {
 	return &InstanceRunner{
 		logger:        logging.NewInstanceLogger(instance.Id),
 		store:         store,
 		instance:      instance,
-		networking:    ns,
 		stateObserver: pubsub.NewObservable(instance.State),
-		vmBuilder:     vmBuilder,
+		driver:        driver,
 	}
 }
 

@@ -18,18 +18,16 @@ import (
 )
 
 type Service struct {
-	ctrd        *client.Client
-	snapshotter string
+	ctrd *client.Client
 }
 
-func NewService(ctrd *client.Client, snapshotter string) *Service {
+func NewService(ctrd *client.Client) *Service {
 	return &Service{
-		ctrd:        ctrd,
-		snapshotter: snapshotter,
+		ctrd: ctrd,
 	}
 }
 
-func (s *Service) Pull(ctx context.Context, ref string, auth registry.RegistriesConfig) (client.Image, error) {
+func (s *Service) Pull(ctx context.Context, ref string, snapshotter string, auth registry.RegistriesConfig) (client.Image, error) {
 	authorizer := docker.NewDockerAuthorizer(
 		docker.WithAuthCreds(func(host string) (string, string, error) {
 			return auth.Get(host)
@@ -44,7 +42,7 @@ func (s *Service) Pull(ctx context.Context, ref string, auth registry.Registries
 
 	pullOpts := []client.RemoteOpt{
 		client.WithResolver(resolver),
-		client.WithPullSnapshotter(s.snapshotter),
+		client.WithPullSnapshotter(snapshotter),
 		client.WithPullUnpack,
 		client.WithChildLabelMap(containerdimages.ChildGCLabelsFilterLayers),
 	}

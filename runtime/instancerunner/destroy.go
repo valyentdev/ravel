@@ -32,7 +32,7 @@ func (ir *InstanceRunner) destroyImpl(ctx context.Context) error {
 		return err
 	}
 
-	err = ir.vmBuilder.CleanupInstance(ctx, &i)
+	err = ir.driver.CleanupInstance(ctx, &i)
 	if err != nil {
 		return err
 	}

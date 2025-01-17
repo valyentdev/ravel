@@ -6,7 +6,7 @@ import (
 
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/instance"
-	instancemanager "github.com/valyentdev/ravel/runtime/instancerunner"
+	"github.com/valyentdev/ravel/runtime/instancerunner"
 )
 
 func (r *Runtime) StartInstance(ctx context.Context, id string) error {
@@ -92,7 +92,7 @@ func (r *Runtime) GetInstance(id string) (*instance.Instance, error) {
 	return &i, nil
 }
 
-func (r *Runtime) getInstance(id string) (*instancemanager.InstanceRunner, error) {
+func (r *Runtime) getInstance(id string) (*instancerunner.InstanceRunner, error) {
 	return r.instances.GetInstance(id)
 }
 

@@ -16,8 +16,10 @@ import (
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/jailer"
 	initdclient "github.com/valyentdev/ravel/initd/client"
+	"github.com/valyentdev/ravel/internal/resources"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
-	"github.com/valyentdev/ravel/runtime/images"
+	"github.com/valyentdev/ravel/runtime/drivers"
+	"github.com/valyentdev/ravel/runtime/drivers/vm/tap"
 )
 
 const (
@@ -26,6 +28,7 @@ const (
 	linuxKernelPath = "/vmlinux.bin"
 	chAPISocketPath = "/instance.sock"
 	vsockPath       = "/instance.vsock"
+	snapshotter     = "devmapper"
 )
 
 func getInstanceDir(id string) string {
@@ -40,16 +43,19 @@ func getVsockPath(id string) string {
 	return path.Join(getInstanceDir(id), "instance.vsock")
 }
 
-type Builder struct {
+type Driver struct {
 	cpuMhz       int64
 	chBinary     string
 	jailerBinary string
 	initBinary   string
 	linuxKernel  string
-	images       *images.Service
 	ctrd         *client.Client
 	jailerUser   User
 	snapshotter  snapshots.Snapshotter
+}
+
+func (b *Driver) Snapshotter() string {
+	return snapshotter
 }
 
 type User struct {
@@ -57,36 +63,50 @@ type User struct {
 	Gid int
 }
 
-func NewBuilder(
-	chBinary, jailerBinary, initBinary, linuxKernel string,
-	images *images.Service,
-	ctrd *client.Client,
-	snapshotter string,
-	cpuMhz int64,
-	user User,
-) (*Builder, error) {
+type Config struct {
+	CloudHypervisorBinary string `json:"cloud_hypervisor_binary" toml:"cloud_hypervisor_binary"`
+	JailerBinary          string `json:"jailer_binary" toml:"jailer_binary"`
+	InitBinary            string `json:"init_binary" toml:"init_binary"`
+	LinuxKernel           string `json:"linux_kernel" toml:"linux_kernel"`
+}
 
-	_, err := cgroup2.NewManager("/sys/fs/cgroup", "/ravel", &cgroup2.Resources{}) // create cgroup2 manager
+func NewDriver(
+	config Config,
+	ctrd *client.Client,
+) (*Driver, error) {
+	frequency, err := resources.GetHostCPUFrequency()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get host CPU frequency: %w", err)
+	}
+
+	uid, gid, err := setupRavelJailerUser()
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup ravel jailer user: %w", err)
+	}
+
+	_, err = cgroup2.NewManager("/sys/fs/cgroup", "/ravel", &cgroup2.Resources{}) // create cgroup2 manager
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cgroup2 manager: %w", err)
 	}
 
 	snapshotService := ctrd.SnapshotService(snapshotter)
 
-	return &Builder{
-		chBinary:     chBinary,
-		initBinary:   initBinary,
-		linuxKernel:  linuxKernel,
-		jailerBinary: jailerBinary,
-		images:       images,
+	return &Driver{
+		chBinary:     config.CloudHypervisorBinary,
+		initBinary:   config.InitBinary,
+		linuxKernel:  config.LinuxKernel,
+		jailerBinary: config.JailerBinary,
 		ctrd:         ctrd,
 		snapshotter:  snapshotService,
-		cpuMhz:       cpuMhz,
-		jailerUser:   user,
+		cpuMhz:       frequency,
+		jailerUser: User{
+			Uid: uid,
+			Gid: gid,
+		},
 	}, nil
 }
 
-var _ instance.Builder = (*Builder)(nil)
+var _ drivers.Driver = (*Driver)(nil)
 
 func getCgroupMemory(c *instance.InstanceGuestConfig) *cgroup2.Memory {
 	high := int64(c.MemoryMB * 1_000_000)
@@ -113,12 +133,37 @@ func getInstanceResources(cpuMhz int64, c *instance.InstanceGuestConfig) *cgroup
 	}
 }
 
-// BuildInstanceVM implements instance.VMBuilder.
-func (b *Builder) BuildInstanceVM(ctx context.Context, instance *instance.Instance) (instance.VM, error) {
+// BuildInstanceTask implements instance.VMBuilder.
+func (b *Driver) BuildInstanceTask(ctx context.Context, instance *instance.Instance) (drivers.InstanceTask, error) {
+	_, err := tap.PrepareInstanceTapDevice(instance.Id, instance.Network, b.jailerUser.Uid, b.jailerUser.Gid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare tap device: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			err := tap.CleanupInstanceTapDevice(instance.Id, instance.Network)
+			if err != nil {
+				slog.Error("failed to cleanup tap device", "error", err)
+			}
+		}
+	}()
+
 	startTime := time.Now()
-	image, err := b.images.GetImage(ctx, instance.ImageRef)
+	image, err := b.ctrd.GetImage(ctx, instance.ImageRef)
 	if err != nil {
 		return nil, err
+	}
+
+	isUnpacked, err := image.IsUnpacked(ctx, b.Snapshotter())
+	if err != nil {
+		return nil, err
+	}
+
+	if !isUnpacked {
+		err = image.Unpack(ctx, b.Snapshotter())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	rootfs, err := b.prepareRootFS(ctx, instance.Id, image)
@@ -191,14 +236,19 @@ func (b *Builder) BuildInstanceVM(ctx context.Context, instance *instance.Instan
 	return vm, nil
 }
 
-// CleanupInstanceVM implements instance.VMBuilder.
-func (b *Builder) CleanupInstanceVM(ctx context.Context, instance *instance.Instance) error {
+// CleanupInstanceTask implements instance.VMBuilder.
+func (b *Driver) CleanupInstanceTask(ctx context.Context, instance *instance.Instance) error {
 	var errs []error
+
 	if err := b.removeRootFS(instance.Id); err != nil {
 		errs = append(errs, err)
 	}
 
 	if err := os.RemoveAll(getInstanceDir(instance.Id)); err != nil {
+		errs = append(errs, err)
+	}
+
+	if err := tap.CleanupInstanceTapDevice(instance.Id, instance.Network); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -210,10 +260,11 @@ func (b *Builder) CleanupInstanceVM(ctx context.Context, instance *instance.Inst
 	if err := cg.Delete(); err != nil {
 		errs = append(errs, fmt.Errorf("failed to delete cgroup: %w", err))
 	}
+
 	return errors.Join(errs...)
 }
 
-func (b *Builder) CleanupInstance(ctx context.Context, instance *instance.Instance) error {
+func (b *Driver) CleanupInstance(ctx context.Context, instance *instance.Instance) error {
 	err := b.removeRootFS(instance.Id)
 	if err != nil {
 		return fmt.Errorf("failed to remove rootfs: %w", err)
@@ -227,8 +278,8 @@ func (b *Builder) CleanupInstance(ctx context.Context, instance *instance.Instan
 	return nil
 }
 
-// RecoverInstanceVM implements instance.VMBuilder.
-func (b *Builder) RecoverInstanceVM(ctx context.Context, i *instance.Instance) (instance.VM, error) {
+// RecoverInstanceTask implements instance.VMBuilder.
+func (b *Driver) RecoverInstanceTask(ctx context.Context, i *instance.Instance) (drivers.InstanceTask, error) {
 	vmm := cloudhypervisor.NewVMMClient(getAPISocketPath(i.Id))
 
 	client := initdclient.NewInternalClient(getVsockPath(i.Id))
@@ -248,7 +299,7 @@ func (b *Builder) RecoverInstanceVM(ctx context.Context, i *instance.Instance) (
 	return vm, nil
 }
 
-func (r *Builder) getContainerMachineCHVmConfig(i *instance.Instance, rootfs string) cloudhypervisor.VmConfig {
+func (r *Driver) getContainerMachineCHVmConfig(i *instance.Instance, rootfs string) cloudhypervisor.VmConfig {
 	config := i.Config
 	return cloudhypervisor.VmConfig{
 		Cpus: &cloudhypervisor.CpusConfig{
