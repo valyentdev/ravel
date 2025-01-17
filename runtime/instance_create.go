@@ -3,11 +3,13 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/containerd/containerd/v2/client"
 	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/runtime/disks"
 	"github.com/valyentdev/ravel/runtime/instancerunner"
 )
 
@@ -33,8 +35,8 @@ func (r *Runtime) releaseImage(ref string) {
 	r.imagesUsage.Unlock()
 }
 
-func (r *Runtime) newInstanceManager(i instance.Instance) *instancerunner.InstanceRunner {
-	return instancerunner.New(r.instancesStore, i, r.driver)
+func (r *Runtime) newInstanceManager(i instance.Instance, disks []disks.Disk) *instancerunner.InstanceRunner {
+	return instancerunner.New(r.instancesStore, i, r.driver, disks)
 }
 
 func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptions) (*instance.Instance, error) {
@@ -71,6 +73,25 @@ func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptio
 		}
 	}()
 
+	disksId := make([]string, len(opt.Config.Mounts))
+	for i, m := range opt.Config.Mounts {
+		disksId[i] = m.Disk
+	}
+
+	disks, err := r.disks.GetDisks(disksId...)
+
+	if err = r.disks.AttachInstance(id, disksId...); err != nil {
+		return nil, fmt.Errorf("failed to attach disks: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			err := r.disks.DetachInstance(disksId...)
+			if err != nil {
+				slog.Error("failed to detach disks", "err", err)
+			}
+		}
+	}()
+
 	i := instance.Instance{
 		Id:       id,
 		Metadata: opt.Metadata,
@@ -87,7 +108,7 @@ func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptio
 		return nil, fmt.Errorf("failed to save instance: %w", err)
 	}
 
-	manager := r.newInstanceManager(i)
+	manager := r.newInstanceManager(i, disks)
 
 	r.instances.AddInstance(id, manager)
 

@@ -34,6 +34,11 @@ func (r *Runtime) DestroyInstance(ctx context.Context, id string) error {
 		return err
 	}
 
+	err = r.disks.DetachInstance(instance.Instance().Config.GetDisks()...)
+	if err != nil {
+		return err
+	}
+
 	err = r.instancesStore.DeleteInstance(id)
 	if err != nil {
 		return err

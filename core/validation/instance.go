@@ -12,6 +12,21 @@ import (
 
 var idRegexp = regexp.MustCompile("^[A-Za-z0-9_-]+$")
 
+func ValidateObjectId(id string) error {
+	if id == "" {
+		return errors.New("id is required")
+	}
+
+	if len(id) > 64 {
+		return errors.New("id is too long")
+	}
+
+	if !idRegexp.MatchString(id) {
+		return errors.New("id contains invalid characters")
+	}
+	return nil
+}
+
 func ValidateInstanceId(id string) error {
 	if id == "" {
 		return errors.New("instance id is required")

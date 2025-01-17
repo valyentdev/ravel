@@ -23,6 +23,7 @@ var (
 	instancesBucket        = []byte("instances")
 	allocationsBucket      = []byte("allocations")
 	eventsBucket           = []byte("events")
+	disksBucket            = []byte("disks")
 )
 
 func NewStore(path string) (*Store, error) {
@@ -56,6 +57,11 @@ func (s *Store) Init() error {
 	}
 
 	_, err = tx.CreateBucketIfNotExists(eventsBucket)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.CreateBucketIfNotExists(disksBucket)
 	if err != nil {
 		return err
 	}

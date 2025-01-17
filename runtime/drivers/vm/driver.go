@@ -18,6 +18,7 @@ import (
 	initdclient "github.com/valyentdev/ravel/initd/client"
 	"github.com/valyentdev/ravel/internal/resources"
 	"github.com/valyentdev/ravel/pkg/cloudhypervisor"
+	"github.com/valyentdev/ravel/runtime/disks"
 	"github.com/valyentdev/ravel/runtime/drivers"
 	"github.com/valyentdev/ravel/runtime/drivers/vm/tap"
 )
@@ -134,7 +135,7 @@ func getInstanceResources(cpuMhz int64, c *instance.InstanceGuestConfig) *cgroup
 }
 
 // BuildInstanceTask implements instance.VMBuilder.
-func (b *Driver) BuildInstanceTask(ctx context.Context, instance *instance.Instance) (drivers.InstanceTask, error) {
+func (b *Driver) BuildInstanceTask(ctx context.Context, instance *instance.Instance, disks []disks.Disk) (drivers.InstanceTask, error) {
 	_, err := tap.PrepareInstanceTapDevice(instance.Id, instance.Network, b.jailerUser.Uid, b.jailerUser.Gid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare tap device: %w", err)
@@ -188,13 +189,7 @@ func (b *Driver) BuildInstanceTask(ctx context.Context, instance *instance.Insta
 		return nil, fmt.Errorf("failed to create cgroup: %w", err)
 	}
 
-	jail, err := jailer.CreateJail(
-		b.jailerBinary,
-		jailer.JailConfig{
-			Uid:     b.jailerUser.Uid,
-			Gid:     b.jailerUser.Gid,
-			NewRoot: getInstanceDir(instance.Id),
-		},
+	opts := []jailer.Opt{
 		jailer.WithTUN(),
 		jailer.WithKVM(),
 		jailer.WithURandom(),
@@ -203,7 +198,20 @@ func (b *Driver) BuildInstanceTask(ctx context.Context, instance *instance.Insta
 		jailer.WithHardLink(b.linuxKernel, "/vmlinux.bin", true),
 		jailer.WithNewPidNS(),
 		jailer.WithMountProc(),
-		jailer.WithCgroup("/ravel/"+instance.Id),
+		jailer.WithCgroup("/ravel/" + instance.Id),
+	}
+	for _, disk := range disks {
+		opts = append(opts, jailer.WithBlockDevice(disk.Path))
+	}
+
+	jail, err := jailer.CreateJail(
+		b.jailerBinary,
+		jailer.JailConfig{
+			Uid:     b.jailerUser.Uid,
+			Gid:     b.jailerUser.Gid,
+			NewRoot: getInstanceDir(instance.Id),
+		},
+		opts...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create jail: %w", err)
@@ -224,13 +232,13 @@ func (b *Driver) BuildInstanceTask(ctx context.Context, instance *instance.Insta
 
 	slog.Debug("initrd created after", "time", time.Since(startTime))
 
-	cmd := jail.Command("./cloud-hypervisor", "--api-socket", chAPISocketPath, "--log-file", "./cloud-hypervisor.log")
+	cmd := jail.Command("./cloud-hypervisor", "--api-socket", chAPISocketPath)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setsid: true,
 	}
 
-	vmConfig := b.getContainerMachineCHVmConfig(instance, rootfs)
+	vmConfig := b.getContainerMachineCHVmConfig(instance, rootfs, disks)
 	vm := newVM(instance.Id, cmd, vmConfig)
 
 	return vm, nil
@@ -299,8 +307,18 @@ func (b *Driver) RecoverInstanceTask(ctx context.Context, i *instance.Instance) 
 	return vm, nil
 }
 
-func (r *Driver) getContainerMachineCHVmConfig(i *instance.Instance, rootfs string) cloudhypervisor.VmConfig {
+func (r *Driver) getContainerMachineCHVmConfig(i *instance.Instance, rootfs string, disks []disks.Disk) cloudhypervisor.VmConfig {
 	config := i.Config
+
+	chDisks := make([]cloudhypervisor.DiskConfig, 0, len(config.Mounts)+1)
+	chDisks = append(chDisks, cloudhypervisor.DiskConfig{
+		Path: rootfs,
+	})
+
+	additionalDisks := getAdditionalDisks(disks)
+
+	chDisks = append(chDisks, additionalDisks...)
+
 	return cloudhypervisor.VmConfig{
 		Cpus: &cloudhypervisor.CpusConfig{
 			BootVcpus: int(config.Guest.VCpus),
@@ -315,13 +333,9 @@ func (r *Driver) getContainerMachineCHVmConfig(i *instance.Instance, rootfs stri
 		Payload: cloudhypervisor.PayloadConfig{
 			Initramfs: cloudhypervisor.StringPtr(initRamfsPath),
 			Kernel:    cloudhypervisor.StringPtr(linuxKernelPath),
-			Cmdline:   cloudhypervisor.StringPtr("ro console=hvc0 rdinit=ravel-init quiet"),
+			Cmdline:   cloudhypervisor.StringPtr("ro console=hvc0 rdinit=ravel-init"),
 		},
-		Disks: &[]cloudhypervisor.DiskConfig{
-			{
-				Path: rootfs,
-			},
-		},
+		Disks: &chDisks,
 		Net: &[]cloudhypervisor.NetConfig{
 			{
 				Tap: cloudhypervisor.StringPtr(i.Network.TapDevice),

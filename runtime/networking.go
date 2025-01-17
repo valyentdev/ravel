@@ -6,12 +6,10 @@ import (
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/networking"
 	"github.com/valyentdev/ravel/internal/id"
-	"github.com/valyentdev/ravel/runtime/drivers/vm"
 )
 
 type networkService struct {
 	localSubnetAllocator *networking.BasicSubnetAllocator
-	jailerUser           vm.User
 }
 
 func newNetworkService() *networkService {

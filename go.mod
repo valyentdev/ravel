@@ -17,6 +17,7 @@ require (
 	github.com/google/go-containerregistry v0.20.2
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/jackc/tern/v2 v2.3.2
+	github.com/mistifyio/go-zfs/v3 v3.0.1
 	github.com/nats-io/nats.go v1.38.0
 	github.com/nrednav/cuid2 v1.0.1
 	github.com/oklog/ulid v1.3.1
@@ -121,7 +122,7 @@ require (
 	github.com/mdlayher/vsock v1.2.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
 	github.com/valyentdev/ravel/api v0.0.0-20250115105712-986972f8fc94
 	github.com/vishvananda/netlink v1.3.0
 	github.com/vishvananda/netns v0.0.5

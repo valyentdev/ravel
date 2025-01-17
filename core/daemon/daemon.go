@@ -9,6 +9,7 @@ import (
 	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/validation"
+	"github.com/valyentdev/ravel/runtime/disks"
 )
 
 type InstanceOptions struct {
@@ -34,6 +35,11 @@ func (i *InstanceOptions) Validate() error {
 	return nil
 }
 
+type DiskOptions struct {
+	Id     string `json:"id"`
+	SizeMB uint64 `json:"size_mb"`
+}
+
 type Daemon interface {
 	CreateInstance(ctx context.Context, opt InstanceOptions) (*instance.Instance, error)
 	GetInstance(ctx context.Context, id string) (*instance.Instance, error)
@@ -48,4 +54,9 @@ type Daemon interface {
 	DeleteImage(ctx context.Context, ref string) error
 	ListImages(ctx context.Context) ([]images.Image, error)
 	PullImage(ctx context.Context, opt ImagePullOptions) (*images.Image, error)
+
+	CreateDisk(ctx context.Context, opt DiskOptions) (*disks.Disk, error)
+	GetDisk(ctx context.Context, id string) (*disks.Disk, error)
+	ListDisks(ctx context.Context) ([]disks.Disk, error)
+	DestroyDisk(ctx context.Context, id string) error
 }

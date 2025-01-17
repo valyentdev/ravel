@@ -14,6 +14,7 @@ import (
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/internal/httpclient"
 	"github.com/valyentdev/ravel/internal/streamutil"
+	"github.com/valyentdev/ravel/runtime/disks"
 )
 
 type DaemonClient struct {
@@ -147,4 +148,44 @@ func (c *DaemonClient) PullImage(ctx context.Context, opts daemon.ImagePullOptio
 	var image daemon.Image
 	err := c.client.Post(ctx, "/images/pull", &image, httpclient.WithJSONBody(&opts))
 	return &image, err
+}
+
+// CreateDisk implements daemon.Daemon.
+func (a *DaemonClient) CreateDisk(ctx context.Context, opt daemon.DiskOptions) (*disks.Disk, error) {
+	var disk disks.Disk
+	err := a.client.Post(ctx, "/disks", &disk, httpclient.WithJSONBody(&opt))
+	if err != nil {
+		return nil, err
+	}
+
+	return &disk, nil
+}
+
+// DestroyDisk implements daemon.Daemon.
+func (a *DaemonClient) DestroyDisk(ctx context.Context, id string) error {
+	err := a.client.Delete(ctx, "/disks/"+id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetDisk implements daemon.Daemon.
+func (a *DaemonClient) GetDisk(ctx context.Context, id string) (*disks.Disk, error) {
+	var disk disks.Disk
+	err := a.client.Get(ctx, "/disks/"+id, &disk)
+	if err != nil {
+		return nil, err
+	}
+	return &disk, nil
+}
+
+// ListDisks implements daemon.Daemon.
+func (a *DaemonClient) ListDisks(ctx context.Context) ([]disks.Disk, error) {
+	var disksList []disks.Disk
+	err := a.client.Get(ctx, "/disks", &disksList)
+	if err != nil {
+		return nil, err
+	}
+	return disksList, nil
 }

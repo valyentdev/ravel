@@ -122,7 +122,7 @@ func (e *Env) Init() error {
 	}
 
 	if err := mountAdditionalDrives(config.Mounts, uid, gid); err != nil {
-		return (fmt.Errorf("error mounting disk: %v", err))
+		return fmt.Errorf("error mounting additional drives: %w", err)
 	}
 
 	if err := unix.Sethostname([]byte(config.Hostname)); err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/pkg/pubsub"
+	"github.com/valyentdev/ravel/runtime/disks"
 	"github.com/valyentdev/ravel/runtime/drivers"
 	"github.com/valyentdev/ravel/runtime/logging"
 )
@@ -21,6 +22,7 @@ type InstanceRunner struct {
 	mutex sync.Mutex
 
 	instance      instance.Instance
+	disks         []disks.Disk
 	stateObserver *pubsub.Observable[instance.State]
 	instanceLock  sync.RWMutex
 
@@ -33,7 +35,7 @@ type InstanceRunner struct {
 var errNotRunning = errdefs.NewFailedPrecondition("instance is not running")
 
 func (ir *InstanceRunner) newVMRunner() *vmRunner {
-	return newVMRunner(ir.Instance(), ir.logger, ir.driver)
+	return newVMRunner(ir.Instance(), ir.logger, ir.driver, ir.disks)
 }
 
 func (ir *InstanceRunner) getVMRunner() *vmRunner {
@@ -52,6 +54,7 @@ func New(
 	store instance.InstanceStore,
 	instance instance.Instance,
 	driver drivers.Driver,
+	disks []disks.Disk,
 ) *InstanceRunner {
 	return &InstanceRunner{
 		logger:        logging.NewInstanceLogger(instance.Id),
@@ -59,6 +62,7 @@ func New(
 		instance:      instance,
 		stateObserver: pubsub.NewObservable(instance.State),
 		driver:        driver,
+		disks:         disks,
 	}
 }
 

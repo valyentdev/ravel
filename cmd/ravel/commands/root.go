@@ -7,6 +7,7 @@ import (
 	"github.com/valyentdev/ravel/cmd/ravel/commands/corrosion"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/daemon"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/db"
+	"github.com/valyentdev/ravel/cmd/ravel/commands/disks"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/images"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/instance"
 	"github.com/valyentdev/ravel/cmd/ravel/commands/server"
@@ -39,6 +40,7 @@ func NewRootCmd() *cobra.Command {
 		images.NewImagesCmd(),
 		tls.NewTLSCommand(),
 		corrosion.NewCorroCmd(),
+		disks.NewDisksCmd(),
 	)
 
 	return rootCmd

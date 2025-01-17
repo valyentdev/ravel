@@ -10,6 +10,7 @@ import (
 	"github.com/valyentdev/ravel/core/daemon"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/validation"
+	"github.com/valyentdev/ravel/runtime/disks"
 )
 
 func (a *Daemon) DeleteImage(ctx context.Context, ref string) error {
@@ -70,4 +71,20 @@ func (a *Daemon) SubscribeToInstanceLogs(ctx context.Context, id string) ([]*api
 
 func (a *Daemon) GetInstanceLogs(ctx context.Context, id string) ([]*api.LogEntry, error) {
 	return a.runtime.GetInstanceLogs(id)
+}
+
+func (a *Daemon) CreateDisk(ctx context.Context, opts daemon.DiskOptions) (*disks.Disk, error) {
+	return a.runtime.CreateDisk(opts.Id, opts.SizeMB)
+}
+
+func (a *Daemon) GetDisk(ctx context.Context, id string) (*disks.Disk, error) {
+	return a.runtime.GetDisk(id)
+}
+
+func (a *Daemon) ListDisks(ctx context.Context) ([]disks.Disk, error) {
+	return a.runtime.ListDisks()
+}
+
+func (a *Daemon) DestroyDisk(ctx context.Context, id string) error {
+	return a.runtime.DestroyDisk(id)
 }

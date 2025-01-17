@@ -69,6 +69,8 @@ func (b *Driver) writeInitrd(file *os.File, instance *instance.Instance, image v
 func getInitConfig(instance *instance.Instance, image v1.ImageConfig) initd.Config {
 	config := instance.Config
 
+	mounts := getAdditionalMounts(config.Mounts)
+
 	return initd.Config{
 		ImageConfig: &initd.ImageConfig{
 			User:       cloudhypervisor.StringPtr(image.User),
@@ -95,5 +97,6 @@ func getInitConfig(instance *instance.Instance, image v1.ImageConfig) initd.Conf
 			},
 			DefaultGateway: instance.Network.Local.Gateway.String(),
 		},
+		Mounts: mounts,
 	}
 }

@@ -103,4 +103,28 @@ func (s DaemonServer) registerEndpoints(mux humago.Mux) {
 		Method:      http.MethodDelete,
 	}, s.deleteImage)
 
+	huma.Register(api, huma.Operation{
+		OperationID: "createDisk",
+		Path:        "/disks",
+		Method:      http.MethodPost,
+	}, s.createDisk)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "getDisk",
+		Path:        "/disks/{id}",
+		Method:      http.MethodGet,
+	}, s.getDisk)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listDisks",
+		Path:        "/disks",
+		Method:      http.MethodGet,
+	}, s.listDisks)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "destroyDisk",
+		Path:        "/disks/{id}",
+		Method:      http.MethodDelete,
+	}, s.destroyDisk)
+
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/valyentdev/ravel/core/daemon"
 	"github.com/valyentdev/ravel/core/instance"
 	"github.com/valyentdev/ravel/core/registry"
+	"github.com/valyentdev/ravel/runtime/disks"
 	"github.com/valyentdev/ravel/runtime/drivers"
 	"github.com/valyentdev/ravel/runtime/drivers/vm"
 	"github.com/valyentdev/ravel/runtime/images"
@@ -28,12 +29,18 @@ type Runtime struct {
 	networking     *networkService
 	driver         drivers.Driver
 	instances      *State
+	disks          *disks.Service
 	registries     registry.RegistriesConfig
+}
+
+type Store interface {
+	instance.InstanceStore
+	disks.Store
 }
 
 var _ daemon.Runtime = (*Runtime)(nil)
 
-func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, is instance.InstanceStore) (*Runtime, error) {
+func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, store Store) (*Runtime, error) {
 	err := os.MkdirAll("/var/lib/ravel/instances", 0755)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create instances directory: %w", err)
@@ -60,7 +67,8 @@ func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, is 
 	}
 
 	runtime := &Runtime{
-		instancesStore: is,
+		disks:          disks.NewService(store, disks.NewZFSPool(config.ZFSPool)),
+		instancesStore: store,
 		imagesUsage:    imageUsage,
 		images:         imagesService,
 		networking:     newNetworkService(),
@@ -106,8 +114,14 @@ func (r *Runtime) Start() error {
 			slog.Error("Failed to allocate network for instance %s: %v", i.Id, err)
 		}
 
+		disks, err := r.disks.GetDisks(i.Config.GetDisks()...)
+		if err != nil {
+			slog.Error("Failed to get disks for instance %s: %v", i.Id, err)
+			return err
+		}
+
 		r.imagesUsage.UseImage(i.ImageRef)
-		manager := r.newInstanceManager(i)
+		manager := r.newInstanceManager(i, disks)
 		manager.Recover()
 		r.instances.AddInstance(i.Id, manager)
 	}

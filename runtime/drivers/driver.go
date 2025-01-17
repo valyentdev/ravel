@@ -6,6 +6,7 @@ import (
 
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/runtime/disks"
 )
 
 type InstanceTask interface {
@@ -17,8 +18,9 @@ type InstanceTask interface {
 	Stop(ctx context.Context, signal string) error
 	Shutdown(ctx context.Context) error
 }
+
 type Driver interface {
-	BuildInstanceTask(ctx context.Context, instance *instance.Instance) (InstanceTask, error)
+	BuildInstanceTask(ctx context.Context, instance *instance.Instance, disks []disks.Disk) (InstanceTask, error)
 	CleanupInstanceTask(ctx context.Context, instance *instance.Instance) error
 	RecoverInstanceTask(ctx context.Context, i *instance.Instance) (InstanceTask, error)
 	CleanupInstance(ctx context.Context, instance *instance.Instance) error

@@ -45,12 +45,26 @@ type State struct {
 	ExitResult *ExitResult    `json:"exit_result,omitempty"`
 }
 
+type Mount struct {
+	Disk string `json:"disk"`
+	Path string `json:"path"`
+}
+
 type InstanceConfig struct {
-	Image string              `json:"image"`
-	Guest InstanceGuestConfig `json:"guest"`
-	Init  api.InitConfig      `json:"init"`
-	Stop  *api.StopConfig     `json:"stop,omitempty"`
-	Env   []string            `json:"env"`
+	Image  string              `json:"image"`
+	Guest  InstanceGuestConfig `json:"guest"`
+	Init   api.InitConfig      `json:"init"`
+	Stop   *api.StopConfig     `json:"stop,omitempty"`
+	Env    []string            `json:"env,omitempty"`
+	Mounts []Mount             `json:"mounts,omitempty"`
+}
+
+func (ic InstanceConfig) GetDisks() []string {
+	disks := make([]string, len(ic.Mounts))
+	for i, m := range ic.Mounts {
+		disks[i] = m.Disk
+	}
+	return disks
 }
 
 type InstanceGuestConfig struct {

@@ -13,7 +13,8 @@
             },
             "init": {
                 "user": "root"
-            }
+            },
+            "auto_destroy": true
         },
         "guest": {
             "cpu_kind": "eco",

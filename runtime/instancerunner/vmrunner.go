@@ -10,6 +10,7 @@ import (
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/runtime/disks"
 	"github.com/valyentdev/ravel/runtime/drivers"
 	"github.com/valyentdev/ravel/runtime/logging"
 )
@@ -22,6 +23,7 @@ type vmRunner struct {
 	vm         drivers.InstanceTask
 	waitCh     chan struct{}
 	exitResult instance.ExitResult
+	disks      []disks.Disk
 }
 
 func (r *vmRunner) terminated() bool {
@@ -37,12 +39,14 @@ func newVMRunner(
 	i instance.Instance,
 	logger *logging.InstanceLogger,
 	driver drivers.Driver,
+	disks []disks.Disk,
 ) *vmRunner {
 	return &vmRunner{
 		i:      i,
 		driver: driver,
 		logger: logger,
 		waitCh: make(chan struct{}),
+		disks:  disks,
 	}
 }
 
@@ -97,8 +101,7 @@ func (r *vmRunner) Stop(signal string, timeout time.Duration) error {
 
 func (r *vmRunner) Start() error {
 	ctx := context.Background()
-	slog.Debug("ensuring instance network")
-	vm, err := r.driver.BuildInstanceTask(ctx, &r.i)
+	vm, err := r.driver.BuildInstanceTask(ctx, &r.i, r.disks)
 	if err != nil {
 		slog.Error("failed to build vm", "error", err)
 		return err
