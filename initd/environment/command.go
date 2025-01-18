@@ -37,6 +37,11 @@ func buildCommand(cfg initd.Config) (*exec.Cmd, error) {
 		workingDir = *cfg.ImageConfig.WorkingDir
 	}
 
+	err := os.Chdir(workingDir)
+	if err != nil {
+		return nil, fmt.Errorf("error changing working directory: %v", err)
+	}
+
 	lp, err := exec.LookPath(args[0])
 	if err != nil {
 		return nil, fmt.Errorf("error searching for executable: %v", err)
@@ -46,7 +51,6 @@ func buildCommand(cfg initd.Config) (*exec.Cmd, error) {
 		Path:   lp,
 		Args:   args,
 		Env:    envars,
-		Dir:    workingDir,
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
