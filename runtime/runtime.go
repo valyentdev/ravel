@@ -74,6 +74,7 @@ func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, sto
 		networking:     newNetworkService(),
 		driver:         instanceBuilder,
 		instances:      state,
+		registries:     registries,
 	}
 	return runtime, nil
 }
