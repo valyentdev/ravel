@@ -78,3 +78,23 @@ func (m *Queries) UpsertNode(ctx context.Context, node api.Node) error {
 
 	return nil
 }
+
+func (m *Queries) ListRegions(ctx context.Context) ([]string, error) {
+	rows, err := m.dbtx.Query(ctx, "SELECT DISTINCT region FROM nodes")
+	if err != nil {
+		return nil, err
+	}
+
+	regions := []string{}
+	for rows.Next() {
+		var region string
+		err := rows.Scan(&region)
+		if err != nil {
+			return nil, err
+		}
+
+		regions = append(regions, region)
+	}
+
+	return regions, nil
+}
