@@ -65,7 +65,7 @@ func (a *AgentClient) MachineExec(ctx context.Context, id string, cmd []string, 
 		TimeoutMs: int(timeout.Milliseconds()),
 	}
 
-	err := a.client.Post(ctx, "/instances/"+id+"/exec", &result, httpclient.WithJSONBody(opt))
+	err := a.client.Post(ctx, "/machines/"+id+"/exec", &result, httpclient.WithJSONBody(opt))
 	if err != nil {
 		return nil, err
 	}
