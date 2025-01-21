@@ -25,6 +25,7 @@ type Queries interface {
 	GetNode(ctx context.Context, id string) (api.Node, error)
 	ListNodesInRegion(ctx context.Context, region string) ([]api.Node, error)
 	ListNodes(ctx context.Context) ([]api.Node, error)
+	ListRegions(ctx context.Context) ([]string, error)
 
 	/* Used by raveld */
 	UpsertNode(ctx context.Context, node api.Node) error

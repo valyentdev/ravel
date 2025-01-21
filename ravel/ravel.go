@@ -3,6 +3,7 @@ package ravel
 import (
 	"context"
 	"crypto/tls"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
@@ -19,6 +20,7 @@ type Ravel struct {
 	pgpool         *pgxpool.Pool
 	config         *config.RavelConfig
 	vcpusTemplates map[string]config.MachineResourcesTemplates
+	regions        *regions
 }
 
 func getClientTLSConfig(config config.RavelConfig) (*tls.Config, error) {
@@ -86,6 +88,11 @@ func New(config config.RavelConfig) (*Ravel, error) {
 
 	o := orchestrator.New(nc, clusterstate, tlsConfig)
 
+	regions := &regions{
+		state:   clusterstate,
+		regions: make(map[string]struct{}),
+	}
+
 	return &Ravel{
 		nc:             nc,
 		o:              o,
@@ -93,10 +100,12 @@ func New(config config.RavelConfig) (*Ravel, error) {
 		vcpusTemplates: config.Server.MachineTemplates,
 		pgpool:         pgpool,
 		config:         &config,
+		regions:        regions,
 	}, nil
 }
 
 func (r *Ravel) Start() error {
+	go r.regions.startPolling(60 * time.Second)
 	return r.listenMachineEvents()
 }
 

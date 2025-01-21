@@ -35,6 +35,10 @@ func getResources(m config.MachineResourcesTemplates, vcpus int, memory int) (ap
 }
 
 func (r *Ravel) CreateMachine(ctx context.Context, namespace string, fleet string, createOptions api.CreateMachinePayload) (*api.Machine, error) {
+	if err := r.regions.validate(createOptions.Region); err != nil {
+		return nil, err
+	}
+
 	f, err := r.GetFleet(ctx, namespace, fleet)
 	if err != nil {
 		return nil, err
