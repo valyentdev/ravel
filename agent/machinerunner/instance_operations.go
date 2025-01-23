@@ -8,6 +8,7 @@ import (
 
 	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/api/errdefs"
+	"github.com/valyentdev/ravel/core/instance"
 )
 
 func errMachineIs(status api.MachineStatus) error {
@@ -22,49 +23,37 @@ func (m *MachineRunner) canUseInstance() error {
 	return nil
 }
 
-func (m *MachineRunner) lockForInstance() error {
-	if !m.mutex.TryLock() {
-		if err := m.canUseInstance(); err != nil {
-			return err
-		}
-
-		m.mutex.Lock()
-		return nil
-	}
-	return nil
-}
-
-func (m *MachineRunner) unlockForInstance() {
-	m.mutex.Unlock()
-}
-
 func (m *MachineRunner) Start(ctx context.Context) error {
-	err := m.lockForInstance()
+	prev, _, err := m.state.PushStartEvent(false)
 	if err != nil {
+		if errdefs.IsFailedPrecondition(err) && (prev.Status == api.MachineStatusStarting || prev.Status == api.MachineStatusRunning) {
+			return nil
+		}
 		return err
 	}
-	defer m.unlockForInstance()
 
-	if m.state.Status() == api.MachineStatusStarting || m.state.Status() == api.MachineStatusRunning {
-		return nil
-	}
-
-	if m.state.Status() != api.MachineStatusStopped {
-		return errMachineIs(m.state.Status())
-	}
-
-	m.start(false)
 	return nil
 }
 
-func (m *MachineRunner) start(isRestart bool) {
-	slog.Info("Starting machine", "machine_id", m.state.InstanceId())
-	ctx := context.Background()
-	m.state.PushStartEvent(isRestart)
+func (m *MachineRunner) startInstance() {
 	go func() {
 		m.runLock.Lock()
 		defer m.runLock.Unlock()
-		err := m.runtime.StartInstance(ctx, m.state.InstanceId())
+		ctx := context.Background()
+
+		instanceId := m.state.InstanceId()
+		i, err := m.runtime.GetInstance(instanceId)
+		if err != nil {
+			m.state.PushStartFailedEvent(err.Error())
+			return
+		}
+
+		if i.State.Status == instance.InstanceStatusRunning || i.State.Status == instance.InstanceStatusStarting {
+			m.state.PushStartedEvent()
+			return
+		}
+
+		err = m.runtime.StartInstance(ctx, m.state.InstanceId())
 		if err != nil {
 			m.state.PushStartFailedEvent(err.Error())
 			return
@@ -74,43 +63,26 @@ func (m *MachineRunner) start(isRestart bool) {
 }
 
 func (m *MachineRunner) Stop(ctx context.Context, stopConfig *api.StopConfig) error {
-	err := m.lockForInstance()
-	if err != nil {
-		return err
-	}
-	defer m.unlockForInstance()
-
-	status := m.state.Status()
-
-	if status == api.MachineStatusStopped || status == api.MachineStatusStopping {
-		return nil
-	}
-	if status != api.MachineStatusRunning {
-		return errMachineIs(status)
-	}
-
-	return m.stop(ctx, stopConfig)
-}
-
-func (m *MachineRunner) stop(ctx context.Context, stopConfig *api.StopConfig) error {
-	err := m.state.PushStopEvent(api.MachineStopEventPayload{
+	slog.Info("Stopping machine", "machine_id", m.state.Id())
+	prev, _, err := m.state.PushStopEvent(api.MachineStopEventPayload{
 		Config: stopConfig,
 	})
 	if err != nil {
+		if errdefs.IsFailedPrecondition(err) && prev.Status == api.MachineStatusStopped {
+			return nil
+		}
 		return err
 	}
 
-	go func() {
-		m.runLock.Lock()
-		defer m.runLock.Unlock()
-		err := m.runtime.StopInstance(ctx, m.state.InstanceId(), stopConfig)
-		if err != nil {
-			slog.Error("Failed to stop instance", "error", err)
-			if !errdefs.IsFailedPrecondition(err) {
-				m.state.PushStopFailedEvent()
-			}
-		}
-	}()
+	return nil
+}
+
+func (m *MachineRunner) stopInstance(ctx context.Context, stopConfig *api.StopConfig) error {
+	err := m.runtime.StopInstance(ctx, m.state.InstanceId(), stopConfig)
+	if err != nil {
+		m.state.PushStopFailedEvent()
+		return nil
+	}
 
 	return nil
 }

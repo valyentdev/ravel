@@ -9,7 +9,7 @@ import (
 
 type Eventer[E any] struct {
 	mutex  sync.RWMutex
-	queue  *deque.Deque[E]
+	queue  *deque.Deque[*E]
 	notify chan struct{}
 	opts   Options[E]
 }
@@ -21,23 +21,24 @@ func (e *Eventer[E]) triggerNotify() {
 		return
 	}
 }
-func (e *Eventer[E]) nextEvent() (event E, ok bool) {
+func (e *Eventer[E]) nextEvent() (event *E, ok bool) {
 	e.mutex.RLock()
+	defer e.mutex.RUnlock()
 	if e.queue.Len() == 0 {
+
 		return event, false
 	}
 
 	event = e.queue.Front()
-	e.mutex.RUnlock()
 
 	return event, true
 }
 
 type Options[E any] struct {
-	Report    func(e E) error // required, report the event
-	OnSuccess func(e E)       // required, action to take on success (like removing the event from the persistent store)
-	OnError   func(e E) bool  // required, action to take on error (return true to retry, false to ignore)
-	Backoff   time.Duration   // default: 1s (time to wait before retrying an event)
+	Report    func(e *E) error // required, report the event
+	OnSuccess func(e *E)       // required, action to take on success (like removing the event from the persistent store)
+	OnError   func(e *E) bool  // required, action to take on error (return true to retry, false to ignore)
+	Backoff   time.Duration    // default: 1s (time to wait before retrying an event)
 }
 
 func NewEventer[E any](options Options[E]) *Eventer[E] {
@@ -50,13 +51,13 @@ func NewEventer[E any](options Options[E]) *Eventer[E] {
 	}
 
 	return &Eventer[E]{
-		queue:  &deque.Deque[E]{},
+		queue:  &deque.Deque[*E]{},
 		notify: make(chan struct{}, 1),
 		opts:   options,
 	}
 }
 
-func (es *Eventer[E]) ReportEvent(event E) {
+func (es *Eventer[E]) ReportEvent(event *E) {
 	es.mutex.Lock()
 	es.queue.PushBack(event)
 	es.mutex.Unlock()
@@ -68,7 +69,7 @@ func (es *Eventer[E]) ReportEvent(event E) {
 func (e *Eventer[E]) Start(existing []E) {
 	e.queue.Grow(len(existing))
 	for _, event := range existing {
-		e.queue.PushFront(event)
+		e.queue.PushFront(&event)
 	}
 
 	e.triggerNotify()

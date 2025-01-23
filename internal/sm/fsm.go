@@ -12,7 +12,7 @@ type Event[ET comparable] interface {
 }
 
 type TransitionsSet[S any, ET comparable, E Event[ET]] struct {
-	Can         func(*S) bool
+	Can         func(*S, E) bool
 	BeforeEvent func(*S, E) error
 	Apply       func(*S, E)
 	AfterEvent  func(*S, E) error
@@ -21,102 +21,94 @@ type TransitionsSet[S any, ET comparable, E Event[ET]] struct {
 type Transitions[S any, ET comparable, E Event[ET]] map[ET]TransitionsSet[S, ET, E]
 
 type StateMachine[S any, ET comparable, E Event[ET]] struct {
-	globalLock sync.Mutex
-	lock       sync.Mutex
-	state      *pubsub.Observable[*S]
-	config     Config[S, ET, E]
+	lock   sync.Mutex
+	state  *pubsub.Observable[*S]
+	config Config[S, ET, E]
+}
+
+func (s *StateMachine[S, ET, E]) Mutate(mutfn func(*S)) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	newState := s.config.Copy(s.state.Get())
+
+	mutfn(newState)
+
+	s.state.Set(newState)
+	if s.config.AfterMutate != nil {
+		return s.config.AfterMutate(newState)
+	}
+
+	return nil
 }
 
 func (s *StateMachine[S, ET, E]) State() *S {
 	return s.state.Get()
 }
 
-func (s *StateMachine[S, ET, E]) Can(event ET) bool {
-	transition, ok := s.config.Transitions[event]
-	if !ok {
-		return false
-	}
-
-	if transition.Can != nil {
-		return transition.Can(s.state.Get())
-	}
-
-	return true
-}
-
-func (s *StateMachine[S, ET, E]) Lock() {
-	s.globalLock.Lock()
-}
-
-func (s *StateMachine[S, ET, E]) Unlock() {
-	s.globalLock.Unlock()
-}
-
-func (s *StateMachine[S, ET, E]) TryLock() bool {
-	return s.globalLock.TryLock()
-}
-
 var ErrUnknownEvent = errors.New("unknown event")
 var ErrCannotTransition = errors.New("cannot transition")
 
-func (sm *StateMachine[S, ET, E]) PushEvent(event E) error {
+func (sm *StateMachine[S, ET, E]) PushEvent(event E) (prev, next *S, _ error) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
+	prev = sm.state.Get()
+
 	transition, ok := sm.config.Transitions[event.EventType()]
 	if !ok {
-		return ErrUnknownEvent
+		return prev, nil, ErrUnknownEvent
 	}
 
-	if transition.Can != nil && !transition.Can(sm.state.Get()) {
-		return ErrCannotTransition
+	if transition.Can != nil && !transition.Can(sm.state.Get(), event) {
+		return prev, nil, ErrCannotTransition
 	}
 
-	if sm.config.BeforeEvent != nil {
-		if err := sm.config.BeforeEvent(sm.state.Get(), event); err != nil {
-			return err
+	if sm.config.BeforeAllEvent != nil {
+		if err := sm.config.BeforeAllEvent(sm.state.Get(), event); err != nil {
+			return prev, nil, err
 		}
 	}
 
 	if transition.BeforeEvent != nil {
 		if err := transition.BeforeEvent(sm.state.Get(), event); err != nil {
-			return err
+			return prev, nil, err
 		}
 	}
 
-	newState := sm.config.Copy(sm.state.Get())
+	next = sm.config.Copy(prev)
 
 	if transition.Apply != nil {
-		transition.Apply(newState, event)
+		transition.Apply(next, event)
 	}
 
-	if sm.config.Apply != nil {
-		sm.config.Apply(newState, event)
+	if sm.config.ApplyAll != nil {
+		sm.config.ApplyAll(next, event)
 	}
 
 	if transition.AfterEvent != nil {
-		if err := transition.AfterEvent(newState, event); err != nil {
-			return err
+		if err := transition.AfterEvent(next, event); err != nil {
+			return prev, nil, err
 		}
 	}
 
-	if sm.config.AfterEvent != nil {
-		if err := sm.config.AfterEvent(newState, event); err != nil {
-			return err
+	if sm.config.AfterAllEvent != nil {
+		if err := sm.config.AfterAllEvent(next, event); err != nil {
+			return prev, nil, err
 		}
 	}
 
-	sm.state.Set(newState)
+	sm.state.Set(next)
 
-	return nil
+	return prev, next, nil
 }
 
 type Config[S any, ET comparable, E Event[ET]] struct {
-	Copy        func(*S) *S
-	Transitions Transitions[S, ET, E]
-	Apply       func(*S, E)
-	BeforeEvent func(*S, E) error
-	AfterEvent  func(*S, E) error
+	Copy           func(*S) *S
+	Transitions    Transitions[S, ET, E]
+	ApplyAll       func(*S, E)
+	BeforeAllEvent func(*S, E) error
+	AfterAllEvent  func(*S, E) error
+	AfterMutate    func(*S) error
 }
 
 func NewStateMachine[S any, ET comparable, E Event[ET]](initialState *S, config Config[S, ET, E]) *StateMachine[S, ET, E] {

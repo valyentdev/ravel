@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/core/cluster"
 )
 
 func (s *MachineInstanceState) startSyncing() {
@@ -27,16 +28,24 @@ func (s *MachineInstanceState) startSyncing() {
 }
 
 func (s *MachineInstanceState) sync() (finished bool, err error) {
-	s.mutex.RLock()
-	cmi := s.mi.ClusterInstance()
-	s.mutex.RUnlock()
-
-	err = s.reportState(cmi)
+	state := s.fsm.State()
+	err = s.reportState(cluster.MachineInstance{
+		Id:                   s.machine.InstanceId,
+		Node:                 s.machine.Node,
+		Namespace:            s.machine.Namespace,
+		MachineVersion:       s.machine.MachineVersion,
+		Status:               state.Status,
+		Events:               state.LastEvents,
+		LocalIPV4:            s.networking.Local.InstanceIP.String(),
+		CreatedAt:            state.CreatedAt,
+		UpdatedAt:            state.UpdatedAt,
+		EnableMachineGateway: state.MachineGatewayEnabled,
+	})
 	if err != nil {
 		return false, err
 	}
 
-	if cmi.Status == api.MachineStatusDestroyed {
+	if state.Status == api.MachineStatusDestroyed {
 		return true, nil
 	}
 

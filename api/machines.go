@@ -121,7 +121,6 @@ const (
 	MachineExited        MachineEventType = "machine.exited"
 	MachineDestroy       MachineEventType = "machine.destroy"
 	MachineDestroyed     MachineEventType = "machine.destroyed"
-	MachineGateway       MachineEventType = "machine.gateway"
 )
 
 type CreateMachinePayload struct {
@@ -162,10 +161,6 @@ type MachineDestroyEventPayload struct {
 	Force       bool   `json:"force"`
 }
 
-type MachineGatewayEventPayload struct {
-	Enabled bool `json:"enabled"`
-}
-
 type MachineEventPayload struct {
 	PrepareFailed *MachinePrepareFailedEventPayload `json:"prepare_failed,omitempty"`
 	Stop          *MachineStopEventPayload          `json:"stop,omitempty"`
@@ -174,7 +169,6 @@ type MachineEventPayload struct {
 	Started       *MachineStartedEventPayload       `json:"started,omitempty"`
 	Exited        *MachineExitedEventPayload        `json:"stopped,omitempty"`
 	Destroy       *MachineDestroyEventPayload       `json:"destroy,omitempty"`
-	Gateway       *MachineGatewayEventPayload       `json:"gateway,omitempty"`
 }
 
 type Origin string
@@ -193,6 +187,10 @@ type MachineEvent struct {
 	Origin     Origin              `json:"origin"`
 	Payload    MachineEventPayload `json:"payload"`
 	Timestamp  time.Time           `json:"timestamp"`
+}
+
+func (me MachineEvent) EventType() MachineEventType {
+	return me.Type
 }
 
 type Resources struct {

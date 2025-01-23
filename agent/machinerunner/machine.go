@@ -12,7 +12,6 @@ import (
 )
 
 type MachineRunner struct {
-	mutex       sync.Mutex
 	state       *state.MachineInstanceState
 	runtime     daemon.Runtime
 	runLock     sync.Mutex

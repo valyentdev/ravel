@@ -20,6 +20,8 @@ func (a *Agent) onMachineDestroyed(m structs.MachineInstance) {
 		slog.Error("failed to delete machine instance", "machine_id", m.Machine.Id, "err", err)
 	}
 
+	a.network.Release(m.Network)
+
 	err = a.allocator.DeleteAllocation(m.Machine.Id)
 	if err != nil {
 		slog.Error("failed to release reservation", "machine_id", m.Machine.Id, "err", err)
@@ -46,12 +48,21 @@ func (a *Agent) PutMachine(ctx context.Context, opt cluster.PutMachineOptions) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to confirm reservation: %w", err)
 	}
-
 	defer func() {
 		if err != nil {
 			if err := a.allocator.DeleteAllocation(opt.AllocationId); err != nil {
 				slog.Error("failed to release reservation", "err", err)
 			}
+		}
+	}()
+
+	network, err := a.network.AllocateNext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to allocate network: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			a.network.Release(network)
 		}
 	}()
 
@@ -72,6 +83,7 @@ func (a *Agent) PutMachine(ctx context.Context, opt cluster.PutMachineOptions) (
 			UpdatedAt:             time.Now(),
 			MachineGatewayEnabled: opt.EnableGateway,
 		},
+		Network: network,
 	}
 
 	if err := a.store.CreateMachineInstance(machineInstance); err != nil {
@@ -148,7 +160,7 @@ func (d *Agent) EnableMachineGateway(ctx context.Context, id string) error {
 		return err
 	}
 
-	return machine.EnableGateway(ctx)
+	return machine.EnableGateway()
 }
 
 func (d *Agent) DisableMachineGateway(ctx context.Context, id string) error {
@@ -157,7 +169,7 @@ func (d *Agent) DisableMachineGateway(ctx context.Context, id string) error {
 		return err
 	}
 
-	return machine.DisableGateway(ctx)
+	return machine.DisableGateway()
 }
 
 func (a *Agent) WaitForMachineStatus(ctx context.Context, id string, status api.MachineStatus, timeout uint) error {

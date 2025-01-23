@@ -73,7 +73,7 @@ func (r *vmRunner) Stop(signal string, timeout time.Duration) error {
 		return nil
 	}
 	ctx := context.Background()
-	err := r.vm.Stop(context.Background(), signal)
+	err := r.vm.Stop(ctx, signal)
 	if err != nil {
 		slog.Error("failed to stop vm", "error", err)
 	}
