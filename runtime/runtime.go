@@ -26,7 +26,6 @@ type Runtime struct {
 	instancesStore instance.InstanceStore
 	imagesUsage    *images.ImagesUsage
 	images         *images.Service
-	networking     *networkService
 	driver         drivers.Driver
 	instances      *State
 	disks          *disks.Service
@@ -71,7 +70,6 @@ func New(config *config.RuntimeConfig, registries registry.RegistriesConfig, sto
 		instancesStore: store,
 		imagesUsage:    imageUsage,
 		images:         imagesService,
-		networking:     newNetworkService(),
 		driver:         instanceBuilder,
 		instances:      state,
 		registries:     registries,
@@ -110,11 +108,6 @@ func (r *Runtime) Start() error {
 	}
 
 	for _, i := range instances {
-		err := r.networking.Allocate(i.Network)
-		if err != nil {
-			slog.Error("Failed to allocate network for instance %s: %v", i.Id, err)
-		}
-
 		disks, err := r.disks.GetDisks(i.Config.GetDisks()...)
 		if err != nil {
 			slog.Error("Failed to get disks for instance %s: %v", i.Id, err)

@@ -20,9 +20,10 @@ type MachineInstanceState struct {
 }
 
 type MachineInstance struct {
-	Machine cluster.Machine      `json:"machine"`
-	Version api.MachineVersion   `json:"version"`
-	State   MachineInstanceState `json:"state"`
+	Machine cluster.Machine           `json:"machine"`
+	Version api.MachineVersion        `json:"version"`
+	Network instance.NetworkingConfig `json:"network"`
+	State   MachineInstanceState      `json:"state"`
 }
 
 func (mi *MachineInstance) InstanceOptions() instance.InstanceOptions {
@@ -43,6 +44,7 @@ func (mi *MachineInstance) InstanceOptions() instance.InstanceOptions {
 			Stop: mi.Version.Config.StopConfig,
 			Env:  mi.Version.Config.Workload.Env,
 		},
+		Network: mi.Network,
 	}
 }
 

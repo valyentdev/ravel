@@ -1,31 +1,23 @@
 package machinerunner
 
-import "context"
-
-func (m *MachineRunner) EnableGateway(ctx context.Context) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if m.state.MachineInstance().State.MachineGatewayEnabled {
+func (m *MachineRunner) EnableGateway() error {
+	if m.state.State().MachineGatewayEnabled {
 		return nil
 	}
 
-	if err := m.state.PushGatewayEvent(true); err != nil {
+	if err := m.state.EnableGateway(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m *MachineRunner) DisableGateway(ctx context.Context) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if !m.state.MachineInstance().State.MachineGatewayEnabled {
+func (m *MachineRunner) DisableGateway() error {
+	if !m.state.State().MachineGatewayEnabled {
 		return nil
 	}
 
-	if err := m.state.PushGatewayEvent(false); err != nil {
+	if err := m.state.DisableGateway(); err != nil {
 		return err
 	}
 

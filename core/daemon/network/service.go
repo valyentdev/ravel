@@ -1,4 +1,4 @@
-package runtime
+package network
 
 import (
 	"net"
@@ -8,11 +8,11 @@ import (
 	"github.com/valyentdev/ravel/internal/id"
 )
 
-type networkService struct {
+type NetworkService struct {
 	localSubnetAllocator *networking.BasicSubnetAllocator
 }
 
-func newNetworkService() *networkService {
+func NewNetworkService() *NetworkService {
 	localSubnetAllocator, err := networking.NewBasicSubnetAllocator(networking.SubnetPool{
 		Network: networking.Network{
 			Family:       networking.IPv4,
@@ -26,16 +26,16 @@ func newNetworkService() *networkService {
 		panic(err)
 	}
 
-	return &networkService{
+	return &NetworkService{
 		localSubnetAllocator: localSubnetAllocator,
 	}
 }
 
-func (n *networkService) Allocate(in instance.NetworkingConfig) error {
+func (n *NetworkService) Allocate(in instance.NetworkingConfig) error {
 	return n.localSubnetAllocator.Allocate(&in.Local.Network)
 }
 
-func (n *networkService) AllocateNext() (instance.NetworkingConfig, error) {
+func (n *NetworkService) AllocateNext() (instance.NetworkingConfig, error) {
 	net, err := n.localSubnetAllocator.AllocateNext()
 	if err != nil {
 		return instance.NetworkingConfig{}, err
@@ -50,6 +50,6 @@ func (n *networkService) AllocateNext() (instance.NetworkingConfig, error) {
 	}, nil
 }
 
-func (n *networkService) Release(network instance.NetworkingConfig) {
+func (n *NetworkService) Release(network instance.NetworkingConfig) {
 	n.localSubnetAllocator.Release(&network.Local.Network)
 }

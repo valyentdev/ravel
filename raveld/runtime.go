@@ -31,9 +31,15 @@ func (a *Daemon) CreateInstance(ctx context.Context, opt daemon.InstanceOptions)
 		return nil, err
 	}
 
+	network, err := a.network.AllocateNext()
+	if err != nil {
+		return nil, err
+	}
+
 	return a.runtime.CreateInstance(ctx, instance.InstanceOptions{
-		Id:     opt.Id,
-		Config: opt.Config,
+		Id:      opt.Id,
+		Config:  opt.Config,
+		Network: network,
 	})
 }
 
@@ -42,7 +48,21 @@ func (s *Daemon) StartInstance(ctx context.Context, id string) error {
 }
 
 func (s *Daemon) DestroyInstance(ctx context.Context, id string) error {
-	return s.runtime.DestroyInstance(ctx, id)
+	instance, err := s.runtime.GetInstance(id)
+	if err != nil {
+		return err
+	}
+
+	err = s.runtime.DestroyInstance(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if instance.Metadata.MachineId != "" {
+		s.network.Release(instance.Network)
+	}
+
+	return err
 }
 
 func (s *Daemon) StopInstance(ctx context.Context, id string, opt *api.StopConfig) error {

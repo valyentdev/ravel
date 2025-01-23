@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/valyentdev/ravel/agent/structs"
+	"github.com/valyentdev/ravel/api"
 	"github.com/valyentdev/ravel/api/errdefs"
 	"go.etcd.io/bbolt"
 )
@@ -12,6 +13,7 @@ const (
 	machineInstanceMachineKey = "machine"
 	machineInstanceVersionKey = "version"
 	machineInstanceStateKey   = "state"
+	machineInstanceNetworkKey = "network"
 )
 
 func assertMachineInstancesBucketExists(bucket *bbolt.Bucket) {
@@ -41,6 +43,7 @@ func (s *Store) LoadMachineInstances() ([]structs.MachineInstance, error) {
 		m := machine.Get([]byte(machineInstanceMachineKey))
 		mv := machine.Get([]byte(machineInstanceVersionKey))
 		ms := machine.Get([]byte(machineInstanceStateKey))
+		mn := machine.Get([]byte(machineInstanceNetworkKey))
 
 		var mi structs.MachineInstance
 		if err := json.Unmarshal(m, &mi.Machine); err != nil {
@@ -52,6 +55,10 @@ func (s *Store) LoadMachineInstances() ([]structs.MachineInstance, error) {
 		}
 
 		if err := json.Unmarshal(ms, &mi.State); err != nil {
+			return err
+		}
+
+		if err := json.Unmarshal(mn, &mi.Network); err != nil {
 			return err
 		}
 
@@ -96,6 +103,11 @@ func (s *Store) CreateMachineInstance(mi structs.MachineInstance) error {
 		return err
 	}
 
+	mn, err := json.Marshal(mi.Network)
+	if err != nil {
+		return err
+	}
+
 	if err = machine.Put([]byte(machineInstanceMachineKey), m); err != nil {
 		return err
 	}
@@ -108,10 +120,14 @@ func (s *Store) CreateMachineInstance(mi structs.MachineInstance) error {
 		return err
 	}
 
+	if err = machine.Put([]byte(machineInstanceNetworkKey), mn); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 
-func (s *Store) UpdateMachineInstanceState(id string, mi structs.MachineInstanceState) error {
+func (s *Store) UpdateMachineInstance(id string, mi *structs.MachineInstanceState, me *api.MachineEvent) error {
 	tx, err := s.db.Begin(true)
 	if err != nil {
 		return err
@@ -133,6 +149,20 @@ func (s *Store) UpdateMachineInstanceState(id string, mi structs.MachineInstance
 
 	if err = machine.Put([]byte(machineInstanceStateKey), ms); err != nil {
 		return err
+	}
+
+	if me != nil {
+		machineEvents := tx.Bucket(eventsBucket)
+		assertEventsBucketExists(machineEvents)
+
+		meBytes, err := json.Marshal(me)
+		if err != nil {
+			return err
+		}
+
+		if err = machineEvents.Put([]byte(me.Id), meBytes); err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit()

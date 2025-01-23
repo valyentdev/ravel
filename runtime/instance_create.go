@@ -41,17 +41,7 @@ func (r *Runtime) newInstanceManager(i instance.Instance, disks []disks.Disk) *i
 
 func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptions) (*instance.Instance, error) {
 	id := opt.Id
-
-	network, err := r.networking.AllocateNext()
-	if err != nil {
-		return nil, fmt.Errorf("failed to allocate network resources: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			r.networking.Release(network)
-		}
-	}()
-
+	var err error
 	ok := r.instances.ReserveId(id)
 	if !ok {
 		err = errdefs.NewAlreadyExists("instance id already in use")
@@ -97,7 +87,7 @@ func (r *Runtime) CreateInstance(ctx context.Context, opt instance.InstanceOptio
 		Metadata: opt.Metadata,
 		Config:   opt.Config,
 		ImageRef: image.Name(),
-		Network:  network,
+		Network:  opt.Network,
 		State: instance.State{
 			Status: instance.InstanceStatusCreated,
 		},

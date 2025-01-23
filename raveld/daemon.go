@@ -9,17 +9,20 @@ import (
 	"github.com/valyentdev/ravel/agent"
 	"github.com/valyentdev/ravel/core/config"
 	"github.com/valyentdev/ravel/core/daemon"
+	"github.com/valyentdev/ravel/core/daemon/network"
 	"github.com/valyentdev/ravel/raveld/server"
 	"github.com/valyentdev/ravel/raveld/store"
 	"github.com/valyentdev/ravel/runtime"
 )
 
 type Daemon struct {
-	agent   *agent.Agent
-	server  *server.DaemonServer
 	runtime *runtime.Runtime
 	store   *store.Store
 	config  *config.RavelConfig
+	network *network.NetworkService
+
+	server *server.DaemonServer
+	agent  *agent.Agent
 }
 
 var _ daemon.Daemon = (*Daemon)(nil)
@@ -42,10 +45,13 @@ func NewDaemon(config config.RavelConfig) (*Daemon, error) {
 		return nil, err
 	}
 
+	networkService := network.NewNetworkService()
+
 	daemon := &Daemon{
-		config:  &config,
-		store:   store,
 		runtime: runtime,
+		store:   store,
+		config:  &config,
+		network: networkService,
 	}
 
 	daemon.server = server.NewDaemonServer(daemon)
@@ -57,7 +63,7 @@ func NewDaemon(config config.RavelConfig) (*Daemon, error) {
 			Agent:     daemonConfig.Agent,
 			Nats:      config.Nats,
 			Corrosion: config.Corrosion,
-		}, store, runtime)
+		}, store, runtime, networkService)
 		if err != nil {
 			return nil, err
 		}
@@ -72,6 +78,15 @@ func (d *Daemon) Start() error {
 	err := d.runtime.Start()
 	if err != nil {
 		return err
+	}
+	instances := d.runtime.ListInstances()
+	for _, instance := range instances {
+		if instance.Metadata.MachineId != "" {
+			err := d.network.Allocate(instance.Network)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	if d.agent != nil {

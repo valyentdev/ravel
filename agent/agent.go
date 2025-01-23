@@ -18,6 +18,8 @@ import (
 	"github.com/valyentdev/ravel/core/cluster/corrosion"
 	"github.com/valyentdev/ravel/core/cluster/placement"
 	"github.com/valyentdev/ravel/core/config"
+	"github.com/valyentdev/ravel/core/daemon/network"
+	"github.com/valyentdev/ravel/internal/eventer"
 	"github.com/valyentdev/ravel/internal/mtls"
 
 	"github.com/valyentdev/ravel/api"
@@ -32,11 +34,12 @@ type Agent struct {
 	cluster   cluster.ClusterState
 	store     Store
 	machines  machinerunner.Store
-	eventer   *eventer
+	eventer   *eventer.Eventer[api.MachineEvent]
 	allocator *allocator.Allocator
 	runtime   *runtime.Runtime
 	server    *server.AgentServer
 	placement *placement.Listener
+	network   *network.NetworkService
 }
 
 type Config struct {
@@ -50,7 +53,7 @@ type Store interface {
 	allocator.AllocationsStore
 }
 
-func New(config Config, store Store, runtime *runtime.Runtime) (*Agent, error) {
+func New(config Config, store Store, runtime *runtime.Runtime, netservice *network.NetworkService) (*Agent, error) {
 	slog.Info("Initializing agent", "node_id", config.Agent.NodeId, "address", config.Agent.Address)
 
 	nc, err := config.Nats.Connect()
@@ -85,16 +88,19 @@ func New(config Config, store Store, runtime *runtime.Runtime) (*Agent, error) {
 		cluster:   cs,
 		store:     store,
 		machines:  machinerunner.NewStore(),
-		eventer:   newEventer(store, nc),
+		eventer:   newMachineEventer(store, nc),
 		allocator: allocator,
 		runtime:   runtime,
 		placement: placement.NewListener(nc),
+		network:   netservice,
 	}
 
-	err = agent.eventer.Start()
+	events, err := store.LoadMachineInstanceEvents()
 	if err != nil {
 		return nil, err
 	}
+
+	agent.eventer.Start(events)
 
 	return agent, nil
 }
@@ -141,6 +147,10 @@ func (a *Agent) Start() error {
 	}
 
 	for _, m := range machines {
+		err := a.network.Allocate(m.Network)
+		if err != nil {
+			return err
+		}
 		machine := a.newMachine(m)
 		a.machines.AddMachine(machine)
 		go machine.Run()

@@ -6,109 +6,139 @@ import (
 	"time"
 
 	"github.com/valyentdev/ravel/api"
-	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/instance"
 )
 
 func (m *MachineRunner) Run() {
-	m.mutex.Lock()
-
-	shouldContinue := m.recover(context.Background())
-	if !shouldContinue {
-		m.mutex.Unlock()
-		return
+	status := m.state.State().Status
+	if status == api.MachineStatusStopping || status == api.MachineStatusRunning {
+		go m.runInstance()
+	}
+	if status == api.MachineStatusCreated {
+		m.state.PushPrepareEvent()
 	}
 
-	ctx := context.Background()
+	for event := range m.state.Events() {
+		slog.Debug("machine event", "machine", event.MachineId, "event", event.Type, "new_status", event.Status)
+		eventType := event.Type
+		switch eventType {
+		case api.MachinePrepare:
+			go m.prepare(context.Background())
+		case api.MachinePrepared:
+			if m.state.State().DesiredStatus == api.MachineStatusRunning {
+				m.state.PushStartEvent(false)
+			}
+		case api.MachinePrepareFailed:
+			m.state.PushDestroyEvent(api.OriginRavel, true, false, "failed to prepare machine")
+		case api.MachineExited:
+			m.handleExit(event.Payload.Exited)
+		case api.MachineStarted:
+			go m.runInstance()
+		case api.MachineStart:
+			go m.startInstance()
+		case api.MachineStop:
+			go m.stopInstance(context.Background(), event.Payload.Stop.Config)
+		case api.MachineDestroy:
+			go m.destroyImpl()
+		case api.MachineDestroyed:
+			m.onDestroyed(m.state.MachineInstance())
+			return
+		}
+	}
+}
+
+func (m *MachineRunner) runInstance() error {
+	ctx, cancel := context.WithCancel(context.Background())
 	updates, err := m.runtime.WatchInstanceState(ctx, m.state.InstanceId())
 	if err != nil {
-		if errdefs.IsNotFound(err) {
-			m.destroyImpl(ctx, destroyPayload{
-				origin: api.OriginRavel,
-				reason: "instance not found",
-				force:  true,
-			})
-		}
+		cancel()
+		return err
+	}
+	go func() {
+		defer cancel()
+		for update := range updates {
+			if update.Status == instance.InstanceStatusStopped {
+				var payload api.MachineExitedEventPayload
+				if update.ExitResult != nil {
+					payload.ExitCode = update.ExitResult.ExitCode
+					payload.ExitedAt = update.ExitResult.ExitedAt
+				} else {
+					payload.ExitCode = -1
+					payload.ExitedAt = time.Now()
+				}
 
-		slog.Error("failed to watch instance state", "machine_id", m.state.Id(), "error", err)
+				m.state.PushExitedEvent(payload)
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (m *MachineRunner) handleExit(p *api.MachineExitedEventPayload) {
+	state := m.state.State()
+
+	config := m.state.MachineInstance().Version.Config
+	if config.Workload.AutoDestroy {
+		m.handleExitWithAutoDestroy(p)
 		return
 	}
-	m.mutex.Unlock()
-	for {
-		select {
-		case instanceUpdate := <-updates:
-			m.runLock.Lock()
-			m.onInstanceUpdate(&instanceUpdate)
-			m.runLock.Unlock()
-		case <-ctx.Done():
+	if state.DesiredStatus != api.MachineStatusRunning {
+		return
+	}
+
+	restartConfig := m.state.MachineInstance().Version.Config.Workload.Restart
+
+	if restartConfig.Policy == api.RestartPolicyNever {
+		m.state.UpdateDesiredStatus(api.MachineStatusStopped)
+		return
+	}
+
+	if restartConfig.Policy == api.RestartPolicyOnFailure {
+		if state.Restarts >= restartConfig.MaxRetries || p.ExitCode == 0 {
+			m.state.UpdateDesiredStatus(api.MachineStatusStopped)
 			return
 		}
-
-	}
-}
-
-func (m *MachineRunner) recover(ctx context.Context) bool {
-	status := m.state.Status()
-
-	switch status {
-	case api.MachineStatusCreated, api.MachineStatusPreparing:
-		err := m.prepare(ctx)
-		if err != nil {
-			return false
-		}
-	case api.MachineStatusDestroyed:
-		m.onDestroyed(m.state.MachineInstance())
-		return false
-
-	case api.MachineStatusDestroying:
-		err := m.destroyImpl(ctx, destroyPayload{
-			origin: api.OriginRavel,
-			reason: "recover from destroying",
-			force:  true,
-		})
-		if err != nil {
-			slog.Error("failed to destroy machine", "machine_id", m.state.Id(), "error", err)
-		}
-		return false
 	}
 
-	return true
-
+	restarts := state.Restarts
+	restartIn := 1 * time.Second
+	if restarts > 1 {
+		restartIn = 5 * time.Second
+	}
+	go m.autoRestartIn(restartIn)
 }
 
-func (m *MachineRunner) onInstanceUpdate(update *instance.State) {
+func (m *MachineRunner) autoRestartIn(duration time.Duration) {
+	time.Sleep(duration)
+	if m.state.State().DesiredStatus != api.MachineStatusRunning {
+		return
+	}
+	m.state.PushStartEvent(true)
+}
+
+func (m *MachineRunner) handleExitWithAutoDestroy(p *api.MachineExitedEventPayload) {
 	state := m.state.State()
-	status := state.Status
-	instanceStatus := update.Status
+	success := p.ExitCode == 0
+	if success {
+		m.state.PushDestroyEvent(api.OriginRavel, false, true, "machine auto-destroyed after successful exit")
+		return
+	}
+	restartConfig := m.state.MachineInstance().Version.Config.Workload.Restart
 
-	switch instanceStatus {
-	case instance.InstanceStatusCreated:
-		if instanceStatus == instance.InstanceStatusCreated {
-			if state.DesiredStatus == api.MachineStatusRunning {
-				m.start(false)
-			}
-		}
-	case instance.InstanceStatusStopped:
-		if status == api.MachineStatusStarting {
-			m.state.PushStartFailedEvent("instance not running")
-		}
-		if status == api.MachineStatusRunning || status == api.MachineStatusStopping {
-			var payload api.MachineExitedEventPayload
-			if update.ExitResult != nil {
-				payload.ExitCode = update.ExitResult.ExitCode
-				payload.ExitedAt = update.ExitResult.ExitedAt
-			} else {
-				payload.ExitCode = -1
-				payload.ExitedAt = time.Now()
-			}
+	if restartConfig.Policy == api.RestartPolicyNever {
+		m.state.PushDestroyEvent(api.OriginRavel, false, true, "machine auto-destroyed after failed exit")
+		return
+	}
 
-			m.state.PushExitedEvent(payload)
-			m.handleExit(&payload)
+	if restartConfig.Policy == api.RestartPolicyOnFailure {
+		if state.Restarts >= restartConfig.MaxRetries {
+			m.state.PushDestroyEvent(api.OriginRavel, false, true, "machine auto-destroyed after failed exit")
 			return
 		}
-	case instance.InstanceStatusRunning:
-		if status == api.MachineStatusStopped {
-			m.state.PushStartedEvent()
-		}
 	}
+
+	restarts := state.Restarts
+	restartIn := 5 * time.Second * time.Duration(restarts)
+	go m.autoRestartIn(restartIn)
 }

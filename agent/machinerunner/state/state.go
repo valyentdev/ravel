@@ -3,19 +3,20 @@ package state
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"log/slog"
-	"sync"
-	"time"
 
 	"github.com/oklog/ulid"
 	"github.com/valyentdev/ravel/agent/structs"
 	"github.com/valyentdev/ravel/api"
+	"github.com/valyentdev/ravel/api/errdefs"
 	"github.com/valyentdev/ravel/core/cluster"
-	"github.com/valyentdev/ravel/pkg/pubsub"
+	"github.com/valyentdev/ravel/core/instance"
+	"github.com/valyentdev/ravel/internal/sm"
 )
 
 type Eventer interface {
-	ReportEvent(event api.MachineEvent)
+	ReportEvent(event *api.MachineEvent)
 }
 
 func eventId() string {
@@ -26,21 +27,33 @@ type Store interface {
 	CreateMachineInstance(mi structs.MachineInstance) error
 	LoadMachineInstances() ([]structs.MachineInstance, error)
 	DeleteMachineInstance(id string) error
-	UpdateMachineInstanceState(id string, mi structs.MachineInstanceState) error
+	UpdateMachineInstance(id string, mi *structs.MachineInstanceState, event *api.MachineEvent) error
 	DeleteMachineInstanceEvent(eventId string) error
 	LoadMachineInstanceEvents() ([]api.MachineEvent, error)
-	PutMachineInstanceEvent(event api.MachineEvent) error
 }
 type MachineInstanceState struct {
-	id             string
-	mutex          sync.RWMutex
+	machine        cluster.Machine
+	machineVersion api.MachineVersion
+	networking     instance.NetworkingConfig
 	store          Store
-	mi             structs.MachineInstance
 	eventer        Eventer
+	fsm            *stateMachine
 	reportState    func(mi cluster.MachineInstance) error
-	stopCh         chan struct{}
 	updateCh       chan struct{}
-	statusObserver *pubsub.Observable[api.MachineStatus]
+	events         chan *api.MachineEvent
+}
+
+func (s *MachineInstanceState) pushEvent(event *api.MachineEvent) (prev, new *structs.MachineInstanceState, err error) {
+	prev, new, err = s.fsm.PushEvent(event)
+	if err == nil {
+		s.eventer.ReportEvent(event)
+		return prev, new, nil
+	}
+	if err == sm.ErrCannotTransition {
+		return prev, new, errdefs.NewFailedPrecondition(fmt.Sprintf("machine is in %s status", prev.Status))
+	}
+	slog.Error("failed to push event", "error", err)
+	return prev, new, err
 }
 
 func (s *MachineInstanceState) triggerUpdate() {
@@ -60,25 +73,32 @@ func NewMachineInstanceState(
 	eventer Eventer,
 	reportState func(mi cluster.MachineInstance) error,
 ) *MachineInstanceState {
-	return newMachineInstanceState(store, machine, eventer, reportState)
+	return newMachineInstanceState(store, &machine, eventer, reportState)
 }
 
 func newMachineInstanceState(
 	store Store,
-	machine structs.MachineInstance,
+	machine *structs.MachineInstance,
 	eventer Eventer,
 	reportState func(mi cluster.MachineInstance) error,
 ) *MachineInstanceState {
+
 	is := &MachineInstanceState{
-		id:             machine.Machine.Id,
 		store:          store,
-		mi:             machine,
 		eventer:        eventer,
 		updateCh:       make(chan struct{}, 1),
-		stopCh:         make(chan struct{}),
 		reportState:    reportState,
-		statusObserver: pubsub.NewObservable(machine.State.Status),
+		machine:        machine.Machine,
+		machineVersion: machine.Version,
+		networking:     machine.Network,
+		events:         make(chan *api.MachineEvent, 5),
 	}
+
+	if len(machine.State.LastEvents) > 0 {
+		is.events <- &machine.State.LastEvents[0]
+	}
+
+	is.fsm = newFSM(&machine.State, is.afterAll, is.afterMutate)
 
 	is.triggerUpdate()
 
@@ -88,65 +108,58 @@ func newMachineInstanceState(
 }
 
 func (i *MachineInstanceState) Id() string {
-	return i.id
+	return i.machine.Id
 }
 
 func (i *MachineInstanceState) InstanceId() string {
-	i.mutex.RLock()
-	defer i.mutex.RUnlock()
-	return i.mi.Machine.InstanceId
+	return i.machine.InstanceId
 }
 
 func (i *MachineInstanceState) MachineInstance() structs.MachineInstance {
-	i.mutex.RLock()
-	defer i.mutex.RUnlock()
-	return i.mi
+	return structs.MachineInstance{
+		Machine: i.machine,
+		Version: i.machineVersion,
+		Network: i.networking,
+		State:   *i.State(),
+	}
 }
 
-func (i *MachineInstanceState) State() structs.MachineInstanceState {
-	i.mutex.RLock()
-	defer i.mutex.RUnlock()
-	return i.mi.State
+func (i *MachineInstanceState) State() *structs.MachineInstanceState {
+	return i.fsm.State()
 }
 
 func (i *MachineInstanceState) Status() api.MachineStatus {
-	i.mutex.RLock()
-	defer i.mutex.RUnlock()
-	return i.mi.State.Status
-}
-
-func (is *MachineInstanceState) persistState() error {
-	is.mi.State.UpdatedAt = time.Now()
-	if err := is.store.UpdateMachineInstanceState(is.id, is.mi.State); err != nil {
-		slog.Error("failed to update machine state in store", "machine_id", is.id, "error", err)
-		return err
-	}
-
-	is.triggerUpdate()
-	return nil
+	return i.fsm.State().Status
 }
 
 func (i *MachineInstanceState) UpdateDesiredStatus(status api.MachineStatus) error {
-	i.mutex.Lock()
-	defer i.mutex.Unlock()
+	err := i.fsm.Mutate(func(mis *structs.MachineInstanceState) {
+		mis.DesiredStatus = status
+	})
 
-	i.mi.State.DesiredStatus = status
+	if err != nil {
+		return err
+	}
 
-	return i.persistState()
+	return nil
 }
 
 func (i *MachineInstanceState) WaitForStatus(ctx context.Context, status api.MachineStatus) error {
-	sub := i.statusObserver.Subscribe()
+	sub := i.fsm.Subscribe()
 	defer sub.Unsubscribe()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case newStatus := <-sub.Ch():
-			if newStatus == status {
+		case state := <-sub.Ch():
+			if state.Status == status {
 				return nil
 			}
 		}
 	}
+}
+
+func (i *MachineInstanceState) Events() <-chan *api.MachineEvent {
+	return i.events
 }

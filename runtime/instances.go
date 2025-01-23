@@ -44,7 +44,6 @@ func (r *Runtime) DestroyInstance(ctx context.Context, id string) error {
 		return err
 	}
 
-	r.networking.Release(instance.Instance().Network)
 	r.instances.Delete(id)
 	r.instances.ReleaseId(id)
 	r.imagesUsage.ReleaseImage(instance.Instance().ImageRef)
