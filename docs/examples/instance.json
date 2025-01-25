@@ -11,11 +11,5 @@
         "vcpus": 1,
         "cpus_mhz": 500,
         "memory_mb": 1024
-    },
-    "mounts": [
-        {
-            "disk": "hey2",
-            "path": "/home/coder/project"
-        }
-    ]
+    }
 }

@@ -1,6 +1,6 @@
 # Ravel
 
-> Ravel is an open-source microVMs orchestrator.
+> Ravel is an open-source containers-as-microVMs orchestrator.
 
 <div align="center">
   <a href="https://discord.gg/DuW5uQCtZj">
@@ -27,20 +27,26 @@
 
 Ravel emerges as the building block for [Valyent](https://valyent.cloud)'s cloud services.
 
-Ravel is a **bidding-style orchestrator** for _microVMs_. It allows you to create, manage, and destroy microVMs on the fly. It supports running OCI images inside microVMs powered by CloudHypervisor.
+Ravel is an open-source containers-as-microVMs as _microVMs_ orchestrator. It allows you to create, manage, and destroy microVMs on the fly. It supports running OCI images inside microVMs powered by CloudHypervisor.
 
 ## Technologies
 
 - [Go](https://golang.org/): A fast, efficient programming language designed for building scalable software.
 - [Cloud Hypervisor](https://github.com/cloud-hypervisor/cloud-hypervisor): A lightweight virtual machine monitor for running modern cloud workloads.
-- [NATS](https://nats.io/): A simple, high-performance messaging system for cloud applications and microservices.
+- [NATS](https://nats.io/): For publish/subscribe features
 - [Corrosion](https://github.com/superfly/corrosion): Gossip-based service discovery (and more) for large distributed systems.
+- [Containerd](https://containerd.io/): For image management 
 
 ## Features
 
-- [x] Create, manage and destroy microVMs
-- [x] RESTful API
-- [x] Bidding-style orchestrator
+- [x] Run OCI images inside cloud-hypervisor micro-VMs with Ravel Runtime
+- [x] An intuitive API to and manage Ravel machines
+- [x] Mutual TLS cluster-communication
+- [x] An HTTP with TLS
+- [ ] Volumes management (work in progress)
+- [ ] Secrets management (coming soon)
+- [ ] Wireguard-based private networks (coming soon)
+
 
 ## Prerequisites
 
@@ -55,9 +61,7 @@ For more details, please refer to our [documentation](https://docs.valyent.cloud
 
 ### Installation
 
-```bash
-curl -L https://raw.githubusercontent.com/valyentdev/ravel/refs/heads/main/install.sh | bash
-```
+To try out Ravel features, you can look at our [documentation](https://docs.valyent.cloud/installation). To install Ravel, you can follow the [Ravel documentation](./docs/README.md).
 
 ## FAQ
 

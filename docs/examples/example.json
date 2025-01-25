@@ -1,6 +1,5 @@
 {
     "region": "fr",
-    "skip_start": false,
     "config": {
         "image": "docker.io/codercom/code-server:latest",
         "workload": {
@@ -8,18 +7,14 @@
                 "SUDO_PASSWORD=password",
                 "PASSWORD=password"
             ],
-            "restart": {
-                "policy": "always"
-            },
             "init": {
                 "user": "root"
-            },
-            "auto_destroy": true
+            }
         },
         "guest": {
-            "cpu_kind": "eco",
+            "cpu_kind": "std",
             "cpus": 1,
-            "memory_mb": 512
+            "memory_mb": 1024
         }
     }
 }

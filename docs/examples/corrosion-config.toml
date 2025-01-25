@@ -1,5 +1,5 @@
 [db]
-path = "./tmp/corrosion.db"
+path = "/tmp/corrosion.db"
 [gossip]
 addr = "[::]:8787"
 bootstrap = []
@@ -10,7 +10,7 @@ addr = "127.0.0.1:8081"
 pg.addr = "127.0.0.1:5432"
 
 [admin]
-path = "/var/run/corrosion/admin.sock"
+path = "./admin.sock"
 
 [log]
 format = "json"
