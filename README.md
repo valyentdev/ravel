@@ -57,10 +57,6 @@ Ravel is an open-source containers-as-microVMs as _microVMs_ orchestrator. It al
 
 ## Documentation
 
-For more details, please refer to our [documentation](https://docs.valyent.cloud).
-
-### Installation
-
 To try out Ravel features, you can look at our [documentation](https://docs.valyent.cloud/installation). To install Ravel, you can follow the [Ravel documentation](./docs/README.md).
 
 ## FAQ
