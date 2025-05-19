@@ -1,3 +1,5 @@
+_This repo is now archived._
+
 # Ravel
 
 > Ravel is an open-source containers-as-microVMs orchestrator.
@@ -35,7 +37,7 @@ Ravel is an open-source containers-as-microVMs as _microVMs_ orchestrator. It al
 - [Cloud Hypervisor](https://github.com/cloud-hypervisor/cloud-hypervisor): A lightweight virtual machine monitor for running modern cloud workloads.
 - [NATS](https://nats.io/): For publish/subscribe features
 - [Corrosion](https://github.com/superfly/corrosion): Gossip-based service discovery (and more) for large distributed systems.
-- [Containerd](https://containerd.io/): For image management 
+- [Containerd](https://containerd.io/): For image management
 
 ## Features
 
@@ -46,7 +48,6 @@ Ravel is an open-source containers-as-microVMs as _microVMs_ orchestrator. It al
 - [ ] Volumes management (work in progress)
 - [ ] Secrets management (coming soon)
 - [ ] Wireguard-based private networks (coming soon)
-
 
 ## Prerequisites
 
