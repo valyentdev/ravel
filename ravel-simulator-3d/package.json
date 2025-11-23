@@ -1,0 +1,21 @@
+{
+  "name": "ravel-simulator-3d",
+  "version": "1.0.0",
+  "description": "3D Game Simulator for Ravel MicroVM Orchestrator",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.169.0",
+    "gsap": "^3.12.5"
+  },
+  "devDependencies": {
+    "@types/three": "^0.169.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

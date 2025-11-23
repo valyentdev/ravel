@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ravel Orchestrator Simulator 3D</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Courier New', monospace;
+        overflow: hidden;
+        background: #000;
+      }
+
+      #canvas-container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      #ui-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        color: #00ff00;
+        font-size: 14px;
+      }
+
+      #hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border: 2px solid #00ff00;
+        border-radius: 5px;
+        min-width: 300px;
+      }
+
+      #event-feed {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border: 2px solid #00ff00;
+        border-radius: 5px;
+        max-width: 400px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      #controls-help {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border: 2px solid #00ff00;
+        border-radius: 5px;
+      }
+
+      .event-item {
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+        animation: fadeIn 0.3s ease-in;
+      }
+
+      .event-item:last-child {
+        border-bottom: none;
+      }
+
+      .event-created { color: #00aaff; }
+      .event-started { color: #00ff00; }
+      .event-stopped { color: #ffaa00; }
+      .event-destroyed { color: #ff0000; }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #00ff00;
+        font-size: 24px;
+        text-align: center;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(0, 255, 0, 0.5);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="canvas-container">
+      <div id="loading">
+        <div>INITIALIZING RAVEL ORCHESTRATOR SIMULATOR</div>
+        <div style="margin-top: 20px; font-size: 16px;">Loading...</div>
+      </div>
+    </div>
+
+    <div id="ui-overlay">
+      <div id="hud">
+        <div><strong>RAVEL ORCHESTRATOR</strong></div>
+        <div style="margin-top: 10px;">
+          <div>Cluster: <span id="cluster-name">Production</span></div>
+          <div>Nodes: <span id="node-count">0</span></div>
+          <div>Machines: <span id="machine-count">0</span></div>
+          <div>CPU Usage: <span id="cpu-usage">0%</span></div>
+          <div>Memory Usage: <span id="memory-usage">0%</span></div>
+        </div>
+        <div style="margin-top: 10px;">
+          <div>Camera: <span id="camera-pos">0, 0, 0</span></div>
+        </div>
+      </div>
+
+      <div id="event-feed">
+        <div><strong>EVENT STREAM</strong></div>
+        <div id="event-list" style="margin-top: 10px;"></div>
+      </div>
+
+      <div id="controls-help">
+        <div><strong>CONTROLS</strong></div>
+        <div style="margin-top: 10px;">
+          <div>WASD - Move</div>
+          <div>Mouse - Look around</div>
+          <div>Space - Jump</div>
+          <div>Shift - Sprint</div>
+          <div>Click - Interact with machines</div>
+          <div>ESC - Release mouse</div>
+          <div>C - Create random machine</div>
+        </div>
+      </div>
+
+      <div id="crosshair"></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

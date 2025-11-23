@@ -5,7 +5,7 @@ _This repo is now archived._
 > Ravel is an open-source containers-as-microVMs orchestrator.
 
 <div align="center">
-  <a href="https://discord.gg/DuW5uQCtZj">
+  <a href="https://discord.gg/HXkpCG7DEH">
     <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
   </a>
 
