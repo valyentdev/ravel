@@ -1,0 +1,259 @@
+package api
+
+import (
+	"time"
+)
+
+const MaxStopTimeout = 30    // in seconds
+const DefaultStopTimeout = 5 // in seconds
+const DefaultStopSignal = "SIGTERM"
+
+func GetDefaultStopConfig() *StopConfig {
+	defaultStopTimeout := DefaultStopTimeout
+	defaultStopSignal := DefaultStopSignal
+	return &StopConfig{
+		Timeout: &defaultStopTimeout,
+		Signal:  &defaultStopSignal,
+	}
+}
+
+type Machine struct {
+	Id             string         `json:"id"`
+	Namespace      string         `json:"namespace"`
+	FleetId        string         `json:"fleet"`
+	InstanceId     string         `json:"instance_id"`
+	MachineVersion string         `json:"machine_version"`
+	Region         string         `json:"region"`
+	Config         MachineConfig  `json:"config"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	Events         []MachineEvent `json:"events"`
+	Status         MachineStatus  `json:"state"`
+	Health         HealthStatus   `json:"health,omitempty"`
+	GatewayEnabled bool           `json:"gateway_enabled"`
+	Metadata       *Metadata      `json:"metadata,omitempty"`
+}
+
+type MachineStatus string
+
+const (
+	MachineStatusCreated    MachineStatus = "created"
+	MachineStatusPreparing  MachineStatus = "preparing"
+	MachineStatusStarting   MachineStatus = "starting"
+	MachineStatusRunning    MachineStatus = "running"
+	MachineStatusStopping   MachineStatus = "stopping"
+	MachineStatusStopped    MachineStatus = "stopped"
+	MachineStatusDestroying MachineStatus = "destroying"
+	MachineStatusDestroyed  MachineStatus = "destroyed"
+)
+
+type HealthStatus string
+
+const (
+	HealthStatusUnknown   HealthStatus = "unknown"
+	HealthStatusHealthy   HealthStatus = "healthy"
+	HealthStatusUnhealthy HealthStatus = "unhealthy"
+	HealthStatusStarting  HealthStatus = "starting"
+)
+
+type ExecOptions struct {
+	Cmd       []string `json:"cmd"`
+	TimeoutMs int      `json:"timeout_ms"`
+}
+
+func (e *ExecOptions) GetTimeout() time.Duration {
+	return time.Duration(e.TimeoutMs) * time.Millisecond
+}
+
+type ExecResult struct {
+	Stderr   string `json:"stderr"`
+	Stdout   string `json:"stdout"`
+	ExitCode int    `json:"exit_code"`
+}
+
+const (
+	RestartPolicyAlways    RestartPolicy = "always"
+	RestartPolicyOnFailure RestartPolicy = "on-failure"
+	RestartPolicyNever     RestartPolicy = "never"
+)
+
+type (
+	MachineConfig struct {
+		Image      string      `json:"image"`
+		Guest      GuestConfig `json:"guest"`
+		Workload   Workload    `json:"workload,omitempty"`
+		StopConfig *StopConfig `json:"stop_config,omitempty"`
+	}
+
+	GuestConfig struct {
+		CpuKind  string `json:"cpu_kind"`
+		MemoryMB int    `json:"memory_mb" minimum:"1"`
+		Cpus     int    `json:"cpus" minimum:"1"`
+	}
+
+	Workload struct {
+		Restart         RestartPolicyConfig `json:"restart,omitempty"`
+		Env             []string            `json:"env,omitempty"`
+		Secrets         []SecretRef         `json:"secrets,omitempty"`
+		Volumes         []VolumeMount       `json:"volumes,omitempty"`
+		Init            InitConfig          `json:"init,omitempty"`
+		HealthCheck     *HealthCheck        `json:"health_check,omitempty"`
+		PrivateNetworks []PrivateNetwork    `json:"private_networks,omitempty"`
+		AutoDestroy     bool                `json:"auto_destroy,omitempty"`
+	}
+
+	HealthCheck struct {
+		Exec     []string `json:"exec,omitempty" doc:"Command to run for health check"`
+		Interval int      `json:"interval,omitempty" doc:"Interval in seconds between health checks (default: 30)"`
+		Timeout  int      `json:"timeout,omitempty" doc:"Timeout in seconds for health check (default: 5)"`
+		Retries  int      `json:"retries,omitempty" doc:"Number of consecutive failures before unhealthy (default: 3)"`
+	}
+
+	VolumeMount struct {
+		Name string `json:"name" doc:"Name of the disk to mount"`
+		Path string `json:"path" doc:"Mount path inside the machine"`
+	}
+
+	PrivateNetwork struct {
+		Name string `json:"name" doc:"Name of the private network to join"`
+		IP   string `json:"ip" doc:"IP address for this machine in the private network (e.g., 10.0.1.2/24)"`
+	}
+
+	SecretRef struct {
+		Name   string `json:"name" doc:"Name of the secret in the namespace"`
+		EnvVar string `json:"env_var" doc:"Environment variable name to inject the secret into"`
+	}
+
+	InitConfig struct {
+		Cmd        []string `json:"cmd,omitempty"`
+		Entrypoint []string `json:"entrypoint,omitempty"`
+		User       string   `json:"user,omitempty"`
+	}
+
+	RestartPolicy string
+
+	RestartPolicyConfig struct {
+		Policy     RestartPolicy `json:"policy,omitempty"`
+		MaxRetries int           `json:"max_retries,omitempty"`
+	}
+
+	StopConfig struct {
+		Timeout *int    `json:"timeout,omitempty"` // in seconds
+		Signal  *string `json:"signal,omitempty"`
+	}
+)
+
+type MachineEventType string
+
+const (
+	MachineCreated       MachineEventType = "machine.created"
+	MachinePrepare       MachineEventType = "machine.prepare"
+	MachinePrepared      MachineEventType = "machine.prepared"
+	MachinePrepareFailed MachineEventType = "machine.prepare_failed"
+	MachineStart         MachineEventType = "machine.start"
+	MachineStartFailed   MachineEventType = "machine.start_failed"
+	MachineStarted       MachineEventType = "machine.started"
+	MachineStop          MachineEventType = "machine.stop"
+	MachineStopFailed    MachineEventType = "machine.stop_failed"
+	MachineExited        MachineEventType = "machine.exited"
+	MachineDestroy       MachineEventType = "machine.destroy"
+	MachineDestroyed     MachineEventType = "machine.destroyed"
+)
+
+type CreateMachinePayload struct {
+	Region               string        `json:"region"`
+	Config               MachineConfig `json:"config"`
+	SkipStart            bool          `json:"skip_start,omitempty"`
+	EnableMachineGateway bool          `json:"enable_machine_gateway,omitempty"`
+	Metadata             *Metadata     `json:"metadata,omitempty"`
+}
+
+type MachineStartEventPayload struct {
+	IsRestart bool `json:"is_restart"`
+}
+
+type MachineStopEventPayload struct {
+	Config *StopConfig `json:"config,omitempty"`
+}
+
+type MachinePrepareFailedEventPayload struct {
+	Error string `json:"error"`
+}
+
+type MachineStartFailedEventPayload struct {
+	Error string `json:"error"`
+}
+
+type MachineStartedEventPayload struct {
+	StartedAt time.Time `json:"started_at"`
+}
+
+type MachineExitedEventPayload struct {
+	ExitCode int       `json:"exit_code"`
+	ExitedAt time.Time `json:"exited_at"`
+}
+
+type MachineDestroyEventPayload struct {
+	AutoDestroy bool   `json:"auto_destroy"`
+	Reason      string `json:"reason"`
+	Force       bool   `json:"force"`
+}
+
+type MachineEventPayload struct {
+	PrepareFailed *MachinePrepareFailedEventPayload `json:"prepare_failed,omitempty"`
+	Stop          *MachineStopEventPayload          `json:"stop,omitempty"`
+	Start         *MachineStartEventPayload         `json:"start,omitempty"`
+	StartFailed   *MachineStartFailedEventPayload   `json:"start_failed,omitempty"`
+	Started       *MachineStartedEventPayload       `json:"started,omitempty"`
+	Exited        *MachineExitedEventPayload        `json:"stopped,omitempty"`
+	Destroy       *MachineDestroyEventPayload       `json:"destroy,omitempty"`
+}
+
+type Origin string
+
+const (
+	OriginRavel Origin = "ravel"
+	OriginUser  Origin = "user"
+)
+
+type MachineEvent struct {
+	Id         string              `json:"id"`
+	MachineId  string              `json:"machine_id"`
+	InstanceId string              `json:"instance_id"`
+	Status     MachineStatus       `json:"status"`
+	Type       MachineEventType    `json:"type"`
+	Origin     Origin              `json:"origin"`
+	Payload    MachineEventPayload `json:"payload"`
+	Timestamp  time.Time           `json:"timestamp"`
+}
+
+func (me MachineEvent) EventType() MachineEventType {
+	return me.Type
+}
+
+type Resources struct {
+	CpusMHz  int `json:"cpus_mhz" toml:"cpus_mhz"`   // in MHz
+	MemoryMB int `json:"memory_mb" toml:"memory_mb"` // in MB
+}
+
+func (r *Resources) Sub(other Resources) Resources {
+	new := Resources{
+		CpusMHz:  r.CpusMHz - other.CpusMHz,
+		MemoryMB: r.MemoryMB - other.MemoryMB,
+	}
+	return new
+}
+
+// Add returns a new Resources object which is the sum of the resources.
+func (r *Resources) Add(other Resources) Resources {
+	new := Resources{
+		CpusMHz:  r.CpusMHz + other.CpusMHz,
+		MemoryMB: r.MemoryMB + other.MemoryMB,
+	}
+	return new
+}
+
+// GT returns true if the resources are greater than the other resources.
+func (r *Resources) GT(other Resources) bool {
+	return r.CpusMHz > other.CpusMHz || r.MemoryMB > other.MemoryMB
+}

@@ -1,0 +1,102 @@
+package endpoints
+
+import (
+	"context"
+
+	"github.com/alexisbouchez/ravel/api"
+)
+
+type CreateFleetBody = api.CreateFleetPayload
+
+type CreateFleetRequest struct {
+	NSResolver
+	Body *CreateFleetBody
+}
+
+type CreateFleetResponse struct {
+	Body *api.Fleet `json:"fleet"`
+}
+
+func (e *Endpoints) createFleet(ctx context.Context, req *CreateFleetRequest) (*CreateFleetResponse, error) {
+	fleet, err := e.ravel.CreateFleet(ctx, req.Namespace, req.Body.Name, req.Body.Metadata)
+	if err != nil {
+		e.log("Failed to create fleet", err)
+		return nil, err
+	}
+
+	return &CreateFleetResponse{
+		Body: fleet,
+	}, nil
+}
+
+type ListFleetsRequest struct {
+	NSResolver
+	Labels map[string]string `query:"labels"`
+}
+
+type ListFleetsResponse struct {
+	Body []api.Fleet `json:"fleets"`
+}
+
+func (e *Endpoints) listFleets(ctx context.Context, req *ListFleetsRequest) (*ListFleetsResponse, error) {
+	fleets, err := e.ravel.ListFleets(ctx, req.Namespace, req.Labels)
+	if err != nil {
+		e.log("Failed to list fleets", err)
+		return nil, err
+	}
+	return &ListFleetsResponse{Body: fleets}, nil
+}
+
+type GetFleetRequest struct {
+	FleetResolver
+}
+
+type GetFleetResponse struct {
+	Body *api.Fleet `json:"fleet"`
+}
+
+func (e *Endpoints) getFleet(ctx context.Context, req *GetFleetRequest) (*GetFleetResponse, error) {
+	fleet, err := e.ravel.GetFleet(ctx, req.Namespace, req.Fleet)
+	if err != nil {
+		e.log("Failed to get fleet", err)
+		return nil, err
+	}
+
+	return &GetFleetResponse{Body: fleet}, nil
+}
+
+type DestroyFleetRequest struct {
+	FleetResolver
+}
+
+type DestroyFleetResponse struct {
+}
+
+func (e *Endpoints) destroyFleet(ctx context.Context, req *DestroyFleetRequest) (*DestroyFleetResponse, error) {
+	err := e.ravel.DestroyFleet(ctx, req.Namespace, req.Fleet)
+	if err != nil {
+		e.log("Failed to destroy fleet", err)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+type UpdateFleetMetadataRequest struct {
+	FleetResolver
+	Body *api.UpdateFleetMetadataPayload
+}
+
+type UpdateFleetMetadataResponse struct {
+	Body *api.Fleet `json:"fleet"`
+}
+
+func (e *Endpoints) updateFleetMetadata(ctx context.Context, req *UpdateFleetMetadataRequest) (*UpdateFleetMetadataResponse, error) {
+	fleet, err := e.ravel.UpdateFleetMetadata(ctx, req.Namespace, req.Fleet, req.Body.Metadata)
+	if err != nil {
+		e.log("Failed to update fleet metadata", err)
+		return nil, err
+	}
+
+	return &UpdateFleetMetadataResponse{Body: fleet}, nil
+}

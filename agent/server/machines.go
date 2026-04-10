@@ -1,0 +1,247 @@
+package server
+
+import (
+	"context"
+
+	"github.com/alexisbouchez/ravel/api"
+	"github.com/alexisbouchez/ravel/api/errdefs"
+	"github.com/alexisbouchez/ravel/core/cluster"
+	"github.com/alexisbouchez/ravel/internal/streamutil"
+	"github.com/danielgtaylor/huma/v2"
+)
+
+type CreateMachineRequest struct {
+	Body cluster.PutMachineOptions
+}
+
+type CreateMachineResponse struct {
+	Body cluster.MachineInstance
+}
+
+func (s *AgentServer) putMachine(ctx context.Context, req *CreateMachineRequest) (*CreateMachineResponse, error) {
+	mi, err := s.agent.PutMachine(ctx, req.Body)
+	if err != nil {
+		s.log("Failed to put machine", err)
+		return nil, err
+	}
+
+	return &CreateMachineResponse{Body: *mi}, nil
+
+}
+
+type DestroyMachineRequest struct {
+	Id    string `path:"id"`
+	Force bool   `query:"force"`
+}
+
+type DestroyMachineResponse struct {
+}
+
+func (s *AgentServer) destroyMachine(ctx context.Context, req *DestroyMachineRequest) (*DestroyMachineResponse, error) {
+	err := s.agent.DestroyMachine(ctx, req.Id, req.Force)
+	if err != nil {
+		s.log("Failed to delete machine", err)
+		return nil, err
+	}
+
+	return &DestroyMachineResponse{}, nil
+}
+
+type MachineExecRequest struct {
+	Id   string `path:"id"`
+	Body api.ExecOptions
+}
+
+type MachineExecResponse struct {
+	Body *api.ExecResult
+}
+
+func (s *AgentServer) machineExec(ctx context.Context, req *MachineExecRequest) (*MachineExecResponse, error) {
+	res, err := s.agent.MachineExec(ctx, req.Id, req.Body.Cmd, req.Body.GetTimeout())
+	if err != nil {
+		s.log("Failed to exec machine", err)
+		return nil, err
+	}
+	return &MachineExecResponse{Body: res}, nil
+}
+
+type StartMachineRequest struct {
+	Id string `path:"id"`
+}
+
+type StartMachineResponse struct {
+}
+
+func (s *AgentServer) startMachine(ctx context.Context, req *StartMachineRequest) (*StartMachineResponse, error) {
+	err := s.agent.StartMachine(ctx, req.Id)
+	if err != nil {
+		s.log("Failed to start machine", err)
+		return nil, err
+	}
+	return &StartMachineResponse{}, nil
+}
+
+type StopMachineRequest struct {
+	Id   string `path:"id"`
+	Body *api.StopConfig
+}
+
+type StopMachineResponse struct {
+}
+
+func (s *AgentServer) stopMachine(ctx context.Context, req *StopMachineRequest) (*StopMachineResponse, error) {
+	err := s.agent.StopMachine(ctx, req.Id, req.Body)
+	if err != nil {
+		s.log("Failed to stop machine", err)
+		return nil, err
+	}
+	return &StopMachineResponse{}, nil
+}
+
+type FollowMachineLogsRequest struct {
+	Id string `path:"id"`
+}
+
+func (s *AgentServer) followMachineLogs(ctx context.Context, req *FollowMachineLogsRequest) (*huma.StreamResponse, error) {
+	logs, ch, err := s.agent.SubscribeToMachineLogs(ctx, req.Id)
+	if err != nil {
+		s.log("Failed to follow machine logs", err)
+		return nil, err
+	}
+
+	return &huma.StreamResponse{
+		Body: func(ctx huma.Context) {
+			streamutil.StreamLogs(ctx, logs, ch)
+		}}, nil
+}
+
+type GetMachineLogsRequest struct {
+	Id string `path:"id"`
+}
+
+type GetMachineLogsResponse struct {
+	Body []*api.LogEntry
+}
+
+func (s *AgentServer) getMachineLogs(ctx context.Context, req *GetMachineLogsRequest) (*GetMachineLogsResponse, error) {
+	logs, err := s.agent.GetMachineLogs(ctx, req.Id)
+	if err != nil {
+		s.log("Failed to get machine logs", err)
+		return nil, err
+	}
+	return &GetMachineLogsResponse{Body: logs}, nil
+}
+
+type EnableMachineGatewayRequest struct {
+	Id string `path:"id"`
+}
+
+type EnableMachineGatewayResponse struct {
+}
+
+func (s *AgentServer) enableMachineGateway(ctx context.Context, req *EnableMachineGatewayRequest) (*EnableMachineGatewayResponse, error) {
+	err := s.agent.EnableMachineGateway(ctx, req.Id)
+	if err != nil {
+		s.log("Failed to enable machine gateway", err)
+		return nil, err
+	}
+	return &EnableMachineGatewayResponse{}, nil
+}
+
+type DisableMachineGatewayRequest struct {
+	Id string `path:"id"`
+}
+
+type DisableMachineGatewayResponse struct {
+}
+
+func (s *AgentServer) disableMachineGateway(ctx context.Context, req *DisableMachineGatewayRequest) (*DisableMachineGatewayResponse, error) {
+	err := s.agent.DisableMachineGateway(ctx, req.Id)
+	if err != nil {
+		s.log("Failed to disable machine gateway", err)
+		return nil, err
+	}
+	return &DisableMachineGatewayResponse{}, nil
+}
+
+type WaitMachineStatusRequest struct {
+	MachineId string            `path:"id"`
+	Timeout   uint              `query:"timeout" minimum:"1" maximum:"60"`
+	Status    api.MachineStatus `query:"status" required:"true"`
+}
+
+type WaitMachineStatusResponse struct {
+}
+
+func (s *AgentServer) waitForMachineStatus(ctx context.Context, req *WaitMachineStatusRequest) (*WaitMachineStatusResponse, error) {
+	timeout := uint(req.Timeout)
+	if timeout == 0 {
+		timeout = 30
+	}
+
+	if req.Status != api.MachineStatusRunning && req.Status != api.MachineStatusStopped && req.Status != api.MachineStatusDestroyed {
+		return nil, errdefs.NewInvalidArgument("invalid status")
+	}
+
+	err := s.agent.WaitForMachineStatus(ctx, req.MachineId, req.Status, timeout)
+	if err != nil {
+		s.log("Failed to wait for machine status", err)
+		return nil, err
+	}
+
+	return &WaitMachineStatusResponse{}, nil
+}
+
+// Snapshot API for AI sandbox fast starts
+
+type MachineSnapshotRequest struct {
+	Id   string `path:"id"`
+	Body struct {
+		SnapshotId string `json:"snapshot_id" required:"true" doc:"Unique identifier for the snapshot"`
+	}
+}
+
+type MachineSnapshotResponse struct {
+	Body struct {
+		SnapshotId string `json:"snapshot_id"`
+		Path       string `json:"path"`
+	}
+}
+
+func (s *AgentServer) machineSnapshot(ctx context.Context, req *MachineSnapshotRequest) (*MachineSnapshotResponse, error) {
+	err := s.agent.MachineSnapshot(ctx, req.Id, req.Body.SnapshotId)
+	if err != nil {
+		s.log("Failed to snapshot machine", err)
+		return nil, err
+	}
+
+	return &MachineSnapshotResponse{
+		Body: struct {
+			SnapshotId string `json:"snapshot_id"`
+			Path       string `json:"path"`
+		}{
+			SnapshotId: req.Body.SnapshotId,
+			Path:       "/var/lib/ravel/snapshots/" + req.Body.SnapshotId,
+		},
+	}, nil
+}
+
+type MachineRestoreRequest struct {
+	Id   string `path:"id"`
+	Body struct {
+		SnapshotId string `json:"snapshot_id" required:"true" doc:"Snapshot ID to restore from"`
+	}
+}
+
+type MachineRestoreResponse struct {
+}
+
+func (s *AgentServer) machineRestore(ctx context.Context, req *MachineRestoreRequest) (*MachineRestoreResponse, error) {
+	err := s.agent.MachineRestore(ctx, req.Id, req.Body.SnapshotId)
+	if err != nil {
+		s.log("Failed to restore machine", err)
+		return nil, err
+	}
+
+	return &MachineRestoreResponse{}, nil
+}

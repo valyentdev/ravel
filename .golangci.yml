@@ -1,0 +1,17 @@
+version: "2"
+
+linters:
+  default: standard
+  disable:
+    - errcheck     # Too many existing violations, enable gradually later
+    - unused       # Too many existing violations, enable gradually later
+    - staticcheck  # Too many existing violations, enable gradually later
+    - ineffassign  # Too many existing violations, enable gradually later
+  settings:
+    govet:
+      disable:
+        - fieldalignment  # Too many existing violations
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -1,0 +1,214 @@
+package agent
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/alexisbouchez/ravel/agent/machinerunner"
+	"github.com/alexisbouchez/ravel/agent/structs"
+	"github.com/alexisbouchez/ravel/api"
+	"github.com/alexisbouchez/ravel/api/errdefs"
+	"github.com/alexisbouchez/ravel/core/cluster"
+)
+
+func (a *Agent) onMachineDestroyed(m structs.MachineInstance) {
+	a.machines.RemoveMachine(m.Machine.Id)
+	err := a.store.DeleteMachineInstance(m.Machine.Id)
+	if err != nil {
+		slog.Error("failed to delete machine instance", "machine_id", m.Machine.Id, "err", err)
+	}
+
+	a.network.Release(m.Network)
+
+	err = a.allocator.DeleteAllocation(m.Machine.Id)
+	if err != nil {
+		slog.Error("failed to release reservation", "machine_id", m.Machine.Id, "err", err)
+	}
+}
+
+func (a *Agent) reportState(mi cluster.MachineInstance) error {
+	return a.cluster.UpsertInstance(context.Background(), mi)
+}
+
+func (a *Agent) newMachine(machineInstance structs.MachineInstance) *machinerunner.MachineRunner {
+	return machinerunner.New(
+		a.store,
+		machineInstance,
+		a.runtime,
+		a.reportState,
+		a.eventer,
+		a.onMachineDestroyed,
+	)
+}
+
+func (a *Agent) PutMachine(ctx context.Context, opt cluster.PutMachineOptions) (*cluster.MachineInstance, error) {
+	_, err := a.allocator.ConfirmAllocation(opt.AllocationId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to confirm reservation: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			if err := a.allocator.DeleteAllocation(opt.AllocationId); err != nil {
+				slog.Error("failed to release reservation", "err", err)
+			}
+		}
+	}()
+
+	network, err := a.network.AllocateNext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to allocate network: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			a.network.Release(network)
+		}
+	}()
+
+	var desiredStatus api.MachineStatus
+	if opt.Start {
+		desiredStatus = api.MachineStatusRunning
+	} else {
+		desiredStatus = api.MachineStatusStopped
+	}
+
+	machineInstance := structs.MachineInstance{
+		Machine: opt.Machine,
+		Version: opt.Version,
+		State: structs.MachineInstanceState{
+			DesiredStatus:         desiredStatus,
+			Status:                api.MachineStatusCreated,
+			CreatedAt:             time.Now(),
+			UpdatedAt:             time.Now(),
+			MachineGatewayEnabled: opt.EnableGateway,
+		},
+		Network: network,
+	}
+
+	if err := a.store.CreateMachineInstance(machineInstance); err != nil {
+		return nil, fmt.Errorf("failed to put machine: %w", err)
+	}
+
+	machine := a.newMachine(machineInstance)
+	a.machines.AddMachine(machine)
+	go machine.Run()
+
+	ci := machineInstance.ClusterInstance()
+
+	return &ci, nil
+}
+
+func (d *Agent) DestroyMachine(ctx context.Context, id string, force bool) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.Destroy(ctx, force)
+}
+
+func (d *Agent) StartMachine(ctx context.Context, id string) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.Start(ctx)
+}
+
+func (d *Agent) StopMachine(ctx context.Context, id string, opt *api.StopConfig) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		slog.Error("failed to get machine", "machine_id", id, "error", err)
+		return err
+	}
+
+	return machine.Stop(ctx, opt)
+}
+
+func (d *Agent) SubscribeToMachineLogs(ctx context.Context, id string) ([]*api.LogEntry, <-chan *api.LogEntry, error) {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return machine.SubscribeToLogs(ctx, id)
+}
+
+func (d *Agent) GetMachineLogs(ctx context.Context, id string) ([]*api.LogEntry, error) {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return machine.GetLogs()
+}
+
+func (d *Agent) MachineExec(ctx context.Context, id string, cmd []string, timeout time.Duration) (*api.ExecResult, error) {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return machine.Exec(ctx, cmd, timeout)
+}
+
+func (d *Agent) EnableMachineGateway(ctx context.Context, id string) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.EnableGateway()
+}
+
+func (d *Agent) DisableMachineGateway(ctx context.Context, id string) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.DisableGateway()
+}
+
+func (a *Agent) WaitForMachineStatus(ctx context.Context, id string, status api.MachineStatus, timeout uint) error {
+	machine, err := a.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	if timeout > 60 || timeout < 1 {
+		return errdefs.NewInvalidArgument("timeout must be between 1 and 60 seconds")
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
+	err = machine.WaitForStatus(ctx, status)
+	if err != nil {
+		return errdefs.NewDeadlineExceeded("timeout waiting for machine status")
+	}
+
+	return nil
+}
+
+// MachineSnapshot saves the running VM state for fast restore.
+// This enables sub-100ms cold starts for AI sandbox workloads.
+func (d *Agent) MachineSnapshot(ctx context.Context, id string, snapshotId string) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.Snapshot(ctx, snapshotId)
+}
+
+// MachineRestore restores the VM from a previously saved snapshot.
+func (d *Agent) MachineRestore(ctx context.Context, id string, snapshotId string) error {
+	machine, err := d.machines.GetMachine(id)
+	if err != nil {
+		return err
+	}
+
+	return machine.Restore(ctx, snapshotId)
+}

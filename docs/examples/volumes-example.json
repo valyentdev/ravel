@@ -1,0 +1,20 @@
+{
+    "image": "docker.io/library/alpine:latest",
+    "guest": {
+        "vcpus": 1,
+        "cpus_mhz": 500,
+        "memory_mb": 256
+    },
+    "workload": {
+        "init": {
+            "cmd": ["/bin/sh", "-c", "echo 'Hello from Ravel!' > /data/hello.txt && cat /data/hello.txt && sleep 10"],
+            "user": "root"
+        },
+        "volumes": [
+            {
+                "name": "my-disk-id",
+                "path": "/data"
+            }
+        ]
+    }
+}

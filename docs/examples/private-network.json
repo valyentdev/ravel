@@ -1,0 +1,20 @@
+{
+  "image": "docker.io/library/alpine:latest",
+  "guest": {
+    "vcpus": 1,
+    "cpus_mhz": 500,
+    "memory_mb": 256
+  },
+  "workload": {
+    "init": {
+      "cmd": ["/bin/sh", "-c", "echo 'Machine in private network' && sleep 3600"],
+      "user": "root"
+    },
+    "private_networks": [
+      {
+        "name": "app-network",
+        "ip": "10.0.1.2/24"
+      }
+    ]
+  }
+}

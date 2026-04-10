@@ -1,0 +1,18 @@
+.env
+bin/
+agent.db
+ravel.json
+ravel.toml
+.devdbrc
+/.idea
+*.iml
+/disks
+nats.creds
+/tmp
+.DS_Store
+vmlinux.bin
+proxy.toml
+CLAUDE.md
+
+# Docker volumes
+postgres_data/

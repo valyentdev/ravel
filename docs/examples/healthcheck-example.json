@@ -1,0 +1,19 @@
+{
+    "image": "docker.io/library/nginx:alpine",
+    "guest": {
+        "vcpus": 1,
+        "cpus_mhz": 1000,
+        "memory_mb": 512
+    },
+    "workload": {
+        "init": {
+            "cmd": ["nginx", "-g", "daemon off;"]
+        },
+        "health_check": {
+            "exec": ["wget", "--spider", "-q", "http://localhost"],
+            "interval": 10,
+            "timeout": 3,
+            "retries": 3
+        }
+    }
+}

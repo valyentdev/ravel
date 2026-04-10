@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for Ravel state
+  postgres:
+    image: postgres:16-alpine
+    container_name: ravel-postgres
+    environment:
+      POSTGRES_DB: ravel
+      POSTGRES_USER: ravel
+      POSTGRES_PASSWORD: ravel_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ravel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # NATS for cluster messaging
+  nats:
+    image: nats:2.10-alpine
+    container_name: ravel-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["-js", "-m", "8222"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

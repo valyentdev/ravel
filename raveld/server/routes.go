@@ -1,0 +1,154 @@
+package server
+
+import (
+	"net/http"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
+)
+
+func getHumaConfig() huma.Config {
+
+	return huma.Config{
+		OpenAPI: &huma.OpenAPI{
+			OpenAPI: "3.1.0",
+			Info: &huma.Info{
+				Title:   "Ravel Agent API",
+				Version: "1.0.0",
+			},
+		},
+		OpenAPIPath: "/openapi",
+		DocsPath:    "/docs",
+		Formats: map[string]huma.Format{
+			"application/json": huma.DefaultJSONFormat,
+			"json":             huma.DefaultJSONFormat,
+		},
+		DefaultFormat: "application/json",
+	}
+}
+
+func (s DaemonServer) registerEndpoints(mux humago.Mux) {
+	humaConfig := getHumaConfig()
+	api := humago.New(mux, humaConfig)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "createInstance",
+		Path:        "/instances",
+		Method:      http.MethodPost,
+	}, s.createInstance)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listInstances",
+		Path:        "/instances",
+		Method:      http.MethodGet,
+	}, s.listInstances)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "getInstance",
+		Path:        "/instances/{id}",
+		Method:      http.MethodGet,
+	}, s.getInstance)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "destroyInstance",
+		Path:        "/instances/{id}",
+		Method:      http.MethodDelete,
+	}, s.destroyInstance)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "startInstance",
+		Path:        "/instances/{id}/start",
+		Method:      http.MethodPost,
+	}, s.startInstance)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "startInstanceFromSnapshot",
+		Path:        "/instances/{id}/start-from-snapshot",
+		Method:      http.MethodPost,
+		Summary:     "Start an instance by restoring from a snapshot (fast cold start)",
+		Tags:        []string{"sandbox"},
+	}, s.startInstanceFromSnapshot)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "stopInstance",
+		Path:        "/instances/{id}/stop",
+		Method:      http.MethodPost,
+	}, s.stopInstance)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "exec",
+		Path:        "/instances/{id}/exec",
+		Method:      http.MethodPost,
+	}, s.exec)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "getInstanceLogs",
+		Path:        "/instances/{id}/logs",
+		Method:      http.MethodGet,
+	}, s.getInstanceLogs)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "followInstanceLogs",
+		Path:        "/instances/{id}/logs/follow",
+		Method:      http.MethodGet,
+	}, s.followInstanceLogs)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listImages",
+		Path:        "/images",
+		Method:      http.MethodGet,
+	}, s.listImages)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "pullImage",
+		Path:        "/images/pull",
+		Method:      http.MethodPost,
+	}, s.pullImage)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "deleteImage",
+		Path:        "/images/{ref}",
+		Method:      http.MethodDelete,
+	}, s.deleteImage)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "createDisk",
+		Path:        "/disks",
+		Method:      http.MethodPost,
+	}, s.createDisk)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "getDisk",
+		Path:        "/disks/{id}",
+		Method:      http.MethodGet,
+	}, s.getDisk)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listDisks",
+		Path:        "/disks",
+		Method:      http.MethodGet,
+	}, s.listDisks)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "destroyDisk",
+		Path:        "/disks/{id}",
+		Method:      http.MethodDelete,
+	}, s.destroyDisk)
+
+	// Snapshot/Restore endpoints for AI sandbox fast starts
+	huma.Register(api, huma.Operation{
+		OperationID: "instanceSnapshot",
+		Path:        "/instances/{id}/snapshot",
+		Method:      http.MethodPost,
+		Summary:     "Create a snapshot of a running instance for fast restore",
+		Tags:        []string{"sandbox"},
+	}, s.instanceSnapshot)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "instanceRestore",
+		Path:        "/instances/{id}/restore",
+		Method:      http.MethodPost,
+		Summary:     "Restore an instance from a snapshot",
+		Tags:        []string{"sandbox"},
+	}, s.instanceRestore)
+}

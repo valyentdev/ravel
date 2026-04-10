@@ -1,0 +1,90 @@
+[daemon]
+database_path = "./agent.db"
+
+[daemon.runtime]
+# Runtime type: "cloudhypervisor" (default) or "firecracker"
+runtime_type = "cloudhypervisor"
+cloud_hypervisor_binary = "./cloud-hypervisor"
+firecracker_binary = "./firecracker"
+jailer_binary = "./bin/jailer"
+init_binary = "./bin/initd"
+linux_kernel = "./vmlinux.bin"
+
+[daemon.agent]
+resources = { cpus_mhz = 20000, memory_mb = 16_384 }
+node_id = "ravel-1"
+region = "fr"
+address = "127.0.0.1"
+port = 8080
+[daemon.agent.tls]
+cert_file = "ravel-1-agent-cert.pem"
+key_file = "ravel-1-agent-key.pem"
+ca_file = "ravel-ca-cert.pem"
+
+
+[nats]
+url = "nats://127.0.0.1:4222"
+cred_file = "./nats.creds"
+
+[registries."your-registry"]
+username = ""
+password = ""
+
+
+[server]
+postgres_url = "postgres://user:password@host:port/db"
+[server.api]
+address = ":3000"
+[server.tls]
+cert_file = "server-1-server-cert.pem"
+key_file = "server-1-server-key.pem"
+ca_file = "ravel-ca-cert.pem"
+
+[server.machine_templates.eco]
+vcpu_frequency = 250
+combinations = [
+    { vcpus = 1, memory_configs = [
+        256,
+        512,
+        1_024,
+        2_048,
+    ] },
+    { vcpus = 2, memory_configs = [
+        512,
+        1_024,
+        2_048,
+        4_096,
+    ] },
+    { vcpus = 4, memory_configs = [
+        1_024,
+        2_048,
+        4_096,
+        8_192,
+    ] },
+    { vcpus = 8, memory_configs = [
+        2_048,
+        4_096,
+        8_192,
+        16_384,
+    ] },
+]
+
+[server.machine_templates.std]
+vcpu_frequency = 2200
+combinations = [
+    { vcpus = 1, memory_configs = [
+        1_024,
+        2_048,
+        4_096,
+    ] },
+    { vcpus = 2, memory_configs = [
+        2_048,
+        4_096,
+        8_192,
+    ] },
+    { vcpus = 4, memory_configs = [
+        4_096,
+        8_192,
+        16_384,
+    ] },
+]

@@ -1,0 +1,13 @@
+{
+    "image": "docker.io/library/alpine:latest",
+    "env": [],
+    "init": {
+        "cmd": ["/bin/sh", "-c", "echo 'Hello from Ravel! Your microVM is running.' && sleep 5"],
+        "user": "root"
+    },
+    "guest": {
+        "vcpus": 1,
+        "cpus_mhz": 500,
+        "memory_mb": 256
+    }
+}
